@@ -1,0 +1,2 @@
+# Ignore local Railway CLI metadata if present
+.railway/

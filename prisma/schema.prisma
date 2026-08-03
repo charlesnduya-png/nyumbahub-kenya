@@ -1,0 +1,615 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  BUYER
+  SELLER
+  AGENT
+  ADMIN
+}
+
+enum ListingType {
+  BUY
+  RENT
+  LAND
+  COMMERCIAL
+  HOLIDAY
+}
+
+enum PropertyType {
+  APARTMENT
+  HOUSE
+  TOWNHOUSE
+  VILLA
+  STUDIO
+  BUNGALOW
+  MAISONETTE
+  PENTHOUSE
+  OFFICE
+  SHOP
+  WAREHOUSE
+  PLOT
+  FARM
+  OTHER
+}
+
+enum PropertyStatus {
+  DRAFT
+  PENDING
+  ACTIVE
+  SOLD
+  RENTED
+  EXPIRED
+  REJECTED
+  ARCHIVED
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  MPESA
+  STRIPE
+  CARD
+}
+
+enum SubscriptionPlan {
+  FREE
+  BASIC
+  PREMIUM
+  AGENT_PRO
+  AGENT_ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+  PAST_DUE
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  VIEWING_SCHEDULED
+  NEGOTIATING
+  WON
+  LOST
+}
+
+enum NotificationType {
+  LEAD
+  MESSAGE
+  PAYMENT
+  LISTING
+  SYSTEM
+  ALERT
+}
+
+enum AdPlacement {
+  HOME_BANNER
+  SIDEBAR
+  SEARCH_SPONSORED
+  PROPERTY_DETAIL
+}
+
+model User {
+  id                    String             @id @default(cuid())
+  name                  String?
+  email                 String             @unique
+  emailVerified         DateTime?
+  phone                 String?            @unique
+  phoneVerified         DateTime?
+  passwordHash          String?
+  image                 String?
+  role                  Role               @default(BUYER)
+  bio                   String?
+  nationalId            String?
+  nationalIdVerified    VerificationStatus @default(UNVERIFIED)
+  titleDeedVerified     VerificationStatus @default(UNVERIFIED)
+  verificationStatus    VerificationStatus @default(UNVERIFIED)
+  isActive              Boolean            @default(true)
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  accounts              Account[]
+  sessions              Session[]
+  properties            Property[]         @relation("PropertyOwner")
+  agentProfile          Agent?
+  leadsAsBuyer          Lead[]             @relation("BuyerLeads")
+  leadsAsAgent          Lead[]             @relation("AgentLeads")
+  messagesSent          Message[]          @relation("SentMessages")
+  messagesReceived      Message[]          @relation("ReceivedMessages")
+  reviews               Review[]
+  subscriptions         Subscription[]
+  payments              Payment[]
+  blogPosts             BlogPost[]
+  notifications         Notification[]
+  favorites             Favorite[]
+  recentlyViewed        RecentlyViewed[]
+  savedSearches         SavedSearch[]
+  comparisons           PropertyComparison[]
+  viewings              Viewing[]          @relation("BuyerViewings")
+  advertisements        Advertisement[]
+  priceAlerts           PriceAlert[]
+
+  @@index([role])
+  @@index([email])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Agent {
+  id              String             @id @default(cuid())
+  userId          String             @unique
+  agencyName      String?
+  licenseNumber   String?
+  specialty       String?
+  yearsExperience Int                @default(0)
+  rating          Float              @default(0)
+  reviewCount     Int                @default(0)
+  totalSales      Int                @default(0)
+  bio             String?            @db.Text
+  website         String?
+  county          String?
+  town            String?
+  isFeatured      Boolean            @default(false)
+  isVerified      Boolean            @default(false)
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clients         Client[]
+  listings        Property[]         @relation("AgentListings")
+
+  @@index([isFeatured])
+  @@index([county])
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  agentId   String
+  name      String
+  email     String?
+  phone     String?
+  notes     String?  @db.Text
+  status    String   @default("ACTIVE")
+  budget    Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  agent     Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+}
+
+model Property {
+  id                String         @id @default(cuid())
+  title             String
+  slug              String         @unique
+  description       String         @db.Text
+  listingType       ListingType
+  propertyType      PropertyType
+  status            PropertyStatus @default(DRAFT)
+  price             Float
+  currency          String         @default("KES")
+  pricePerSqft      Float?
+  bedrooms          Int?
+  bathrooms         Int?
+  parkingSpaces     Int            @default(0)
+  floorArea         Float?
+  plotSize          Float?
+  yearBuilt         Int?
+  furnished         Boolean        @default(false)
+  swimmingPool      Boolean        @default(false)
+  security          Boolean        @default(false)
+  county            String
+  town              String
+  estate            String?
+  address           String?
+  latitude          Float?
+  longitude         Float?
+  isFeatured        Boolean        @default(false)
+  isSponsored       Boolean        @default(false)
+  isPremium         Boolean        @default(false)
+  isVerified        Boolean        @default(false)
+  views             Int            @default(0)
+  expiresAt         DateTime?
+  publishedAt       DateTime?
+  ownerId           String
+  agentId           String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  owner             User           @relation("PropertyOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  agent             Agent?         @relation("AgentListings", fields: [agentId], references: [id])
+  images            PropertyImage[]
+  videos            PropertyVideo[]
+  amenities         PropertyAmenity[]
+  leads             Lead[]
+  reviews           Review[]
+  favorites         Favorite[]
+  recentlyViewed    RecentlyViewed[]
+  priceHistory      PriceHistory[]
+  nearbyPlaces      NearbyPlace[]
+  viewings          Viewing[]
+  comparisons       ComparisonItem[]
+
+  @@index([listingType, status])
+  @@index([county, town])
+  @@index([price])
+  @@index([isFeatured])
+  @@index([ownerId])
+  @@index([slug])
+}
+
+model PropertyImage {
+  id         String   @id @default(cuid())
+  propertyId String
+  url        String
+  publicId   String?
+  alt        String?
+  order      Int      @default(0)
+  isPrimary  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+}
+
+model PropertyVideo {
+  id         String   @id @default(cuid())
+  propertyId String
+  url        String
+  publicId   String?
+  title      String?
+  thumbnail  String?
+  createdAt  DateTime @default(now())
+
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+}
+
+model Amenity {
+  id         String           @id @default(cuid())
+  name       String           @unique
+  icon       String?
+  category   String?
+  properties PropertyAmenity[]
+}
+
+model PropertyAmenity {
+  propertyId String
+  amenityId  String
+
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  amenity    Amenity  @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+
+  @@id([propertyId, amenityId])
+}
+
+model Lead {
+  id          String     @id @default(cuid())
+  propertyId  String
+  buyerId     String?
+  agentId     String?
+  name        String
+  email       String?
+  phone       String?
+  message     String?    @db.Text
+  status      LeadStatus @default(NEW)
+  source      String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  property    Property   @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  buyer       User?      @relation("BuyerLeads", fields: [buyerId], references: [id])
+  agent       User?      @relation("AgentLeads", fields: [agentId], references: [id])
+
+  @@index([propertyId])
+  @@index([status])
+  @@index([agentId])
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  content    String   @db.Text
+  isRead     Boolean  @default(false)
+  propertyId String?
+  createdAt  DateTime @default(now())
+
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([senderId, receiverId])
+  @@index([receiverId, isRead])
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  propertyId String
+  userId     String
+  rating     Int
+  comment    String?  @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId, userId])
+  @@index([propertyId])
+}
+
+model Subscription {
+  id        String             @id @default(cuid())
+  userId    String
+  plan      SubscriptionPlan   @default(FREE)
+  status    SubscriptionStatus @default(ACTIVE)
+  startDate DateTime           @default(now())
+  endDate   DateTime?
+  autoRenew Boolean            @default(true)
+  amount    Float              @default(0)
+  currency  String             @default("KES")
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payments  Payment[]
+
+  @@index([userId, status])
+}
+
+model Payment {
+  id             String        @id @default(cuid())
+  userId         String
+  subscriptionId String?
+  amount         Float
+  currency       String        @default("KES")
+  method         PaymentMethod
+  status         PaymentStatus @default(PENDING)
+  reference      String?       @unique
+  mpesaReceipt   String?
+  stripeIntentId String?
+  description    String?
+  metadata       Json?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+}
+
+model BlogPost {
+  id          String    @id @default(cuid())
+  title       String
+  slug        String    @unique
+  excerpt     String?
+  content     String    @db.Text
+  coverImage  String?
+  category    String
+  tags        String[]
+  published   Boolean   @default(false)
+  publishedAt DateTime?
+  authorId    String
+  views       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([category, published])
+  @@index([slug])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  link      String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+}
+
+model Favorite {
+  id         String   @id @default(cuid())
+  userId     String
+  propertyId String
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, propertyId])
+}
+
+model RecentlyViewed {
+  id         String   @id @default(cuid())
+  userId     String
+  propertyId String
+  viewedAt   DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, propertyId])
+  @@index([userId, viewedAt])
+}
+
+model SavedSearch {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  filters   Json
+  alertOn   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model PriceHistory {
+  id         String   @id @default(cuid())
+  propertyId String
+  price      Float
+  recordedAt DateTime @default(now())
+
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, recordedAt])
+}
+
+model NearbyPlace {
+  id         String  @id @default(cuid())
+  propertyId String
+  name       String
+  type       String
+  distance   Float?
+  latitude   Float?
+  longitude  Float?
+
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, type])
+}
+
+model Viewing {
+  id         String   @id @default(cuid())
+  propertyId String
+  buyerId    String
+  scheduledAt DateTime
+  status     String   @default("SCHEDULED")
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  buyer      User     @relation("BuyerViewings", fields: [buyerId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@index([buyerId])
+}
+
+model PropertyComparison {
+  id        String           @id @default(cuid())
+  userId    String
+  createdAt DateTime         @default(now())
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     ComparisonItem[]
+
+  @@index([userId])
+}
+
+model ComparisonItem {
+  comparisonId String
+  propertyId   String
+
+  comparison   PropertyComparison @relation(fields: [comparisonId], references: [id], onDelete: Cascade)
+  property     Property           @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@id([comparisonId, propertyId])
+}
+
+model Advertisement {
+  id         String      @id @default(cuid())
+  title      String
+  imageUrl   String
+  linkUrl    String?
+  placement  AdPlacement
+  isActive   Boolean     @default(true)
+  startDate  DateTime?
+  endDate    DateTime?
+  clicks     Int         @default(0)
+  impressions Int        @default(0)
+  advertiserId String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  advertiser User?       @relation(fields: [advertiserId], references: [id])
+
+  @@index([placement, isActive])
+}
+
+model PriceAlert {
+  id        String   @id @default(cuid())
+  userId    String
+  county    String?
+  town      String?
+  maxPrice  Float?
+  listingType ListingType?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}

@@ -1,0 +1,13 @@
+# Railway — NyumbaHub (public site + admin in one Next.js service)
+# Docs: https://docs.railway.com/guides/nextjs
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "npm run start:railway"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 120
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5

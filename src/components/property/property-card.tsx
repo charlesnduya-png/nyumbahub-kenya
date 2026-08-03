@@ -1,0 +1,176 @@
+"use client";
+
+import Image from "next/image";
+import Link from "next/link";
+import { Bath, BedDouble, Heart, MapPin, ShieldCheck, Star } from "lucide-react";
+import * as React from "react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn, formatPrice } from "@/lib/utils";
+import { getListingTypeLabel, getPropertyTypeLabel } from "@/lib/kenya";
+import type { PropertyCard } from "@/types";
+
+interface PropertyCardProps {
+  property: PropertyCard;
+  className?: string;
+  priority?: boolean;
+}
+
+export function PropertyCardComponent({
+  property,
+  className,
+  priority = false,
+}: PropertyCardProps) {
+  const [favorited, setFavorited] = React.useState(false);
+  const imageUrl = property.primaryImage?.url ?? "/placeholder-property.jpg";
+  const location = [property.estate, property.town, property.county]
+    .filter(Boolean)
+    .join(", ");
+
+  return (
+    <article
+      className={cn(
+        "group relative overflow-hidden rounded-3xl border border-border/70 bg-card/90 shadow-[0_10px_40px_-20px_rgba(11,110,79,0.35)] transition-all duration-500 hover:-translate-y-1.5 hover:border-primary/25 hover:shadow-[0_20px_50px_-18px_rgba(11,110,79,0.45)]",
+        className,
+      )}
+    >
+      <Link
+        href={`/properties/${property.slug}`}
+        className="absolute inset-0 z-10 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        aria-label={`View ${property.title}`}
+      >
+        <span className="sr-only">View {property.title}</span>
+      </Link>
+
+      <div className="relative aspect-[4/3] overflow-hidden">
+        <Image
+          src={imageUrl}
+          alt={property.primaryImage?.alt ?? property.title}
+          fill
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+          priority={priority}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+
+        <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
+          {property.isFeatured && (
+            <Badge className="gap-1 bg-primary/90 backdrop-blur-sm">
+              <Star className="h-3 w-3 fill-current" aria-hidden="true" />
+              Featured
+            </Badge>
+          )}
+          {property.isVerified && (
+            <Badge
+              variant="secondary"
+              className="gap-1 bg-white/90 text-foreground backdrop-blur-sm dark:bg-black/70 dark:text-white"
+            >
+              <ShieldCheck className="h-3 w-3" aria-hidden="true" />
+              Verified
+            </Badge>
+          )}
+        </div>
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className={cn(
+            "absolute right-3 top-3 z-20 h-9 w-9 rounded-full bg-white/90 text-foreground backdrop-blur-sm hover:bg-white dark:bg-black/70 dark:text-white dark:hover:bg-black/90",
+            favorited && "text-red-500 hover:text-red-600",
+          )}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setFavorited((prev) => !prev);
+          }}
+          aria-label={favorited ? "Remove from wishlist" : "Add to wishlist"}
+          aria-pressed={favorited}
+        >
+          <Heart
+            className={cn("h-4 w-4", favorited && "fill-current")}
+            aria-hidden="true"
+          />
+        </Button>
+
+        <div className="absolute bottom-3 left-3">
+          <span className="rounded-lg bg-white/95 px-2.5 py-1 text-xs font-medium text-foreground backdrop-blur-sm dark:bg-black/80 dark:text-white">
+            {getListingTypeLabel(property.listingType)}
+          </span>
+        </div>
+      </div>
+
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-2">
+          <p className="font-display text-xl font-semibold text-primary">
+            {formatPrice(property.price, { currency: property.currency })}
+            {property.listingType === "RENT" && (
+              <span className="text-sm font-normal text-muted-foreground">
+                /mo
+              </span>
+            )}
+            {property.listingType === "HOLIDAY" && (
+              <span className="text-sm font-normal text-muted-foreground">
+                /night
+              </span>
+            )}
+          </p>
+          <span className="shrink-0 text-xs text-muted-foreground">
+            {getPropertyTypeLabel(property.propertyType)}
+          </span>
+        </div>
+
+        <h3 className="mt-1 line-clamp-1 font-medium text-foreground">
+          {property.title}
+        </h3>
+
+        <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
+          <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span className="line-clamp-1">{location}</span>
+        </p>
+
+        {(property.bedrooms != null || property.bathrooms != null) && (
+          <div className="mt-3 flex items-center gap-4 text-sm text-muted-foreground">
+            {property.bedrooms != null && (
+              <span className="flex items-center gap-1">
+                <BedDouble className="h-4 w-4" aria-hidden="true" />
+                {property.bedrooms} bed{property.bedrooms !== 1 ? "s" : ""}
+              </span>
+            )}
+            {property.bathrooms != null && (
+              <span className="flex items-center gap-1">
+                <Bath className="h-4 w-4" aria-hidden="true" />
+                {property.bathrooms} bath{property.bathrooms !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    </article>
+  );
+}
+
+export function PropertyCardSkeleton({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn(
+        "overflow-hidden rounded-2xl border border-border bg-card",
+        className,
+      )}
+      aria-hidden="true"
+    >
+      <Skeleton className="aspect-[4/3] w-full rounded-none" />
+      <div className="space-y-3 p-4">
+        <Skeleton className="h-6 w-1/3" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-2/3" />
+        <div className="flex gap-4">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+      </div>
+    </div>
+  );
+}
