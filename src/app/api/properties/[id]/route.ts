@@ -107,8 +107,13 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       );
     }
 
-    const { id: _propertyId, ...updateData } = parsed.data;
+    const { id: _propertyId, images: _images, parking: _parking, ...rest } =
+      parsed.data;
     void _propertyId;
+    void _images;
+    void _parking;
+
+    const updateData = rest;
 
     const isAdmin = session.user.role === "ADMIN";
 

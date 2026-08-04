@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import type { ListingType, PropertyType, SubscriptionPlan } from "@/types";
+import type { SubscriptionPlan } from "@/types";
 
 export class StripeConfigError extends Error {
   constructor(message = "Stripe is not configured") {
