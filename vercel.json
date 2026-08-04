@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "buildCommand": "prisma generate && next build",
+  "buildCommand": "prisma generate && (node -e \"process.exit(process.env.DATABASE_URL ? 0 : 2)\" && npx prisma migrate deploy || echo \"Skipping migrations (DATABASE_URL not set)\") && next build",
   "installCommand": "npm ci"
 }

@@ -68,6 +68,19 @@ export async function POST(request: Request) {
 
       return NextResponse.json({ success: true, data: user }, { status: 201 });
     } catch {
+      // On production (Vercel), we must not create "fake" demo users when Postgres is missing.
+      // The correct fix is to configure DATABASE_URL + run migrations.
+      if (process.env.NODE_ENV === "production") {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "Database is unavailable. Connect Postgres (DATABASE_URL) to create real accounts.",
+          },
+          { status: 503 },
+        );
+      }
+
       const demo = createDemoUser({
         name,
         email: normalizedEmail,
