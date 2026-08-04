@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "prisma generate && next build",
+    "build": "node scripts/ensure-db-env.js && prisma generate && next build",
+    "postinstall": "node scripts/ensure-db-env.js && prisma generate",
     "start": "node server.js",
     "start:local": "next start",
     "start:railway": "prisma migrate deploy && node server.js",
@@ -14,10 +15,9 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
-    "db:migrate:deploy": "prisma migrate deploy",
-    "db:seed": "tsx prisma/seed.ts",
-    "db:studio": "prisma studio",
-    "postinstall": "prisma generate"
+    "db:migrate:deploy": "node scripts/ensure-db-env.js && prisma migrate deploy",
+    "db:seed": "node scripts/ensure-db-env.js && tsx prisma/seed.ts",
+    "db:studio": "prisma studio"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
