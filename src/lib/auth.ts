@@ -1,4 +1,3 @@
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import type { Provider } from "@auth/core/providers";
 import bcrypt from "bcryptjs";
 import NextAuth from "next-auth";
@@ -79,8 +78,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
-  // Adapter is optional for JWT credentials; wrap so missing DB doesn't crash boot
-  adapter: PrismaAdapter(prisma),
+  // JWT + credentials only — PrismaAdapter breaks credential sign-in on serverless.
   providers,
   callbacks: {
     ...authConfig.callbacks,

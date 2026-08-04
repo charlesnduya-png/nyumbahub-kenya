@@ -12,9 +12,15 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  const isSecure = request.nextUrl.protocol === "https:";
+
   const token = await getToken({
     req: request,
     secret: process.env.AUTH_SECRET,
+    secureCookie: isSecure,
+    cookieName: isSecure
+      ? "__Secure-authjs.session-token"
+      : "authjs.session-token",
   });
 
   if (!token) {
@@ -41,11 +47,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  if (pathname.startsWith("/dashboard/seller") && !["SELLER", "AGENT", "ADMIN"].includes(String(token.role))) {
+  if (
+    pathname.startsWith("/dashboard/seller") &&
+    !["SELLER", "AGENT", "ADMIN"].includes(String(token.role))
+  ) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  if (pathname.startsWith("/dashboard/agent") && !["AGENT", "ADMIN"].includes(String(token.role))) {
+  if (
+    pathname.startsWith("/dashboard/agent") &&
+    !["AGENT", "ADMIN"].includes(String(token.role))
+  ) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 

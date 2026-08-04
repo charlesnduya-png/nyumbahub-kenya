@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -29,7 +29,6 @@ const QUICK_LOGINS = [
 ] as const;
 
 export default function LoginPageClient() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
   const [isLoading, setIsLoading] = useState(false);
@@ -60,14 +59,14 @@ export default function LoginPageClient() {
         redirect: false,
       });
 
-      if (result?.error) {
+      if (!result?.ok || result.error) {
         toast.error("Invalid email or password. Please try again.");
         return;
       }
 
       toast.success("Welcome back!");
-      router.push(nextUrl);
-      router.refresh();
+      // Full navigation so the session cookie is sent on the next request.
+      window.location.assign(nextUrl);
     } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {
