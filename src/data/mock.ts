@@ -44,8 +44,34 @@ export interface MockCategory {
 }
 
 function property(
-  partial: Omit<PropertyCard, "currency" | "status" | "parkingSpaces" | "furnished" | "swimmingPool" | "security" | "views"> &
-    Partial<Pick<PropertyCard, "currency" | "status" | "parkingSpaces" | "furnished" | "swimmingPool" | "security" | "views">>,
+  partial: Omit<
+    PropertyCard,
+    | "currency"
+    | "status"
+    | "parkingSpaces"
+    | "furnished"
+    | "swimmingPool"
+    | "security"
+    | "views"
+    | "isFeatured"
+    | "isPremium"
+    | "isVerified"
+  > &
+    Partial<
+      Pick<
+        PropertyCard,
+        | "currency"
+        | "status"
+        | "parkingSpaces"
+        | "furnished"
+        | "swimmingPool"
+        | "security"
+        | "views"
+        | "isFeatured"
+        | "isPremium"
+        | "isVerified"
+      >
+    >,
 ): PropertyCard {
   const imageUrl = partial.primaryImage?.url ?? unsplash("photo-1600585154340-be6161a56a0c");
   return {
@@ -56,6 +82,9 @@ function property(
     swimmingPool: false,
     security: true,
     views: 120,
+    isFeatured: false,
+    isPremium: false,
+    isVerified: false,
     ...partial,
     primaryImage: partial.primaryImage ?? {
       id: `${partial.id}-img`,
@@ -861,13 +890,13 @@ export const latestProperties = [...mockProperties]
   )
   .slice(0, 8);
 
-type MockSearchFilters = PropertySearchInput & {
+type MockSearchFilters = Partial<PropertySearchInput> & {
   query?: string;
   isFeatured?: boolean;
   sortBy?: "newest" | "price_asc" | "price_desc" | "popular";
 };
 
-export function filterMockProperties(filters: MockSearchFilters) {
+export function filterMockProperties(filters: MockSearchFilters = {}) {
   let results = mockProperties.filter((p) => p.status === "ACTIVE");
 
   if (filters.query?.trim()) {

@@ -63,7 +63,7 @@ function buildInitialListings(): ManagedListing[] {
     slug: p.slug,
     listingType: p.listingType,
     propertyType: p.propertyType,
-    description: p.description,
+    description: `${p.title} in ${p.town}, ${p.county}.`,
     price: p.price,
     currency: p.currency,
     town: p.town,
