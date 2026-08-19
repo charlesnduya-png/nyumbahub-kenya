@@ -30,7 +30,7 @@ interface PropertyMediaImageProps {
 /**
  * Renders listing photos safely:
  * - https URLs → next/image
- * - data:/blob: URLs (uploads without Cloudinary) → native <img>
+ * - data:/blob: URLs and local /api/media paths → native <img>
  */
 export function PropertyMediaImage({
   src,

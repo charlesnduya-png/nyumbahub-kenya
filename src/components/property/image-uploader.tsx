@@ -83,13 +83,6 @@ export function ImageUploader({
           publicId: json.data.publicId as string | undefined,
           alt: file.name.replace(/\.[^.]+$/, ""),
         });
-
-        if (json.stub && uploaded.length === 1) {
-          toast.message("Photos saved without Cloudinary", {
-            description:
-              "Add Cloudinary env vars for reliable image hosting in production.",
-          });
-        }
       }
 
       if (uploaded.length > 0) {

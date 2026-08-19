@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
+import { isBlobConfigured, uploadFileToBlob } from "@/lib/blob-storage";
 import {
   isCloudinaryConfigured,
   CloudinaryConfigError,
@@ -28,7 +29,7 @@ function stubFromDataUrl(dataUrl: string, mimeType?: string) {
   };
 }
 
-async function persistStubUpload(
+async function persistNeonUpload(
   userId: string,
   dataUrl: string,
   mimeType?: string,
@@ -52,6 +53,30 @@ async function persistStubUpload(
       publicId: stub.publicId,
     };
   }
+}
+
+async function persistHostedUpload(
+  userId: string,
+  result: { url: string; publicId: string },
+  mimeType?: string | null,
+) {
+  try {
+    await saveMediaAsset({
+      userId,
+      publicId: result.publicId,
+      url: result.url,
+      mimeType: mimeType ?? null,
+    });
+  } catch (error) {
+    console.error("MediaAsset save failed:", error);
+  }
+  return result;
+}
+
+function imageFolderFor(type: string) {
+  if (type === "profile") return "your-home/profiles";
+  if (type === "blog") return "your-home/blog";
+  return "your-home/properties";
 }
 
 export async function POST(request: Request) {
@@ -100,16 +125,6 @@ export async function POST(request: Request) {
             { status: 400 },
           );
         }
-        if (!isCloudinaryConfigured()) {
-          return NextResponse.json(
-            {
-              success: false,
-              error:
-                "Video uploads require Cloudinary. Add Cloudinary credentials in production.",
-            },
-            { status: 503 },
-          );
-        }
       } else if (!file.type.startsWith("image/")) {
         return NextResponse.json(
           { success: false, error: "Only image files are allowed" },
@@ -117,57 +132,68 @@ export async function POST(request: Request) {
         );
       }
 
-      const imageFolder =
-        type === "profile"
-          ? "your-home/profiles"
-          : type === "blog"
-            ? "your-home/blog"
-            : "your-home/properties";
+      const folder =
+        type === "video" ? "your-home/properties/videos" : imageFolderFor(type);
+      const buffer = Buffer.from(await file.arrayBuffer());
 
-      if (!isCloudinaryConfigured()) {
-        if (type === "video") {
-          return NextResponse.json(
-            {
-              success: false,
-              error:
-                "Video uploads require Cloudinary. Add Cloudinary credentials in production.",
-            },
-            { status: 503 },
-          );
-        }
-        // Keep stub payloads small so create-listing JSON fits Vercel body limits.
-        if (file.size > 1.5 * 1024 * 1024) {
-          return NextResponse.json(
-            {
-              success: false,
-              stub: true,
-              error:
-                "Image hosting is not configured. Compress the photo under 1.5MB, or add Cloudinary credentials.",
-            },
-            { status: 503 },
-          );
-        }
-
-        const dataUrl = await fileToDataUrl(file);
-        const stored = await persistStubUpload(
+      if (isCloudinaryConfigured()) {
+        const result =
+          type === "video"
+            ? await uploadVideo(buffer, { folder })
+            : await uploadImage(buffer, { folder });
+        const stored = await persistHostedUpload(
           session.user.id,
-          dataUrl,
-          file.type || "image/jpeg",
+          result,
+          file.type,
         );
-        return NextResponse.json({
-          success: true,
-          stub: true,
-          data: stored,
-        });
+        return NextResponse.json({ success: true, data: stored });
       }
 
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const result =
-        type === "video"
-          ? await uploadVideo(buffer, { folder: "your-home/properties/videos" })
-          : await uploadImage(buffer, { folder: imageFolder });
+      if (isBlobConfigured()) {
+        const result = await uploadFileToBlob({
+          data: buffer,
+          filename: file.name || (type === "video" ? "video.mp4" : "photo.jpg"),
+          contentType: file.type || "image/jpeg",
+          folder,
+        });
+        const stored = await persistHostedUpload(
+          session.user.id,
+          result,
+          file.type,
+        );
+        return NextResponse.json({ success: true, data: stored });
+      }
 
-      return NextResponse.json({ success: true, data: result });
+      if (type === "video") {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Video uploads need image hosting to be configured.",
+          },
+          { status: 503 },
+        );
+      }
+
+      if (file.size > 1.5 * 1024 * 1024) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Compress the photo under 1.5MB and try again.",
+          },
+          { status: 503 },
+        );
+      }
+
+      const dataUrl = await fileToDataUrl(file);
+      const stored = await persistNeonUpload(
+        session.user.id,
+        dataUrl,
+        file.type || "image/jpeg",
+      );
+      return NextResponse.json({
+        success: true,
+        data: stored,
+      });
     }
 
     const body = await request.json();
@@ -180,32 +206,51 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!isCloudinaryConfigured()) {
-      const dataUrl = data.startsWith("data:")
-        ? data
-        : `data:image/jpeg;base64,${data}`;
-      const stored = await persistStubUpload(session.user.id, dataUrl);
-      return NextResponse.json({
-        success: true,
-        stub: true,
-        data: stored,
-      });
+    const dataUrl = data.startsWith("data:")
+      ? data
+      : `data:image/jpeg;base64,${data}`;
+    const comma = dataUrl.indexOf(",");
+    const payload = comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl;
+    const buffer = Buffer.from(payload, "base64");
+    const mimeMatch = dataUrl.match(/^data:([^;,]+)/i);
+    const mimeType = mimeMatch?.[1] || "image/jpeg";
+    const folder =
+      type === "video" ? "your-home/properties/videos" : "your-home/properties";
+
+    if (isCloudinaryConfigured()) {
+      const result =
+        type === "video"
+          ? await uploadVideo(data, { folder })
+          : await uploadImage(data, { folder });
+      const stored = await persistHostedUpload(session.user.id, result, mimeType);
+      return NextResponse.json({ success: true, data: stored });
     }
 
-    const result =
-      type === "video"
-        ? await uploadVideo(data, { folder: "your-home/properties/videos" })
-        : await uploadImage(data, { folder: "your-home/properties" });
+    if (isBlobConfigured()) {
+      const result = await uploadFileToBlob({
+        data: buffer,
+        filename: type === "video" ? "video.mp4" : "photo.jpg",
+        contentType: mimeType,
+        folder,
+      });
+      const stored = await persistHostedUpload(session.user.id, result, mimeType);
+      return NextResponse.json({ success: true, data: stored });
+    }
 
-    return NextResponse.json({ success: true, data: result });
+    const stored = await persistNeonUpload(session.user.id, dataUrl, mimeType);
+    return NextResponse.json({
+      success: true,
+      data: stored,
+    });
   } catch (error) {
     if (error instanceof CloudinaryConfigError) {
       return NextResponse.json(
-        { success: false, error: error.message, stub: true },
+        { success: false, error: error.message },
         { status: 503 },
       );
     }
 
+    console.error("Upload failed:", error);
     return NextResponse.json(
       { success: false, error: "Upload failed" },
       { status: 500 },
