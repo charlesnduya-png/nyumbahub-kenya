@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Loader2, Search, Building2 } from "lucide-react";
+import { Loader2, Search, Building2, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import { UserListingsDialog } from "@/components/admin/user-listings-dialog";
@@ -22,7 +22,38 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ACCOUNT_TYPE_LABELS } from "@/lib/admin-growth";
+import { TEAM_ROLE_LABEL, type TeamRoleValue } from "@/lib/team-roles";
 import type { Role } from "@/types";
+
+type AdminTeamMember = {
+  userId: string;
+  name: string;
+  email: string;
+  isActive: boolean;
+  role: Role;
+  roles: TeamRoleValue[];
+};
+
+type AdminTeamInvite = {
+  email: string;
+  roles: TeamRoleValue[];
+  expiresAt: string;
+};
+
+export type AdminUserTeam =
+  | {
+      kind: "owner";
+      memberCount: number;
+      members: AdminTeamMember[];
+      pendingInvites: AdminTeamInvite[];
+    }
+  | {
+      kind: "member";
+      ownerId: string;
+      ownerName: string;
+      ownerEmail: string;
+      roles: TeamRoleValue[];
+    };
 
 export interface AdminUser {
   id: string;
@@ -46,6 +77,71 @@ export interface AdminUser {
   ownedListingCount?: number;
   agentListingCount?: number;
   listingCount?: number;
+  team?: AdminUserTeam | null;
+}
+
+function rolesText(roles?: TeamRoleValue[] | null) {
+  return (roles ?? [])
+    .map((role) => TEAM_ROLE_LABEL[role] ?? role)
+    .join(", ");
+}
+
+function AccountTeamCell({ team }: { team?: AdminUserTeam | null }) {
+  if (!team) {
+    return <span className="text-muted-foreground">No team</span>;
+  }
+
+  if (team.kind === "member") {
+    return (
+      <div className="max-w-[16rem] space-y-1">
+        <Badge variant="secondary">On a team</Badge>
+        <p className="text-sm font-medium">
+          {team.ownerName}
+          <span className="font-normal text-muted-foreground">’s account</span>
+        </p>
+        <p className="text-xs text-muted-foreground">{team.ownerEmail}</p>
+        <p className="text-xs text-muted-foreground">{rolesText(team.roles)}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-[18rem] space-y-2">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <Badge variant="default">
+          <Users className="mr-1 h-3 w-3" />
+          Owner
+        </Badge>
+        <Badge variant="secondary">
+          {team.memberCount} {team.memberCount === 1 ? "member" : "members"}
+        </Badge>
+        {team.pendingInvites.length > 0 ? (
+          <Badge variant="outline">
+            {team.pendingInvites.length} pending
+          </Badge>
+        ) : null}
+      </div>
+      {team.members.length === 0 && team.pendingInvites.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No one invited yet</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {team.members.map((member) => (
+            <li key={member.userId} className="text-xs">
+              <p className="font-medium text-foreground">{member.name}</p>
+              <p className="text-muted-foreground">{member.email}</p>
+              <p className="text-muted-foreground">{rolesText(member.roles)}</p>
+            </li>
+          ))}
+          {team.pendingInvites.map((invite) => (
+            <li key={invite.email} className="text-xs text-muted-foreground">
+              <p>{invite.email} · invited</p>
+              <p>{rolesText(invite.roles)}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 type AccountTab = "tenants" | "agents" | "landlords" | "admins" | "all";
@@ -94,6 +190,7 @@ function UsersTable({
       <thead>
         <tr className="border-b text-left text-muted-foreground">
           <th className="pb-3 pr-4 font-medium">Name</th>
+          <th className="pb-3 pr-4 font-medium">Team</th>
           <th className="pb-3 pr-4 font-medium">Email</th>
           <th className="pb-3 pr-4 font-medium">Phone</th>
           {showListings ? (
@@ -122,6 +219,9 @@ function UsersTable({
                   </Badge>
                 ) : null}
               </div>
+            </td>
+            <td className="py-3 pr-4 align-top">
+              <AccountTeamCell team={u.team} />
             </td>
             <td className="py-3 pr-4">{u.email}</td>
             <td className="py-3 pr-4">{u.phone}</td>
@@ -288,10 +388,25 @@ export default function AdminUsersPage() {
       return users.filter((u) => {
         if (role !== "ALL" && u.role !== role) return false;
         if (!q) return true;
+        const teamHit =
+          u.team?.kind === "owner"
+            ? u.team.members.some(
+                (m) =>
+                  m.name.toLowerCase().includes(q) ||
+                  m.email.toLowerCase().includes(q),
+              ) ||
+              u.team.pendingInvites.some((invite) =>
+                invite.email.toLowerCase().includes(q),
+              )
+            : u.team?.kind === "member"
+              ? u.team.ownerName.toLowerCase().includes(q) ||
+                u.team.ownerEmail.toLowerCase().includes(q)
+              : false;
         return (
           u.name.toLowerCase().includes(q) ||
           u.email.toLowerCase().includes(q) ||
-          u.phone.toLowerCase().includes(q)
+          u.phone.toLowerCase().includes(q) ||
+          teamHit
         );
       });
     },
@@ -385,8 +500,8 @@ export default function AdminUsersPage() {
         <div>
           <h1 className="text-2xl font-bold">Accounts</h1>
           <p className="text-muted-foreground">
-            Manage tenants, agents, landlords, and admins. View agent and
-            landlord listings from their account row.
+            Manage tenants, agents, landlords, and admins. Each professional
+            account shows its team members and pending invitations.
           </p>
         </div>
         <div className="flex gap-2">
@@ -425,7 +540,7 @@ export default function AdminUsersPage() {
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search name, email, phone…"
+                placeholder="Search name, email, phone, or team…"
                 className="w-full pl-8 sm:w-72"
               />
             </div>

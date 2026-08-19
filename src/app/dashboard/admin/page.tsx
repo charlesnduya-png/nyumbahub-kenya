@@ -12,7 +12,7 @@ import { getAdminGrowthSummary } from "@/lib/admin-growth";
 const ADMIN_SECTIONS = [
   {
     title: "Accounts",
-    description: "Tenants, agents, landlords, and admins",
+    description: "Tenants, agents, landlords, and each account’s team",
     href: "/dashboard/admin/users",
   },
   {

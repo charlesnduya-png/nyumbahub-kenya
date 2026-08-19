@@ -46,6 +46,47 @@ export async function GET() {
             _count: { select: { listings: true } },
           },
         },
+        accountTeamOwned: {
+          select: {
+            members: {
+              orderBy: { createdAt: "desc" },
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    isActive: true,
+                    role: true,
+                  },
+                },
+              },
+            },
+            invites: {
+              where: { acceptedAt: null, expiresAt: { gt: new Date() } },
+              orderBy: { createdAt: "desc" },
+              select: {
+                id: true,
+                email: true,
+                roles: true,
+                expiresAt: true,
+              },
+            },
+          },
+        },
+        accountTeamMembers: {
+          take: 1,
+          select: {
+            roles: true,
+            team: {
+              select: {
+                owner: {
+                  select: { id: true, name: true, email: true },
+                },
+              },
+            },
+          },
+        },
       },
     });
 
@@ -55,6 +96,8 @@ export async function GET() {
         const ownedCount = u._count.properties;
         const agentCount = u.agentProfile?._count.listings ?? 0;
         const isAgent = u.role === "AGENT";
+        const ownedTeam = u.accountTeamOwned;
+        const membership = u.accountTeamMembers[0] ?? null;
         const isVerified = isAgent
           ? (u.agentProfile?.isVerified ?? false)
           : u.verificationStatus === "VERIFIED" ||
@@ -81,6 +124,34 @@ export async function GET() {
           ownedListingCount: ownedCount,
           agentListingCount: agentCount,
           listingCount: ownedCount + agentCount,
+          team: ownedTeam
+            ? {
+                kind: "owner" as const,
+                memberCount: ownedTeam.members.length,
+                members: ownedTeam.members.map((m) => ({
+                  userId: m.user.id,
+                  name: m.user.name ?? m.user.email,
+                  email: m.user.email,
+                  isActive: m.user.isActive,
+                  role: m.user.role,
+                  roles: m.roles,
+                })),
+                pendingInvites: ownedTeam.invites.map((invite) => ({
+                  email: invite.email,
+                  roles: invite.roles,
+                  expiresAt: invite.expiresAt.toISOString(),
+                })),
+              }
+            : membership
+              ? {
+                  kind: "member" as const,
+                  ownerId: membership.team.owner.id,
+                  ownerName:
+                    membership.team.owner.name ?? membership.team.owner.email,
+                  ownerEmail: membership.team.owner.email,
+                  roles: membership.roles,
+                }
+              : null,
         };
       }),
     });
