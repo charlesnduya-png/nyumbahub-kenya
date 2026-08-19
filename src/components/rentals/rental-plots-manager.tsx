@@ -59,6 +59,9 @@ type PlotUnit = {
   propertyType: string;
   listingType: string;
   isVacant?: boolean;
+  housesTotal?: number;
+  housesAvailable?: number;
+  housesRented?: number;
   images?: Array<{ url: string; alt: string | null }>;
 };
 
@@ -106,6 +109,7 @@ export function RentalPlotsManager() {
     price: "",
     bedrooms: "1",
     bathrooms: "1",
+    housesAvailable: "1",
     furnished: false,
     description: "",
     images: [] as UploadedImage[],
@@ -199,6 +203,11 @@ export function RentalPlotsManager() {
       toast.error("Add at least one photo of this house");
       return;
     }
+    const housesAvailable = Number(unitForm.housesAvailable);
+    if (!Number.isInteger(housesAvailable) || housesAvailable < 1) {
+      toast.error("Enter how many houses are available");
+      return;
+    }
     setBusy(true);
     try {
       const res = await fetch(`/api/rental-plots/${unitOpen.id}`, {
@@ -212,6 +221,7 @@ export function RentalPlotsManager() {
           bedrooms: Number(unitForm.bedrooms) || 0,
           bathrooms: Number(unitForm.bathrooms) || 0,
           furnished: unitForm.furnished,
+          housesAvailable,
           description: unitForm.description.trim() || undefined,
           images: unitForm.images.map((img, index) => ({
             url: img.url,
@@ -237,6 +247,7 @@ export function RentalPlotsManager() {
         price: "",
         bedrooms: "1",
         bathrooms: "1",
+        housesAvailable: "1",
         furnished: false,
         description: "",
         images: [],
@@ -371,6 +382,7 @@ export function RentalPlotsManager() {
                       {plot.counts.vacant} vacant
                     </Badge>
                     <Badge variant="outline">{plot.counts.rented} rented</Badge>
+                    <Badge variant="outline">{plot.counts.total} houses</Badge>
                     {plot.counts.pending > 0 ? (
                       <Badge>{plot.counts.pending} pending approval</Badge>
                     ) : null}
@@ -389,6 +401,7 @@ export function RentalPlotsManager() {
                           price: "",
                           bedrooms: "1",
                           bathrooms: "1",
+                          housesAvailable: "1",
                           furnished: false,
                           description: "",
                           images: [],
@@ -457,18 +470,22 @@ export function RentalPlotsManager() {
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge
                             variant={
-                              unit.status === "ACTIVE"
+                              (unit.housesAvailable ?? 0) > 0
                                 ? "default"
                                 : unit.status === "RENTED"
                                   ? "secondary"
                                   : "outline"
                             }
                           >
-                            {unit.status === "ACTIVE"
-                              ? "VACANT"
-                              : unit.status}
+                            {(unit.housesTotal ?? 1) > 1
+                              ? `${unit.housesAvailable ?? 0} of ${unit.housesTotal} vacant`
+                              : unit.status === "ACTIVE"
+                                ? "VACANT"
+                                : unit.status}
                           </Badge>
-                          {canManagePlots && unit.status === "ACTIVE" ? (
+                          {canManagePlots &&
+                          unit.status !== "PENDING" &&
+                          (unit.housesAvailable ?? 0) > 0 ? (
                             <Button
                               size="sm"
                               variant="outline"
@@ -482,10 +499,14 @@ export function RentalPlotsManager() {
                               }
                             >
                               <KeyRound className="mr-1 h-3.5 w-3.5" />
-                              Mark rented
+                              {(unit.housesTotal ?? 1) > 1
+                                ? "Mark one rented"
+                                : "Mark rented"}
                             </Button>
                           ) : null}
-                          {canManagePlots && unit.status === "RENTED" ? (
+                          {canManagePlots &&
+                          unit.status !== "PENDING" &&
+                          (unit.housesRented ?? 0) > 0 ? (
                             <Button
                               size="sm"
                               variant="outline"
@@ -498,7 +519,9 @@ export function RentalPlotsManager() {
                                 )
                               }
                             >
-                              Mark vacant again
+                              {(unit.housesTotal ?? 1) > 1
+                                ? "Mark one vacant"
+                                : "Mark vacant again"}
                             </Button>
                           ) : null}
                           {unit.status === "ACTIVE" ||
@@ -614,7 +637,7 @@ export function RentalPlotsManager() {
             <DialogTitle>Post vacant house</DialogTitle>
             <DialogDescription>
               {unitOpen
-                ? `Add a vacant rental at ${unitOpen.name}. Include the floor and photos of this exact house.`
+                ? `Add vacant rentals at ${unitOpen.name}. Enter how many identical houses are free — each booking deducts one until none are left.`
                 : null}
             </DialogDescription>
           </DialogHeader>
@@ -689,6 +712,26 @@ export function RentalPlotsManager() {
                   }
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Total houses available</Label>
+              <Input
+                type="number"
+                min={1}
+                max={80}
+                value={unitForm.housesAvailable}
+                onChange={(e) =>
+                  setUnitForm((f) => ({
+                    ...f,
+                    housesAvailable: e.target.value,
+                  }))
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                How many identical houses of this type are vacant on this plot.
+                When one is rented, the number drops until all are booked. The
+                listing stays public until the last house is taken.
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">

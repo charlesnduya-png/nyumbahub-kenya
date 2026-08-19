@@ -73,6 +73,9 @@ export async function GET() {
               take: 1,
               select: { url: true, alt: true },
             },
+            rentalRooms: {
+              select: { id: true, status: true },
+            },
           },
           orderBy: { createdAt: "desc" },
         },
@@ -85,10 +88,27 @@ export async function GET() {
       canViewRent: ctx.permissions.manageListings,
       canManagePlots: canManagePlots(ctx),
       data: plots.map((plot) => {
-        const vacant = plot.units.filter(
-          (u) => u.status === "ACTIVE" && u.listingType === "RENT",
-        );
-        const rented = plot.units.filter((u) => u.status === "RENTED");
+        let vacantHouses = 0;
+        let rentedHouses = 0;
+        let totalHouses = 0;
+
+        for (const unit of plot.units) {
+          if (unit.rentalRooms.length > 0) {
+            const available = unit.rentalRooms.filter((room) => room.status === "AVAILABLE").length;
+            vacantHouses += available;
+            rentedHouses += unit.rentalRooms.length - available;
+            totalHouses += unit.rentalRooms.length;
+          } else if (unit.status === "ACTIVE" && unit.listingType === "RENT") {
+            vacantHouses += 1;
+            totalHouses += 1;
+          } else if (unit.status === "RENTED") {
+            rentedHouses += 1;
+            totalHouses += 1;
+          } else {
+            totalHouses += 1;
+          }
+        }
+
         const pending = plot.units.filter((u) => u.status === "PENDING");
 
         return {
@@ -104,15 +124,41 @@ export async function GET() {
           createdAt: plot.createdAt.toISOString(),
           updatedAt: plot.updatedAt.toISOString(),
           counts: {
-            total: plot.units.length,
-            vacant: vacant.length,
-            rented: rented.length,
+            total: totalHouses,
+            vacant: vacantHouses,
+            rented: rentedHouses,
             pending: pending.length,
           },
-          units: plot.units.map((u) => ({
-            ...u,
-            isVacant: u.status === "ACTIVE" && u.listingType === "RENT",
-          })),
+          units: plot.units.map((u) => {
+            const rooms = u.rentalRooms;
+            const housesTotal = rooms.length > 0 ? rooms.length : 1;
+            const housesAvailable =
+              rooms.length > 0
+                ? rooms.filter((room) => room.status === "AVAILABLE").length
+                : u.status === "ACTIVE" && u.listingType === "RENT"
+                  ? 1
+                  : 0;
+
+            return {
+              id: u.id,
+              title: u.title,
+              slug: u.slug,
+              unitLabel: u.unitLabel,
+              unitFloor: u.unitFloor,
+              price: u.price,
+              currency: u.currency,
+              bedrooms: u.bedrooms,
+              bathrooms: u.bathrooms,
+              status: u.status,
+              propertyType: u.propertyType,
+              listingType: u.listingType,
+              images: u.images,
+              housesTotal,
+              housesAvailable,
+              housesRented: housesTotal - housesAvailable,
+              isVacant: housesAvailable > 0,
+            };
+          }),
         };
       }),
     });

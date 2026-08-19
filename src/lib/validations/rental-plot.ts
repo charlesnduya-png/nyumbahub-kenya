@@ -65,6 +65,7 @@ export const createPlotUnitSchema = z.object({
     .array(plotUnitImageSchema)
     .min(1, "Add at least one photo of this house")
     .max(MAX_LISTING_IMAGES, `You can upload up to ${MAX_LISTING_IMAGES} photos`),
+  housesAvailable: z.coerce.number().int().min(1).max(80).default(1),
   submitForReview: z.boolean().optional().default(true),
 });
 

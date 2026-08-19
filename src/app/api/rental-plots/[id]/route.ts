@@ -241,13 +241,16 @@ export async function POST(request: Request, { params }: RouteParams) {
     const unitFloor = parsed.data.unitFloor;
     const images = parsed.data.images;
     const hasPrimary = images.some((img) => img.isPrimary);
+    const housesAvailable = parsed.data.housesAvailable;
 
     const title =
       parsed.data.title?.trim() ||
-      `${unitLabel}, ${unitFloor} — ${plot.name}, ${plot.town}`;
+      (housesAvailable > 1
+        ? `${housesAvailable} ${unitLabel} units, ${unitFloor} — ${plot.name}, ${plot.town}`
+        : `${unitLabel}, ${unitFloor} — ${plot.name}, ${plot.town}`);
     const description =
       parsed.data.description?.trim() ||
-      `Vacant ${parsed.data.propertyType.toLowerCase()} (${unitLabel}, ${unitFloor}) available for rent at ${plot.name} in ${plot.town}, ${plot.county}.${plot.description ? ` ${plot.description}` : ""}`;
+      `${housesAvailable} vacant ${parsed.data.propertyType.toLowerCase()}${housesAvailable === 1 ? "" : "s"} (${unitLabel}, ${unitFloor}) available for rent at ${plot.name} in ${plot.town}, ${plot.county}.${plot.description ? ` ${plot.description}` : ""}`;
 
     const baseSlug = slugify(`${title}-${unitLabel}`);
     let slug = baseSlug;
@@ -292,6 +295,16 @@ export async function POST(request: Request, { params }: RouteParams) {
             isPrimary: hasPrimary ? Boolean(img.isPrimary) : index === 0,
           })),
         },
+        rentalRooms: {
+          create: Array.from({ length: housesAvailable }, (_, index) => ({
+            label:
+              housesAvailable > 1 ? `${unitLabel} ${index + 1}` : unitLabel,
+            floor: unitFloor,
+            price: parsed.data.price,
+            sortOrder: index,
+            status: "AVAILABLE" as const,
+          })),
+        },
       },
       include: {
         images: { orderBy: { order: "asc" } },
@@ -304,8 +317,12 @@ export async function POST(request: Request, { params }: RouteParams) {
         data: unit,
         message:
           status === "PENDING"
-            ? "Vacant unit submitted for admin approval"
-            : "Vacant unit saved as draft",
+            ? housesAvailable > 1
+              ? `${housesAvailable} houses submitted for admin approval. Each booking will deduct one until none are left.`
+              : "Vacant unit submitted for admin approval"
+            : housesAvailable > 1
+              ? `${housesAvailable} houses saved as draft`
+              : "Vacant unit saved as draft",
       },
       { status: 201 },
     );
