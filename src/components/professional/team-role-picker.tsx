@@ -5,7 +5,7 @@ import {
   TEAM_ROLE_VALUES,
   normalizeTeamRoles,
   type TeamRoleValue,
-} from "@/lib/account-team";
+} from "@/lib/team-roles";
 import { Checkbox } from "@/components/ui/checkbox";
 
 export function TeamRolePicker({
@@ -17,7 +17,7 @@ export function TeamRolePicker({
   onChange: (roles: TeamRoleValue[]) => void;
   disabled?: boolean;
 }) {
-  const selected = new Set(value);
+  const selected = new Set(value ?? []);
 
   function toggle(role: TeamRoleValue, checked: boolean) {
     let next: TeamRoleValue[];

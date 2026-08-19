@@ -2,29 +2,12 @@ import type { TeamRole } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
-export const TEAM_ROLE_VALUES = [
-  "FULL",
-  "LISTINGS",
-  "INQUIRIES",
-  "VIEWINGS",
-  "OFFERS",
-  "BOOKINGS",
-  "MESSAGES",
-  "READ",
-] as const;
-
-export type TeamRoleValue = (typeof TEAM_ROLE_VALUES)[number];
-
-export const TEAM_ROLE_LABEL: Record<TeamRoleValue, string> = {
-  FULL: "Full access",
-  LISTINGS: "Manage listings",
-  INQUIRIES: "Manage inquiries",
-  VIEWINGS: "Manage viewings",
-  OFFERS: "Manage offers",
-  BOOKINGS: "Manage bookings",
-  MESSAGES: "Manage messages",
-  READ: "Read-only",
-};
+export {
+  TEAM_ROLE_VALUES,
+  TEAM_ROLE_LABEL,
+  normalizeTeamRoles,
+  type TeamRoleValue,
+} from "@/lib/team-roles";
 
 export type TeamPermissions = {
   manageListings: boolean;
@@ -53,12 +36,6 @@ const NO_PERMISSIONS: TeamPermissions = {
   manageMessages: false,
   manageTeam: false,
 };
-
-export function normalizeTeamRoles(roles: readonly string[]): TeamRoleValue[] {
-  const unique = TEAM_ROLE_VALUES.filter((role) => roles.includes(role));
-  if (unique.includes("FULL")) return ["FULL"];
-  return unique.length > 0 ? unique : ["INQUIRIES"];
-}
 
 export function permissionsForTeamRole(role: TeamRole): TeamPermissions {
   switch (role) {

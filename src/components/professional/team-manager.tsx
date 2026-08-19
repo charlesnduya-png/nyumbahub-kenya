@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import {
   TEAM_ROLE_LABEL,
   type TeamRoleValue,
-} from "@/lib/account-team";
+} from "@/lib/team-roles";
 
 type TeamMember = {
   userId: string;
@@ -33,8 +33,8 @@ type TeamInvite = {
   createdAt: string;
 };
 
-function rolesText(roles: TeamRoleValue[]) {
-  return roles.map((role) => TEAM_ROLE_LABEL[role] ?? role).join(", ");
+function rolesText(roles?: TeamRoleValue[] | null) {
+  return (roles ?? []).map((role) => TEAM_ROLE_LABEL[role] ?? role).join(", ");
 }
 
 export function TeamManager() {
@@ -325,7 +325,7 @@ export function TeamManager() {
                       </Button>
                     </div>
                     <TeamRolePicker
-                      value={m.roles}
+                      value={m.roles ?? []}
                       disabled={busy}
                       onChange={(next) => void updateRoles(m.userId, next)}
                     />
