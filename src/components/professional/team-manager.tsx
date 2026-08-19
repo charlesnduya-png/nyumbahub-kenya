@@ -100,9 +100,9 @@ export function TeamManager() {
       } else if (json.data?.joinUrl) {
         try {
           await navigator.clipboard.writeText(json.data.joinUrl);
-          toast.success("Email could not be sent. Join link copied.");
+          toast.success("Invitation created. Join link copied — send it if the email does not arrive.");
         } catch {
-          toast.success("Invitation created. Copy the join link from the pending list after resend.");
+          toast.success("Invitation created. Use Resend if they did not get the email.");
         }
       } else {
         toast.success(json.message ?? "Invitation created");

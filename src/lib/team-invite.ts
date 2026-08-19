@@ -55,19 +55,25 @@ export async function createAndSendTeamInvite(input: {
   const joinUrl = absoluteUrl(`/team/join?token=${encodeURIComponent(rawToken)}`);
 
   let emailSent = false;
+  let emailError: string | undefined;
   if (isMailConfigured()) {
-    await sendTeamInviteEmail({
-      to: email,
-      ownerName: input.ownerName,
-      rolesLabel: rolesLabel(roles),
-      joinUrl,
-    });
-    emailSent = true;
+    try {
+      await sendTeamInviteEmail({
+        to: email,
+        ownerName: input.ownerName,
+        rolesLabel: rolesLabel(roles),
+        joinUrl,
+      });
+      emailSent = true;
+    } catch (error) {
+      emailError = error instanceof Error ? error.message : "Could not send the invitation email";
+      console.error("[team-invite] Email send failed:", error);
+    }
   } else {
     console.warn(`[team-invite] Mail not configured. Join link for ${email}: ${joinUrl}`);
   }
 
-  return { invite, joinUrl, emailSent };
+  return { invite, joinUrl, emailSent, emailError };
 }
 
 export async function findPendingInviteByToken(rawToken: string) {

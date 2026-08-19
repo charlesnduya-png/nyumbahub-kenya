@@ -17,17 +17,16 @@ const addMemberSchema = z.object({
 });
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ success: false, error: "Sign in required" }, { status: 401 });
-  }
-
-  const ctx = await resolveProfessionalActingContext(session.user.id);
-  if (!ctx.permissions.manageTeam) {
-    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
-  }
-
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, error: "Sign in required" }, { status: 401 });
+    }
+
+    const ctx = await resolveProfessionalActingContext(session.user.id);
+    if (!ctx.permissions.manageTeam) {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    }
     const team = await prisma.accountTeam.findUnique({
       where: { ownerId: ctx.actingOwnerId },
       include: {
@@ -69,21 +68,23 @@ export async function GET() {
           })) ?? [],
       },
     });
-  } catch {
+  } catch (error) {
+    console.error("Load team failed:", error);
     return NextResponse.json({ success: false, error: "Unable to load team" }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ success: false, error: "Sign in required" }, { status: 401 });
-  }
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, error: "Sign in required" }, { status: 401 });
+    }
 
-  const ctx = await resolveProfessionalActingContext(session.user.id);
-  if (!ctx.permissions.manageTeam) {
-    return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
-  }
+    const ctx = await resolveProfessionalActingContext(session.user.id);
+    if (!ctx.permissions.manageTeam) {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    }
 
   const body = await request.json().catch(() => ({}));
   const parsed = addMemberSchema.safeParse(body);
@@ -100,7 +101,6 @@ export async function POST(request: Request) {
     parsed.data.roles ?? (parsed.data.role ? [parsed.data.role] : ["INQUIRIES"]),
   );
 
-  try {
     if (email === session.user.email?.toLowerCase()) {
       return NextResponse.json(
         { success: false, error: "You cannot invite yourself" },
@@ -162,19 +162,18 @@ export async function POST(request: Request) {
         roles: invite.roles,
         expiresAt: invite.expiresAt,
         emailSent,
-        joinUrl: emailSent ? undefined : joinUrl,
+        joinUrl,
       },
       message: emailSent
         ? "Invitation sent"
-        : "Invitation created. Email could not be sent — copy the join link.",
+        : "Invitation created. Copy the join link if the email does not arrive.",
     });
   } catch (error) {
     console.error("Create team invite failed:", error);
     return NextResponse.json(
       {
         success: false,
-        error:
-          error instanceof Error ? error.message : "Unable to send team invitation.",
+        error: "Unable to send the invitation. Refresh the page and try again.",
       },
       { status: 400 },
     );
