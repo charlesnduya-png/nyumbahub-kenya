@@ -52,6 +52,7 @@ interface NavItem {
 const professionalNav: NavItem[] = [
   { label: "Professional Home", href: "/dashboard/pro", icon: Briefcase },
   { label: "Profile photo", href: "/dashboard/pro/profile", icon: UserCircle },
+  { label: "The team", href: "/dashboard/pro/team", icon: Users },
   { label: "Notifications", href: "/dashboard/notifications", icon: Bell },
   { label: "Inbox", href: "/dashboard/pro/inbox", icon: Inbox },
   { label: "All Listings", href: "/dashboard/pro/listings", icon: Building2 },

@@ -12,7 +12,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { TeamManager } from "@/components/professional/team-manager";
 
 interface AgentProfile {
   id: string;
@@ -159,7 +158,6 @@ export function ProfileSettingsForm() {
   }
 
   const isAgent = profile?.role === "AGENT";
-  const isProOwner = profile?.role === "AGENT" || profile?.role === "SELLER";
   const isVerified =
     profile?.agentProfile?.isVerified ||
     profile?.verificationStatus === "VERIFIED";
@@ -350,8 +348,6 @@ export function ProfileSettingsForm() {
         </Card>
         </>
       ) : null}
-
-      {isProOwner ? <TeamManager /> : null}
 
       <div className="flex justify-end">
         <Button disabled={saving} onClick={() => void saveProfile()}>
