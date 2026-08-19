@@ -24,9 +24,14 @@ export default async function DashboardLayout({
   }
 
   const owner = isSiteOwnerEmail(session.user.email);
-  const ctx = session.user.id
-    ? await resolveProfessionalActingContext(session.user.id)
-    : null;
+  let ctx = null;
+  try {
+    ctx = session.user.id
+      ? await resolveProfessionalActingContext(session.user.id)
+      : null;
+  } catch (error) {
+    console.error("Dashboard team context failed:", error);
+  }
   const role = (
     owner
       ? "ADMIN"

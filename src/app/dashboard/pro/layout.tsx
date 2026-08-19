@@ -29,9 +29,16 @@ export default async function ProLayout({
     redirect("/login?callbackUrl=/dashboard/pro");
   }
 
-  const ctx = await resolveProfessionalActingContext(session.user.id);
-  if (!hasProfessionalWorkspaceAccess(ctx)) {
-    redirect("/dashboard/tenant");
+  try {
+    const ctx = await resolveProfessionalActingContext(session.user.id);
+    if (!hasProfessionalWorkspaceAccess(ctx)) {
+      redirect("/dashboard/tenant");
+    }
+  } catch (error) {
+    console.error("Professional workspace check failed:", error);
+    if (session.user.role !== "SELLER" && session.user.role !== "AGENT") {
+      redirect("/dashboard/tenant");
+    }
   }
 
   return <>{children}</>;

@@ -10,9 +10,13 @@ export default async function TenantLayout({
 }) {
   const session = await auth();
   if (session?.user?.id) {
-    const ctx = await resolveProfessionalActingContext(session.user.id);
-    if (ctx.isTeamMember) {
-      redirect("/dashboard/pro");
+    try {
+      const ctx = await resolveProfessionalActingContext(session.user.id);
+      if (ctx.isTeamMember) {
+        redirect("/dashboard/pro");
+      }
+    } catch (error) {
+      console.error("Tenant team redirect failed:", error);
     }
   }
 

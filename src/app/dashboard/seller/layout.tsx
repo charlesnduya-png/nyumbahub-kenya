@@ -15,9 +15,16 @@ export default async function SellerLayout({
     redirect("/login?callbackUrl=/dashboard/seller");
   }
 
-  const ctx = await resolveProfessionalActingContext(session.user.id);
-  if (!hasProfessionalWorkspaceAccess(ctx)) {
-    redirect("/dashboard/tenant");
+  try {
+    const ctx = await resolveProfessionalActingContext(session.user.id);
+    if (!hasProfessionalWorkspaceAccess(ctx)) {
+      redirect("/dashboard/tenant");
+    }
+  } catch (error) {
+    console.error("Seller workspace check failed:", error);
+    if (session.user.role !== "SELLER" && session.user.role !== "AGENT") {
+      redirect("/dashboard/tenant");
+    }
   }
 
   return <>{children}</>;

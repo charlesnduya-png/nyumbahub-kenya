@@ -109,47 +109,55 @@ export function hasProfessionalWorkspaceAccess(
 export async function resolveProfessionalActingContext(
   userId: string,
 ): Promise<ProfessionalActingContext> {
-  const membership = await prisma.accountTeamMember.findUnique({
-    where: { userId },
-    include: { team: { select: { ownerId: true } } },
-  });
-
-  if (membership) {
-    const actingOwnerId = membership.team.ownerId;
-    const actingOwner = await prisma.user.findUnique({
-      where: { id: actingOwnerId },
-      select: { role: true, name: true, email: true },
+  try {
+    const membership = await prisma.accountTeamMember.findUnique({
+      where: { userId },
+      include: { team: { select: { ownerId: true } } },
     });
 
-    return {
-      actingOwnerId,
-      actingOwnerRole: actingOwner?.role ?? null,
-      actingOwnerName: actingOwner?.name ?? actingOwner?.email ?? null,
-      permissions: permissionsForTeamRoles(membership.roles),
-      isTeamMember: true,
-      teamMemberRoles: membership.roles,
-    };
+    if (membership) {
+      const actingOwnerId = membership.team.ownerId;
+      const actingOwner = await prisma.user.findUnique({
+        where: { id: actingOwnerId },
+        select: { role: true, name: true, email: true },
+      });
+
+      return {
+        actingOwnerId,
+        actingOwnerRole: actingOwner?.role ?? null,
+        actingOwnerName: actingOwner?.name ?? actingOwner?.email ?? null,
+        permissions: permissionsForTeamRoles(membership.roles),
+        isTeamMember: true,
+        teamMemberRoles: membership.roles,
+      };
+    }
+  } catch (error) {
+    console.error("Team membership lookup failed:", error);
   }
 
-  const ownedTeam = await prisma.accountTeam.findUnique({
-    where: { ownerId: userId },
-    select: { id: true },
-  });
-
-  if (ownedTeam) {
-    const actingOwner = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { role: true, name: true, email: true },
+  try {
+    const ownedTeam = await prisma.accountTeam.findUnique({
+      where: { ownerId: userId },
+      select: { id: true },
     });
 
-    return {
-      actingOwnerId: userId,
-      actingOwnerRole: actingOwner?.role ?? null,
-      actingOwnerName: actingOwner?.name ?? actingOwner?.email ?? null,
-      permissions: permissionsForTeamRole("FULL"),
-      isTeamMember: false,
-      teamMemberRoles: [],
-    };
+    if (ownedTeam) {
+      const actingOwner = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { role: true, name: true, email: true },
+      });
+
+      return {
+        actingOwnerId: userId,
+        actingOwnerRole: actingOwner?.role ?? null,
+        actingOwnerName: actingOwner?.name ?? actingOwner?.email ?? null,
+        permissions: permissionsForTeamRole("FULL"),
+        isTeamMember: false,
+        teamMemberRoles: [],
+      };
+    }
+  } catch (error) {
+    console.error("Owned team lookup failed:", error);
   }
 
   const user = await prisma.user.findUnique({
