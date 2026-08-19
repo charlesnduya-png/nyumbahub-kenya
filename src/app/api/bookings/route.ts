@@ -5,7 +5,7 @@ import {
   createBookingSchema,
   nightsBetween,
 } from "@/lib/validations/booking";
-import { resolveProfessionalActingContext } from "@/lib/account-team";
+import { canViewWith, resolveProfessionalActingContext } from "@/lib/account-team";
 
 function inboxPathForRole(role: string, peerId: string, propertyId: string) {
   const params = new URLSearchParams({ peer: peerId, property: propertyId });
@@ -26,9 +26,7 @@ export async function GET() {
 
   const ctx = await resolveProfessionalActingContext(session.user.id);
   const canHostBookings =
-    session.user.role === "ADMIN" ||
-    ctx.permissions.manageBookings ||
-    (ctx.isTeamMember && ctx.teamMemberRole === "READ");
+    session.user.role === "ADMIN" || canViewWith(ctx, "manageBookings");
 
   const hostUserId = ctx.actingOwnerId;
   const guestUserId = session.user.id;

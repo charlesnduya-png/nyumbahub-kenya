@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { getPropertyHostUserId } from "@/lib/messages";
 import { prisma } from "@/lib/prisma";
 import { createViewingSchema } from "@/lib/validations/viewing";
-import { resolveProfessionalActingContext } from "@/lib/account-team";
+import { canViewWith, resolveProfessionalActingContext } from "@/lib/account-team";
 
 function proViewingsLink() {
   return "/dashboard/pro/viewings";
@@ -25,9 +25,7 @@ export async function GET() {
   const ctx = await resolveProfessionalActingContext(session.user.id);
 
   const canHostViewings =
-    session.user.role === "ADMIN" ||
-    ctx.permissions.manageViewings ||
-    (ctx.isTeamMember && ctx.teamMemberRole === "READ");
+    session.user.role === "ADMIN" || canViewWith(ctx, "manageViewings");
 
   const hostUserId = ctx.actingOwnerId;
   const buyerUserId = session.user.id;

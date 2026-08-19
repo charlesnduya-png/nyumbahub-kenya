@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getOwnerListings } from "@/lib/properties";
-import { resolveProfessionalActingContext } from "@/lib/account-team";
+import { canViewWith, resolveProfessionalActingContext } from "@/lib/account-team";
 
 export async function GET() {
   try {
@@ -15,9 +15,7 @@ export async function GET() {
     }
 
     const ctx = await resolveProfessionalActingContext(session.user.id);
-    const canView =
-      ctx.permissions.manageListings ||
-      (ctx.isTeamMember && ctx.teamMemberRole === "READ");
+    const canView = canViewWith(ctx, "manageListings");
 
     if (!canView) {
       return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });

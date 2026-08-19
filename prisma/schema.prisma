@@ -889,19 +889,35 @@ model AccountTeam {
   ownerId   String                @unique
   owner     User                  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   members   AccountTeamMember[]
+  invites   AccountTeamInvite[]
   createdAt DateTime              @default(now())
   updatedAt DateTime              @updatedAt
 }
 
 model AccountTeamMember {
-  id        String   @id @default(cuid())
+  id        String     @id @default(cuid())
   teamId    String
-  userId    String   @unique
-  role      TeamRole @default(INQUIRIES)
+  userId    String     @unique
+  roles     TeamRole[]
   team      AccountTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
   @@index([teamId])
+}
+
+model AccountTeamInvite {
+  id         String     @id @default(cuid())
+  teamId     String
+  email      String
+  roles      TeamRole[]
+  tokenHash  String     @unique
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  createdAt  DateTime   @default(now())
+  team       AccountTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+  @@index([email])
 }

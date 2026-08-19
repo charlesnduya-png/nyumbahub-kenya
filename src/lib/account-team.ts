@@ -2,6 +2,30 @@ import type { TeamRole } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
+export const TEAM_ROLE_VALUES = [
+  "FULL",
+  "LISTINGS",
+  "INQUIRIES",
+  "VIEWINGS",
+  "OFFERS",
+  "BOOKINGS",
+  "MESSAGES",
+  "READ",
+] as const;
+
+export type TeamRoleValue = (typeof TEAM_ROLE_VALUES)[number];
+
+export const TEAM_ROLE_LABEL: Record<TeamRoleValue, string> = {
+  FULL: "Full access",
+  LISTINGS: "Manage listings",
+  INQUIRIES: "Manage inquiries",
+  VIEWINGS: "Manage viewings",
+  OFFERS: "Manage offers",
+  BOOKINGS: "Manage bookings",
+  MESSAGES: "Manage messages",
+  READ: "Read-only",
+};
+
 export type TeamPermissions = {
   manageListings: boolean;
   manageInquiries: boolean;
@@ -17,8 +41,24 @@ export type ProfessionalActingContext = {
   actingOwnerRole: string | null;
   permissions: TeamPermissions;
   isTeamMember: boolean;
-  teamMemberRole?: TeamRole;
+  teamMemberRoles: TeamRole[];
 };
+
+const NO_PERMISSIONS: TeamPermissions = {
+  manageListings: false,
+  manageInquiries: false,
+  manageViewings: false,
+  manageOffers: false,
+  manageBookings: false,
+  manageMessages: false,
+  manageTeam: false,
+};
+
+export function normalizeTeamRoles(roles: readonly string[]): TeamRoleValue[] {
+  const unique = TEAM_ROLE_VALUES.filter((role) => roles.includes(role));
+  if (unique.includes("FULL")) return ["FULL"];
+  return unique.length > 0 ? unique : ["INQUIRIES"];
+}
 
 export function permissionsForTeamRole(role: TeamRole): TeamPermissions {
   switch (role) {
@@ -33,83 +73,53 @@ export function permissionsForTeamRole(role: TeamRole): TeamPermissions {
         manageTeam: true,
       };
     case "LISTINGS":
-      return {
-        manageListings: true,
-        manageInquiries: false,
-        manageViewings: false,
-        manageOffers: false,
-        manageBookings: false,
-        manageMessages: false,
-        manageTeam: false,
-      };
+      return { ...NO_PERMISSIONS, manageListings: true };
     case "INQUIRIES":
-      return {
-        manageListings: false,
-        manageInquiries: true,
-        manageViewings: false,
-        manageOffers: false,
-        manageBookings: false,
-        manageMessages: false,
-        manageTeam: false,
-      };
+      return { ...NO_PERMISSIONS, manageInquiries: true };
     case "VIEWINGS":
-      return {
-        manageListings: false,
-        manageInquiries: false,
-        manageViewings: true,
-        manageOffers: false,
-        manageBookings: false,
-        manageMessages: false,
-        manageTeam: false,
-      };
+      return { ...NO_PERMISSIONS, manageViewings: true };
     case "OFFERS":
-      return {
-        manageListings: false,
-        manageInquiries: false,
-        manageViewings: false,
-        manageOffers: true,
-        manageBookings: false,
-        manageMessages: false,
-        manageTeam: false,
-      };
+      return { ...NO_PERMISSIONS, manageOffers: true };
     case "BOOKINGS":
-      return {
-        manageListings: false,
-        manageInquiries: false,
-        manageViewings: false,
-        manageOffers: false,
-        manageBookings: true,
-        manageMessages: false,
-        manageTeam: false,
-      };
+      return { ...NO_PERMISSIONS, manageBookings: true };
     case "MESSAGES":
-      return {
-        manageListings: false,
-        manageInquiries: false,
-        manageViewings: false,
-        manageOffers: false,
-        manageBookings: false,
-        manageMessages: true,
-        manageTeam: false,
-      };
+      return { ...NO_PERMISSIONS, manageMessages: true };
     case "READ":
     default:
-      return {
-        manageListings: false,
-        manageInquiries: false,
-        manageViewings: false,
-        manageOffers: false,
-        manageBookings: false,
-        manageMessages: false,
-        manageTeam: false,
-      };
+      return { ...NO_PERMISSIONS };
   }
+}
+
+export function permissionsForTeamRoles(
+  roles: readonly TeamRole[],
+): TeamPermissions {
+  if (roles.includes("FULL")) return permissionsForTeamRole("FULL");
+
+  const merged = { ...NO_PERMISSIONS };
+  for (const role of roles) {
+    const next = permissionsForTeamRole(role);
+    merged.manageListings ||= next.manageListings;
+    merged.manageInquiries ||= next.manageInquiries;
+    merged.manageViewings ||= next.manageViewings;
+    merged.manageOffers ||= next.manageOffers;
+    merged.manageBookings ||= next.manageBookings;
+    merged.manageMessages ||= next.manageMessages;
+    merged.manageTeam ||= next.manageTeam;
+  }
+  return merged;
+}
+
+export function canViewWith(
+  ctx: ProfessionalActingContext,
+  permission: keyof TeamPermissions,
+): boolean {
+  if (ctx.permissions[permission]) return true;
+  return ctx.isTeamMember && ctx.teamMemberRoles.includes("READ");
 }
 
 export async function resolveProfessionalActingContext(
   userId: string,
 ): Promise<ProfessionalActingContext> {
-  // Team member: act on behalf of their team owner.
   const membership = await prisma.accountTeamMember.findUnique({
     where: { userId },
     include: { team: { select: { ownerId: true } } },
@@ -125,13 +135,12 @@ export async function resolveProfessionalActingContext(
     return {
       actingOwnerId,
       actingOwnerRole: actingOwner?.role ?? null,
-      permissions: permissionsForTeamRole(membership.role),
+      permissions: permissionsForTeamRoles(membership.roles),
       isTeamMember: true,
-      teamMemberRole: membership.role,
+      teamMemberRoles: membership.roles,
     };
   }
 
-  // Team owner: full permissions for their own account.
   const ownedTeam = await prisma.accountTeam.findUnique({
     where: { ownerId: userId },
     select: { id: true },
@@ -148,10 +157,10 @@ export async function resolveProfessionalActingContext(
       actingOwnerRole: actingOwner?.role ?? null,
       permissions: permissionsForTeamRole("FULL"),
       isTeamMember: false,
+      teamMemberRoles: [],
     };
   }
 
-  // Regular account (non-team): treat professional roles as full access.
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: { role: true },
@@ -163,8 +172,10 @@ export async function resolveProfessionalActingContext(
   return {
     actingOwnerId: userId,
     actingOwnerRole: user?.role ?? null,
-    permissions: isProfessional ? permissionsForTeamRole("FULL") : permissionsForTeamRole("READ"),
+    permissions: isProfessional
+      ? permissionsForTeamRole("FULL")
+      : permissionsForTeamRole("READ"),
     isTeamMember: false,
+    teamMemberRoles: [],
   };
 }
-

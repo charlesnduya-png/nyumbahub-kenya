@@ -2,20 +2,16 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { auth } from "@/lib/auth";
+import {
+  TEAM_ROLE_VALUES,
+  normalizeTeamRoles,
+  resolveProfessionalActingContext,
+} from "@/lib/account-team";
 import { prisma } from "@/lib/prisma";
-import { resolveProfessionalActingContext } from "@/lib/account-team";
 
 const updateMemberSchema = z.object({
-  role: z.enum([
-    "FULL",
-    "LISTINGS",
-    "INQUIRIES",
-    "VIEWINGS",
-    "OFFERS",
-    "BOOKINGS",
-    "MESSAGES",
-    "READ",
-  ]),
+  roles: z.array(z.enum(TEAM_ROLE_VALUES)).optional(),
+  role: z.enum(TEAM_ROLE_VALUES).optional(),
 });
 
 interface RouteParams {
@@ -41,6 +37,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ success: false, error: "Invalid request" }, { status: 400 });
   }
 
+  const roles = normalizeTeamRoles(
+    parsed.data.roles ?? (parsed.data.role ? [parsed.data.role] : []),
+  );
+
   const member = await prisma.accountTeamMember.findUnique({
     where: { userId },
     include: { team: { select: { ownerId: true } } },
@@ -56,10 +56,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
   const updated = await prisma.accountTeamMember.update({
     where: { userId },
-    data: { role: parsed.data.role },
+    data: { roles },
   });
 
-  return NextResponse.json({ success: true, data: { userId, role: updated.role } });
+  return NextResponse.json({ success: true, data: { userId, roles: updated.roles } });
 }
 
 export async function DELETE(_: Request, { params }: RouteParams) {
@@ -91,4 +91,3 @@ export async function DELETE(_: Request, { params }: RouteParams) {
   await prisma.accountTeamMember.delete({ where: { userId } });
   return NextResponse.json({ success: true });
 }
-

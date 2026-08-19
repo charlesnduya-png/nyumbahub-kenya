@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { resolveProfessionalActingContext } from "@/lib/account-team";
+import { canViewWith, resolveProfessionalActingContext } from "@/lib/account-team";
 
 export async function GET() {
   const session = await auth();
@@ -14,9 +14,7 @@ export async function GET() {
 
   const ctx = await resolveProfessionalActingContext(session.user.id);
   const canView =
-    ctx.permissions.manageInquiries ||
-    (ctx.isTeamMember && ctx.teamMemberRole === "READ") ||
-    session.user.role === "ADMIN";
+    session.user.role === "ADMIN" || canViewWith(ctx, "manageInquiries");
 
   if (!canView) {
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });

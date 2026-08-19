@@ -2,14 +2,18 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { auth } from "@/lib/auth";
+import {
+  TEAM_ROLE_VALUES,
+  normalizeTeamRoles,
+  resolveProfessionalActingContext,
+} from "@/lib/account-team";
 import { prisma } from "@/lib/prisma";
-import { resolveProfessionalActingContext } from "@/lib/account-team";
+import { createAndSendTeamInvite } from "@/lib/team-invite";
 
 const addMemberSchema = z.object({
   email: z.string().email(),
-  role: z
-    .enum(["FULL", "LISTINGS", "INQUIRIES", "VIEWINGS", "OFFERS", "BOOKINGS", "MESSAGES", "READ"])
-    .optional(),
+  roles: z.array(z.enum(TEAM_ROLE_VALUES)).optional(),
+  role: z.enum(TEAM_ROLE_VALUES).optional(),
 });
 
 export async function GET() {
@@ -33,6 +37,10 @@ export async function GET() {
           },
           orderBy: { createdAt: "desc" },
         },
+        invites: {
+          where: { acceptedAt: null, expiresAt: { gt: new Date() } },
+          orderBy: { createdAt: "desc" },
+        },
       },
     });
 
@@ -40,16 +48,25 @@ export async function GET() {
       success: true,
       data: {
         ownerId: ctx.actingOwnerId,
-        members: team?.members.map((m) => ({
-          userId: m.userId,
-          role: m.role,
-          user: {
-            id: m.user.id,
-            name: m.user.name,
-            email: m.user.email,
-            image: m.user.image,
-          },
-        })) ?? [],
+        members:
+          team?.members.map((m) => ({
+            userId: m.userId,
+            roles: m.roles,
+            user: {
+              id: m.user.id,
+              name: m.user.name,
+              email: m.user.email,
+              image: m.user.image,
+            },
+          })) ?? [],
+        invites:
+          team?.invites.map((invite) => ({
+            id: invite.id,
+            email: invite.email,
+            roles: invite.roles,
+            expiresAt: invite.expiresAt,
+            createdAt: invite.createdAt,
+          })) ?? [],
       },
     });
   } catch {
@@ -78,21 +95,45 @@ export async function POST(request: Request) {
     );
   }
 
+  const email = parsed.data.email.trim().toLowerCase();
+  const roles = normalizeTeamRoles(
+    parsed.data.roles ?? (parsed.data.role ? [parsed.data.role] : ["INQUIRIES"]),
+  );
+
   try {
-    if (parsed.data.email.toLowerCase() === session.user.email?.toLowerCase()) {
+    if (email === session.user.email?.toLowerCase()) {
       return NextResponse.json(
-        { success: false, error: "You cannot add yourself as a team member" },
+        { success: false, error: "You cannot invite yourself" },
         { status: 400 },
       );
     }
 
     const targetUser = await prisma.user.findUnique({
-      where: { email: parsed.data.email },
-      select: { id: true, email: true, isActive: true, role: true },
+      where: { email },
+      select: { id: true, isActive: true, role: true },
     });
 
-    if (!targetUser?.isActive) {
+    if (targetUser && !targetUser.isActive) {
       return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
+    }
+
+    if (targetUser) {
+      const alreadyMember = await prisma.accountTeamMember.findUnique({
+        where: { userId: targetUser.id },
+        select: { id: true, team: { select: { ownerId: true } } },
+      });
+      if (alreadyMember?.team.ownerId === ctx.actingOwnerId) {
+        return NextResponse.json(
+          { success: false, error: "This person is already on your team" },
+          { status: 400 },
+        );
+      }
+      if (alreadyMember) {
+        return NextResponse.json(
+          { success: false, error: "This account already belongs to another team" },
+          { status: 400 },
+        );
+      }
     }
 
     const team = await prisma.accountTeam.upsert({
@@ -101,54 +142,41 @@ export async function POST(request: Request) {
       update: {},
     });
 
-    // Keep team-member UI consistent by aligning their base role with the acting owner role.
-    // (Fine-grained permissions are enforced via AccountTeamMember.role.)
-    if (ctx.actingOwnerRole === "SELLER" || ctx.actingOwnerRole === "AGENT") {
-      if (targetUser.role !== ctx.actingOwnerRole) {
-        await prisma.user.update({
-          where: { id: targetUser.id },
-          data: { role: ctx.actingOwnerRole },
-        });
-      }
-    }
+    const owner = await prisma.user.findUnique({
+      where: { id: ctx.actingOwnerId },
+      select: { name: true, email: true },
+    });
 
-    // NOTE: userId is unique in AccountTeamMember, so this prevents the same user being in multiple teams.
-    const member = await prisma.accountTeamMember.create({
-      data: {
-        teamId: team.id,
-        userId: targetUser.id,
-        role: parsed.data.role ?? "INQUIRIES",
-      },
-      include: {
-        user: { select: { id: true, name: true, email: true, image: true } },
-      },
+    const { invite, joinUrl, emailSent } = await createAndSendTeamInvite({
+      teamId: team.id,
+      email,
+      roles,
+      ownerName: owner?.name?.trim() || owner?.email || "A Your Home professional",
     });
 
     return NextResponse.json({
       success: true,
       data: {
-        userId: member.userId,
-        role: member.role,
-        user: {
-          id: member.user.id,
-          name: member.user.name,
-          email: member.user.email,
-          image: member.user.image,
-        },
+        id: invite.id,
+        email: invite.email,
+        roles: invite.roles,
+        expiresAt: invite.expiresAt,
+        emailSent,
+        joinUrl: emailSent ? undefined : joinUrl,
       },
+      message: emailSent
+        ? "Invitation sent"
+        : "Invitation created. Email could not be sent — copy the join link.",
     });
   } catch (error) {
-    // Unique constraint violations can bubble up here.
+    console.error("Create team invite failed:", error);
     return NextResponse.json(
       {
         success: false,
         error:
-          error instanceof Error
-            ? error.message
-            : "Unable to add team member (possibly already added to another team).",
+          error instanceof Error ? error.message : "Unable to send team invitation.",
       },
       { status: 400 },
     );
   }
 }
-

@@ -6,7 +6,7 @@ import {
   getActiveListingSubscription,
   PRICING_MUTED,
 } from "@/lib/listing-subscription";
-import { resolveProfessionalActingContext } from "@/lib/account-team";
+import { canViewWith, resolveProfessionalActingContext } from "@/lib/account-team";
 
 export async function GET() {
   try {
@@ -19,9 +19,7 @@ export async function GET() {
     }
 
     const ctx = await resolveProfessionalActingContext(session.user.id);
-    const canViewListings =
-      ctx.permissions.manageListings ||
-      (ctx.isTeamMember && ctx.teamMemberRole === "READ");
+    const canViewListings = canViewWith(ctx, "manageListings");
 
     if (!canViewListings) {
       return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });

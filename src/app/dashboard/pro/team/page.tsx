@@ -6,8 +6,8 @@ export default function ProTeamPage() {
       <div>
         <h1 className="text-2xl font-bold">The team</h1>
         <p className="text-muted-foreground">
-          Add team accounts and choose what each person can manage under your
-          profile.
+          Invite people by email, give them one or more roles, and they join
+          after creating an account from the invitation.
         </p>
       </div>
 

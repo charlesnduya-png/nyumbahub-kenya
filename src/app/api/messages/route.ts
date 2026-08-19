@@ -5,7 +5,7 @@ import {
   listMessagesSchema,
   sendMessageSchema,
 } from "@/lib/validations/message";
-import { resolveProfessionalActingContext } from "@/lib/account-team";
+import { canViewWith, resolveProfessionalActingContext } from "@/lib/account-team";
 
 function inboxPathForRole(role: string, peerId: string, propertyId?: string | null) {
   const params = new URLSearchParams({ peer: peerId });
@@ -27,9 +27,7 @@ export async function GET(request: Request) {
 
   const ctx = await resolveProfessionalActingContext(session.user.id);
   const hostInboxAllowed =
-    session.user.role === "ADMIN" ||
-    ctx.permissions.manageMessages ||
-    (ctx.isTeamMember && ctx.teamMemberRole === "READ");
+    session.user.role === "ADMIN" || canViewWith(ctx, "manageMessages");
 
   const userId = hostInboxAllowed ? ctx.actingOwnerId : session.user.id;
   const { searchParams } = new URL(request.url);

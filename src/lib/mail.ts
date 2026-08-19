@@ -108,3 +108,47 @@ If you did not ask for a reset, you can ignore this email.
 
   await sendMail({ to: input.to, subject, text, html });
 }
+
+export async function sendTeamInviteEmail(input: {
+  to: string;
+  ownerName: string;
+  rolesLabel: string;
+  joinUrl: string;
+}) {
+  const subject = `${input.ownerName} invited you to join their team on Your Home`;
+  const text = `Hi,
+
+${input.ownerName} invited you to join their professional team on Your Home.
+
+Assigned access: ${input.rolesLabel}
+
+Create your account (or sign in) and join the team using this link (expires in 7 days):
+${input.joinUrl}
+
+If you were not expecting this invitation, you can ignore this email.
+
+— Your Home`;
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#0f172a">
+      <h2 style="margin:0 0 12px;color:#0b6e4f">Your Home</h2>
+      <p style="margin:0 0 16px">Hi,</p>
+      <p style="margin:0 0 16px">
+        <strong>${input.ownerName}</strong> invited you to join their professional team.
+      </p>
+      <p style="margin:0 0 16px;color:#475569;font-size:14px">
+        Assigned access: ${input.rolesLabel}
+      </p>
+      <p style="margin:0 0 24px">
+        <a href="${input.joinUrl}" style="display:inline-block;background:#0b6e4f;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600">
+          Accept invitation
+        </a>
+      </p>
+      <p style="margin:0 0 12px;color:#475569;font-size:14px">This link expires in 7 days.</p>
+      <p style="margin:0 0 8px;color:#64748b;font-size:12px;word-break:break-all">${input.joinUrl}</p>
+      <p style="margin:16px 0 0;color:#64748b;font-size:12px">If you were not expecting this, ignore this email.</p>
+    </div>
+  `;
+
+  await sendMail({ to: input.to, subject, text, html });
+}
