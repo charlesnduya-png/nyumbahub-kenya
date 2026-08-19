@@ -91,25 +91,16 @@ export async function middleware(request: NextRequest) {
 
   const home = dashboardHomeForRole(role, email);
 
-  if (
-    pathname.startsWith("/dashboard/pro") &&
-    !["SELLER", "AGENT"].includes(role)
-  ) {
-    return NextResponse.redirect(new URL(home, request.url));
-  }
-
+  // Invitees keep a BUYER JWT until the session refreshes. The pro/seller
+  // layouts check real team membership so they can still open the workspace.
   if (pathname.startsWith("/dashboard/tenant") && role !== "BUYER") {
     return NextResponse.redirect(new URL(home, request.url));
   }
 
   if (
-    pathname.startsWith("/dashboard/seller") &&
-    !["SELLER", "AGENT"].includes(role)
+    pathname.startsWith("/dashboard/agent") &&
+    role !== "AGENT"
   ) {
-    return NextResponse.redirect(new URL(home, request.url));
-  }
-
-  if (pathname.startsWith("/dashboard/agent") && role !== "AGENT") {
     return NextResponse.redirect(new URL(home, request.url));
   }
 

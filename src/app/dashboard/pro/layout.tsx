@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { auth } from "@/lib/auth";
+import {
+  hasProfessionalWorkspaceAccess,
+  resolveProfessionalActingContext,
+} from "@/lib/account-team";
 import { isSiteOwnerEmail, SITE_OWNER_COOKIE } from "@/lib/site-owner";
 
 /** Professional workspace — site owner is never allowed here. */
@@ -19,6 +23,15 @@ export default async function ProLayout({
     session?.user?.role === "ADMIN"
   ) {
     redirect("/dashboard/admin");
+  }
+
+  if (!session?.user?.id) {
+    redirect("/login?callbackUrl=/dashboard/pro");
+  }
+
+  const ctx = await resolveProfessionalActingContext(session.user.id);
+  if (!hasProfessionalWorkspaceAccess(ctx)) {
+    redirect("/dashboard/tenant");
   }
 
   return <>{children}</>;

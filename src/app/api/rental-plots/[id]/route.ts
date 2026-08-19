@@ -9,12 +9,43 @@ import {
 import {
   assertCanCreateListing,
 } from "@/lib/listing-subscription";
+import {
+  canViewWith,
+  resolveProfessionalActingContext,
+} from "@/lib/account-team";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-async function getOwnedPlot(plotId: string, userId: string, role?: string) {
+async function getPlotActor(userId: string, role?: string | null) {
+  const ctx = await resolveProfessionalActingContext(userId);
+  return {
+    ctx,
+    actorId: ctx.actingOwnerId,
+    actorRole: ctx.actingOwnerRole ?? role,
+  };
+}
+
+async function requireOwnedPlot(
+  plotId: string,
+  userId: string,
+  sessionRole?: string | null,
+  write = false,
+) {
+  const { ctx, actorId, actorRole } = await getPlotActor(userId, sessionRole);
+  const allowed =
+    sessionRole === "ADMIN" ||
+    (write ? ctx.permissions.manageListings : canViewWith(ctx, "manageListings"));
+  if (!allowed) {
+    return { error: "Forbidden" as const, status: 403 as const };
+  }
+  const owned = await getOwnedPlot(plotId, actorId, actorRole);
+  if ("error" in owned) return owned;
+  return { ...owned, ctx, actorId, actorRole };
+}
+
+async function getOwnedPlot(plotId: string, userId: string, role?: string | null) {
   const agent = await prisma.agent.findUnique({
     where: { userId },
     select: { id: true },
@@ -46,7 +77,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     }
 
     const { id } = await params;
-    const owned = await getOwnedPlot(id, session.user.id, session.user.role);
+    const owned = await requireOwnedPlot(id, session.user.id, session.user.role);
     if ("error" in owned && owned.error) {
       return NextResponse.json(
         { success: false, error: owned.error },
@@ -86,7 +117,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
 
     const { id } = await params;
-    const owned = await getOwnedPlot(id, session.user.id, session.user.role);
+    const owned = await requireOwnedPlot(id, session.user.id, session.user.role, true);
     if ("error" in owned && owned.error) {
       return NextResponse.json(
         { success: false, error: owned.error },
@@ -128,7 +159,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     }
 
     const { id } = await params;
-    const owned = await getOwnedPlot(id, session.user.id, session.user.role);
+    const owned = await requireOwnedPlot(id, session.user.id, session.user.role, true);
     if ("error" in owned && owned.error) {
       return NextResponse.json(
         { success: false, error: owned.error },
@@ -158,7 +189,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const { id } = await params;
-    const owned = await getOwnedPlot(id, session.user.id, session.user.role);
+    const owned = await requireOwnedPlot(id, session.user.id, session.user.role, true);
     if ("error" in owned && owned.error) {
       return NextResponse.json(
         { success: false, error: owned.error },
@@ -167,6 +198,10 @@ export async function POST(request: Request, { params }: RouteParams) {
     }
 
     const plot = owned.plot!;
+    const actorId = "actorId" in owned ? owned.actorId : session.user.id;
+    const role =
+      ("actorRole" in owned ? owned.actorRole : session.user.role) ??
+      session.user.role;
     const body = await request.json();
     const parsed = createPlotUnitSchema.safeParse(body);
     if (!parsed.success) {
@@ -180,11 +215,10 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    const role = session.user.role;
     const submitForReview = parsed.data.submitForReview !== false;
 
     const canCreate = await assertCanCreateListing({
-      userId: session.user.id,
+      userId: actorId,
       role,
     });
     if (!canCreate.ok) {
@@ -241,7 +275,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         address: plot.address,
         latitude: plot.latitude,
         longitude: plot.longitude,
-        ownerId: session.user.id,
+        ownerId: actorId,
         agentId: owned.agent?.id ?? plot.agentId,
         rentalPlotId: plot.id,
         unitLabel,

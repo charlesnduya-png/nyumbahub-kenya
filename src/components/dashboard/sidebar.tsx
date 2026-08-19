@@ -41,6 +41,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { SITE_OWNER_COOKIE } from "@/lib/site-owner";
+import {
+  TEAM_ROLE_LABEL,
+  canAccessNavHref,
+  type TeamNavState,
+  type TeamRoleValue,
+} from "@/lib/team-roles";
 
 interface NavItem {
   label: string;
@@ -127,6 +133,7 @@ function getNavForRole(role: Role): NavItem[] {
 interface DashboardSidebarProps {
   role: Role;
   userName?: string | null;
+  team?: TeamNavState | null;
   onNavigate?: () => void;
   className?: string;
 }
@@ -134,12 +141,18 @@ interface DashboardSidebarProps {
 export function DashboardSidebar({
   role,
   userName,
+  team,
   onNavigate,
   className,
 }: DashboardSidebarProps) {
   const pathname = usePathname();
-  const navItems = getNavForRole(role);
+  const navItems = getNavForRole(role).filter((item) =>
+    canAccessNavHref(item.href, team),
+  );
   const isPro = role === "SELLER" || role === "AGENT";
+  const roleLabels = (team?.roles ?? [])
+    .map((roleKey: TeamRoleValue) => TEAM_ROLE_LABEL[roleKey] ?? roleKey)
+    .join(" · ");
 
   return (
     <aside
@@ -158,10 +171,17 @@ export function DashboardSidebar({
         <p className="mt-0.5 text-xs uppercase tracking-wide text-muted-foreground">
           {role === "ADMIN"
             ? "Site owner admin"
-            : isPro
-              ? "Professional admin"
-              : "Tenant account"}
+            : team?.isTeamMember
+              ? `On ${team.ownerName}'s team`
+              : isPro
+                ? "Professional admin"
+                : "Tenant account"}
         </p>
+        {team?.isTeamMember && roleLabels ? (
+          <p className="mt-1 truncate text-xs text-muted-foreground">
+            {roleLabels}
+          </p>
+        ) : null}
       </div>
       <Separator />
       <ScrollArea className="flex-1 px-3 py-4">

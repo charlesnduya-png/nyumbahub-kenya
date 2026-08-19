@@ -29,7 +29,7 @@ function JoinTeamForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token")?.trim() ?? "";
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
 
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -102,9 +102,11 @@ function JoinTeamForm() {
           router.push("/login");
           return;
         }
+      } else {
+        await update();
       }
 
-      toast.success("You joined the team");
+      toast.success(`You joined ${invite?.ownerName ?? "the team"}`);
       window.location.replace("/dashboard/pro");
     } catch {
       toast.error("Unable to join the team");

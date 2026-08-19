@@ -2,14 +2,20 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createRentalPlotSchema } from "@/lib/validations/rental-plot";
+import {
+  canViewWith,
+  hasProfessionalWorkspaceAccess,
+  resolveProfessionalActingContext,
+} from "@/lib/account-team";
 
-async function requirePro() {
+async function requirePlotWorkspace() {
   const session = await auth();
   if (!session?.user?.id) {
     return { error: NextResponse.json({ success: false, error: "Sign in required" }, { status: 401 }) };
   }
-  const role = session.user.role;
-  if (!role || !["SELLER", "AGENT", "ADMIN"].includes(role)) {
+
+  const ctx = await resolveProfessionalActingContext(session.user.id);
+  if (!hasProfessionalWorkspaceAccess(ctx) && session.user.role !== "ADMIN") {
     return {
       error: NextResponse.json(
         { success: false, error: "Only landlords and agents can manage plots" },
@@ -17,15 +23,21 @@ async function requirePro() {
       ),
     };
   }
-  return { session };
+
+  return { session, ctx };
 }
 
 export async function GET() {
   try {
-    const gate = await requirePro();
+    const gate = await requirePlotWorkspace();
     if ("error" in gate && gate.error) return gate.error;
-    const session = gate.session!;
-    const userId = session.user.id;
+    const ctx = gate.ctx!;
+
+    if (!canViewWith(ctx, "manageListings") && gate.session!.user.role !== "ADMIN") {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    }
+
+    const userId = ctx.actingOwnerId;
 
     const agent = await prisma.agent.findUnique({
       where: { userId },
@@ -110,9 +122,14 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const gate = await requirePro();
+    const gate = await requirePlotWorkspace();
     if ("error" in gate && gate.error) return gate.error;
     const session = gate.session!;
+    const ctx = gate.ctx!;
+
+    if (!ctx.permissions.manageListings && session.user.role !== "ADMIN") {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    }
 
     const body = await request.json();
     const parsed = createRentalPlotSchema.safeParse(body);
@@ -124,7 +141,7 @@ export async function POST(request: Request) {
     }
 
     const agent = await prisma.agent.findUnique({
-      where: { userId: session.user.id },
+      where: { userId: ctx.actingOwnerId },
       select: { id: true },
     });
 
@@ -138,7 +155,7 @@ export async function POST(request: Request) {
         address: parsed.data.address ?? null,
         latitude: parsed.data.latitude ?? null,
         longitude: parsed.data.longitude ?? null,
-        ownerId: session.user.id,
+        ownerId: ctx.actingOwnerId,
         agentId: agent?.id ?? null,
       },
     });

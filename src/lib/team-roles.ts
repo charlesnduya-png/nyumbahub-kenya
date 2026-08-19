@@ -27,3 +27,76 @@ export function normalizeTeamRoles(roles: readonly string[] | null | undefined):
   if (unique.includes("FULL")) return ["FULL"];
   return unique.length > 0 ? unique : ["INQUIRIES"];
 }
+
+export type TeamNavPermissions = {
+  manageListings: boolean;
+  manageInquiries: boolean;
+  manageViewings: boolean;
+  manageOffers: boolean;
+  manageBookings: boolean;
+  manageMessages: boolean;
+  manageTeam: boolean;
+};
+
+export type TeamNavState = {
+  isTeamMember: boolean;
+  ownerName: string;
+  roles: TeamRoleValue[];
+  permissions: TeamNavPermissions;
+};
+
+const OWNER_ONLY_HREFS = new Set([
+  "/dashboard/pro/profile",
+  "/dashboard/seller/promote",
+  "/dashboard/seller/analytics",
+  "/dashboard/agent/subscription",
+  "/dashboard/agent/clients",
+  "/dashboard/agent/crm",
+]);
+
+export function canAccessNavHref(
+  href: string,
+  team: TeamNavState | null | undefined,
+): boolean {
+  if (!team?.isTeamMember) return true;
+  if (OWNER_ONLY_HREFS.has(href)) return false;
+
+  const { permissions, roles } = team;
+  const canRead = roles.includes("READ") || roles.includes("FULL");
+
+  if (
+    href === "/dashboard/pro" ||
+    href === "/dashboard/notifications" ||
+    href === "/dashboard/pro/team"
+  ) {
+    return true;
+  }
+  if (href === "/dashboard/pro/inbox") {
+    return permissions.manageMessages || canRead;
+  }
+  if (
+    href === "/dashboard/pro/listings" ||
+    href === "/dashboard/pro/plots"
+  ) {
+    return permissions.manageListings || canRead;
+  }
+  if (href === "/dashboard/seller/properties/new") {
+    return permissions.manageListings;
+  }
+  if (href === "/dashboard/pro/inquiries") {
+    return permissions.manageInquiries || canRead;
+  }
+  if (href === "/dashboard/pro/viewings") {
+    return permissions.manageViewings || canRead;
+  }
+  if (href === "/dashboard/pro/offers") {
+    return permissions.manageOffers || canRead;
+  }
+  if (href === "/dashboard/pro/bookings") {
+    return permissions.manageBookings || canRead;
+  }
+  if (href === "/dashboard/pro/rental-reservations") {
+    return permissions.manageListings || permissions.manageBookings || canRead;
+  }
+  return permissions.manageTeam;
+}

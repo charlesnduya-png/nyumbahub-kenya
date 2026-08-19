@@ -13,16 +13,19 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import type { Role } from "@/types";
+import type { TeamNavState } from "@/lib/team-roles";
 
 interface DashboardShellProps {
   role: Role;
   userName?: string | null;
+  team?: TeamNavState | null;
   children: React.ReactNode;
 }
 
 export function DashboardShell({
   role,
   userName,
+  team,
   children,
 }: DashboardShellProps) {
   const [open, setOpen] = useState(false);
@@ -31,7 +34,7 @@ export function DashboardShell({
     <div className="flex min-h-dvh bg-background">
       {/* Desktop sidebar */}
       <div className="hidden shrink-0 lg:flex lg:h-dvh lg:sticky lg:top-0">
-        <DashboardSidebar role={role} userName={userName} />
+        <DashboardSidebar role={role} userName={userName} team={team} />
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -54,6 +57,7 @@ export function DashboardShell({
               <DashboardSidebar
                 role={role}
                 userName={userName}
+                team={team}
                 onNavigate={() => setOpen(false)}
                 className="h-full border-0"
               />

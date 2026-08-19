@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { canViewWith, resolveProfessionalActingContext } from "@/lib/account-team";
 
 export async function GET() {
   try {
@@ -14,7 +15,17 @@ export async function GET() {
       );
     }
 
-    const userId = session.user.id;
+    const ctx = await resolveProfessionalActingContext(session.user.id);
+    const canView =
+      session.user.role === "ADMIN" ||
+      canViewWith(ctx, "manageBookings") ||
+      canViewWith(ctx, "manageListings");
+
+    if (!canView) {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    }
+
+    const userId = ctx.actingOwnerId;
     const agent = await prisma.agent.findUnique({
       where: { userId },
       select: { id: true },

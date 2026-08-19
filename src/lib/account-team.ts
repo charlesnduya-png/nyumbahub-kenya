@@ -22,6 +22,7 @@ export type TeamPermissions = {
 export type ProfessionalActingContext = {
   actingOwnerId: string;
   actingOwnerRole: string | null;
+  actingOwnerName: string | null;
   permissions: TeamPermissions;
   isTeamMember: boolean;
   teamMemberRoles: TeamRole[];
@@ -94,6 +95,17 @@ export function canViewWith(
   return ctx.isTeamMember && ctx.teamMemberRoles.includes("READ");
 }
 
+export function hasProfessionalWorkspaceAccess(
+  ctx: ProfessionalActingContext,
+): boolean {
+  if (ctx.isTeamMember) return true;
+  return (
+    ctx.actingOwnerRole === "SELLER" ||
+    ctx.actingOwnerRole === "AGENT" ||
+    ctx.actingOwnerRole === "ADMIN"
+  );
+}
+
 export async function resolveProfessionalActingContext(
   userId: string,
 ): Promise<ProfessionalActingContext> {
@@ -106,12 +118,13 @@ export async function resolveProfessionalActingContext(
     const actingOwnerId = membership.team.ownerId;
     const actingOwner = await prisma.user.findUnique({
       where: { id: actingOwnerId },
-      select: { role: true },
+      select: { role: true, name: true, email: true },
     });
 
     return {
       actingOwnerId,
       actingOwnerRole: actingOwner?.role ?? null,
+      actingOwnerName: actingOwner?.name ?? actingOwner?.email ?? null,
       permissions: permissionsForTeamRoles(membership.roles),
       isTeamMember: true,
       teamMemberRoles: membership.roles,
@@ -126,12 +139,13 @@ export async function resolveProfessionalActingContext(
   if (ownedTeam) {
     const actingOwner = await prisma.user.findUnique({
       where: { id: userId },
-      select: { role: true },
+      select: { role: true, name: true, email: true },
     });
 
     return {
       actingOwnerId: userId,
       actingOwnerRole: actingOwner?.role ?? null,
+      actingOwnerName: actingOwner?.name ?? actingOwner?.email ?? null,
       permissions: permissionsForTeamRole("FULL"),
       isTeamMember: false,
       teamMemberRoles: [],
@@ -140,7 +154,7 @@ export async function resolveProfessionalActingContext(
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { role: true },
+    select: { role: true, name: true, email: true },
   });
 
   const isProfessional =
@@ -149,6 +163,7 @@ export async function resolveProfessionalActingContext(
   return {
     actingOwnerId: userId,
     actingOwnerRole: user?.role ?? null,
+    actingOwnerName: user?.name ?? user?.email ?? null,
     permissions: isProfessional
       ? permissionsForTeamRole("FULL")
       : permissionsForTeamRole("READ"),

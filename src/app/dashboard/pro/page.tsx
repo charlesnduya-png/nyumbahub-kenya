@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
+import { resolveProfessionalActingContext } from "@/lib/account-team";
 import { prisma } from "@/lib/prisma";
 import { formatPrice, formatRelativeDate } from "@/lib/utils";
 
@@ -24,9 +25,12 @@ export default async function ProfessionalAdminPage() {
     return null;
   }
 
+  const ctx = await resolveProfessionalActingContext(userId);
+  const ownerId = ctx.actingOwnerId;
+
   const [properties, messages, leads, pendingOffers] = await Promise.all([
     prisma.property.findMany({
-      where: { ownerId: userId },
+      where: { ownerId },
       orderBy: { updatedAt: "desc" },
       take: 12,
       select: {
@@ -41,7 +45,7 @@ export default async function ProfessionalAdminPage() {
       },
     }),
     prisma.message.findMany({
-      where: { receiverId: userId },
+      where: { receiverId: ownerId },
       orderBy: { createdAt: "desc" },
       take: 4,
       include: {
@@ -50,7 +54,7 @@ export default async function ProfessionalAdminPage() {
     }),
     prisma.lead.findMany({
       where: {
-        OR: [{ agentId: userId }, { property: { ownerId: userId } }],
+        OR: [{ agentId: ownerId }, { property: { ownerId } }],
       },
       orderBy: { createdAt: "desc" },
       take: 5,
@@ -62,7 +66,7 @@ export default async function ProfessionalAdminPage() {
       .count({
         where: {
           status: "PENDING",
-          property: { ownerId: userId },
+          property: { ownerId },
         },
       })
       .catch(() => 0),
@@ -89,29 +93,40 @@ export default async function ProfessionalAdminPage() {
         <div>
           <div className="mb-1 flex items-center gap-2">
             <h1 className="text-2xl font-bold">Professional admin</h1>
-            <Badge>Workspace</Badge>
+            <Badge>
+              {ctx.isTeamMember
+                ? `${ctx.actingOwnerName}'s team`
+                : "Workspace"}
+            </Badge>
           </div>
           <p className="text-muted-foreground">
-            Manage listings, inbox, and buyer inquiries in one place.
+            {ctx.isTeamMember
+              ? `You are working in ${ctx.actingOwnerName}'s account with the roles assigned to you.`
+              : "Manage listings, inbox, and buyer inquiries in one place."}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" asChild>
-            <Link href="/dashboard/pro/inbox">
-              <Inbox className="mr-2 h-4 w-4" />
-              Inbox ({unread.length})
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link href="/dashboard/seller/properties/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Add listing
-            </Link>
-          </Button>
+          {(ctx.permissions.manageMessages ||
+            ctx.teamMemberRoles.includes("READ")) && (
+            <Button variant="outline" asChild>
+              <Link href="/dashboard/pro/inbox">
+                <Inbox className="mr-2 h-4 w-4" />
+                Inbox ({unread.length})
+              </Link>
+            </Button>
+          )}
+          {ctx.permissions.manageListings && (
+            <Button asChild>
+              <Link href="/dashboard/seller/properties/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Add listing
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 
-      <ProfilePhotoCard compact />
+      {!ctx.isTeamMember ? <ProfilePhotoCard compact /> : null}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {[
