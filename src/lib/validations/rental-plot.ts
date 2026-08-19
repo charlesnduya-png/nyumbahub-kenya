@@ -71,3 +71,11 @@ export const createPlotUnitSchema = z.object({
 
 export type CreateRentalPlotInput = z.infer<typeof createRentalPlotSchema>;
 export type CreatePlotUnitInput = z.infer<typeof createPlotUnitSchema>;
+
+export const updatePlotUnitSchema = createPlotUnitSchema
+  .omit({ submitForReview: true })
+  .extend({
+    description: z.string().trim().max(5000).optional().nullable(),
+  });
+
+export type UpdatePlotUnitInput = z.infer<typeof updatePlotUnitSchema>;

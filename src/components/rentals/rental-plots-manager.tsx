@@ -7,6 +7,7 @@ import {
   Home,
   KeyRound,
   Loader2,
+  Pencil,
   Plus,
   Trash2,
   Wallet,
@@ -82,6 +83,19 @@ type PlotRow = {
   units: PlotUnit[];
 };
 
+const EMPTY_UNIT_FORM = {
+  unitLabel: "",
+  unitFloor: "First floor",
+  propertyType: "APARTMENT",
+  price: "",
+  bedrooms: "1",
+  bathrooms: "1",
+  housesAvailable: "1",
+  furnished: false,
+  description: "",
+  images: [] as UploadedImage[],
+};
+
 export function RentalPlotsManager() {
   const [plots, setPlots] = useState<PlotRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,6 +105,7 @@ export function RentalPlotsManager() {
   const [canManagePlots, setCanManagePlots] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [unitOpen, setUnitOpen] = useState<PlotRow | null>(null);
+  const [editingUnit, setEditingUnit] = useState<PlotUnit | null>(null);
   const [deletePlot, setDeletePlot] = useState<PlotRow | null>(null);
 
   const [plotForm, setPlotForm] = useState({
@@ -102,18 +117,7 @@ export function RentalPlotsManager() {
     description: "",
   });
 
-  const [unitForm, setUnitForm] = useState({
-    unitLabel: "",
-    unitFloor: "First floor",
-    propertyType: "APARTMENT",
-    price: "",
-    bedrooms: "1",
-    bathrooms: "1",
-    housesAvailable: "1",
-    furnished: false,
-    description: "",
-    images: [] as UploadedImage[],
-  });
+  const [unitForm, setUnitForm] = useState(EMPTY_UNIT_FORM);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -205,56 +209,113 @@ export function RentalPlotsManager() {
     }
     const housesAvailable = Number(unitForm.housesAvailable);
     if (!Number.isInteger(housesAvailable) || housesAvailable < 1) {
-      toast.error("Enter how many houses are available");
+      toast.error(
+        editingUnit
+          ? "Enter the total houses on this listing"
+          : "Enter how many houses are available",
+      );
       return;
     }
     setBusy(true);
     try {
-      const res = await fetch(`/api/rental-plots/${unitOpen.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          unitLabel: unitForm.unitLabel.trim(),
-          unitFloor: unitForm.unitFloor.trim(),
-          propertyType: unitForm.propertyType,
-          price: Number(unitForm.price),
-          bedrooms: Number(unitForm.bedrooms) || 0,
-          bathrooms: Number(unitForm.bathrooms) || 0,
-          furnished: unitForm.furnished,
-          housesAvailable,
-          description: unitForm.description.trim() || undefined,
-          images: unitForm.images.map((img, index) => ({
-            url: img.url,
-            publicId: img.publicId ?? null,
-            alt: img.alt ?? unitForm.unitLabel.trim(),
-            isPrimary: img.isPrimary ?? index === 0,
-            order: index,
-          })),
-          submitForReview: true,
-        }),
-      });
+      const payload = {
+        unitLabel: unitForm.unitLabel.trim(),
+        unitFloor: unitForm.unitFloor.trim(),
+        propertyType: unitForm.propertyType,
+        price: Number(unitForm.price),
+        bedrooms: Number(unitForm.bedrooms) || 0,
+        bathrooms: Number(unitForm.bathrooms) || 0,
+        furnished: unitForm.furnished,
+        housesAvailable,
+        description: unitForm.description.trim() || undefined,
+        images: unitForm.images.map((img, index) => ({
+          url: img.url,
+          publicId: img.publicId ?? null,
+          alt: img.alt ?? unitForm.unitLabel.trim(),
+          isPrimary: img.isPrimary ?? index === 0,
+          order: index,
+        })),
+        ...(editingUnit ? {} : { submitForReview: true }),
+      };
+      const res = await fetch(
+        editingUnit
+          ? `/api/rental-plots/${unitOpen.id}/units/${editingUnit.id}`
+          : `/api/rental-plots/${unitOpen.id}`,
+        {
+          method: editingUnit ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
       const json = await res.json();
       if (!res.ok) {
-        toast.error(json.error ?? "Could not add vacant unit");
+        toast.error(
+          json.error ??
+            (editingUnit ? "Could not update listing" : "Could not add vacant unit"),
+        );
         return;
       }
-      toast.success(json.message ?? "Vacant unit posted");
+      toast.success(
+        json.message ?? (editingUnit ? "Listing updated" : "Vacant unit posted"),
+      );
       setUnitOpen(null);
-      setUnitForm({
-        unitLabel: "",
-        unitFloor: "First floor",
-        propertyType: "APARTMENT",
-        price: "",
-        bedrooms: "1",
-        bathrooms: "1",
-        housesAvailable: "1",
-        furnished: false,
-        description: "",
-        images: [],
-      });
+      setEditingUnit(null);
+      setUnitForm(EMPTY_UNIT_FORM);
       void load();
     } catch {
-      toast.error("Could not add vacant unit");
+      toast.error(editingUnit ? "Could not update listing" : "Could not add vacant unit");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function openEditUnit(plot: PlotRow, unit: PlotUnit) {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/rental-plots/${plot.id}/units/${unit.id}`);
+      const json = await res.json();
+      if (!res.ok || !json.data) {
+        toast.error(json.error ?? "Could not load listing");
+        return;
+      }
+      const data = json.data as {
+        unitLabel?: string | null;
+        unitFloor?: string | null;
+        propertyType?: string;
+        price?: number;
+        bedrooms?: number | null;
+        bathrooms?: number | null;
+        furnished?: boolean;
+        description?: string | null;
+        housesTotal?: number;
+        images?: Array<{
+          url: string;
+          publicId?: string | null;
+          alt?: string | null;
+          isPrimary?: boolean;
+        }>;
+      };
+      setEditingUnit(unit);
+      setUnitOpen(plot);
+      setUnitForm({
+        unitLabel: data.unitLabel ?? unit.unitLabel ?? "",
+        unitFloor: data.unitFloor || unit.unitFloor || "First floor",
+        propertyType: data.propertyType || unit.propertyType || "APARTMENT",
+        price: String(data.price ?? unit.price ?? ""),
+        bedrooms: String(data.bedrooms ?? unit.bedrooms ?? 1),
+        bathrooms: String(data.bathrooms ?? unit.bathrooms ?? 1),
+        housesAvailable: String(data.housesTotal ?? unit.housesTotal ?? 1),
+        furnished: Boolean(data.furnished),
+        description: data.description ?? "",
+        images: (data.images ?? []).map((img, index) => ({
+          url: img.url,
+          publicId: img.publicId ?? undefined,
+          alt: img.alt ?? undefined,
+          isPrimary: img.isPrimary ?? index === 0,
+        })),
+      });
+    } catch {
+      toast.error("Could not load listing");
     } finally {
       setBusy(false);
     }
@@ -392,21 +453,11 @@ export function RentalPlotsManager() {
                   {canManagePlots ? (
                     <Button
                       size="sm"
-                      onClick={() => {
-                        setUnitOpen(plot);
-                        setUnitForm({
-                          unitLabel: "",
-                          unitFloor: "First floor",
-                          propertyType: "APARTMENT",
-                          price: "",
-                          bedrooms: "1",
-                          bathrooms: "1",
-                          housesAvailable: "1",
-                          furnished: false,
-                          description: "",
-                          images: [],
-                        });
-                      }}
+                    onClick={() => {
+                      setEditingUnit(null);
+                      setUnitForm(EMPTY_UNIT_FORM);
+                      setUnitOpen(plot);
+                    }}
                     >
                       <Home className="mr-1 h-4 w-4" />
                       Post vacant house
@@ -524,6 +575,17 @@ export function RentalPlotsManager() {
                                 : "Mark vacant again"}
                             </Button>
                           ) : null}
+                          {canManagePlots ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={busy}
+                              onClick={() => void openEditUnit(plot, unit)}
+                            >
+                              <Pencil className="mr-1 h-3.5 w-3.5" />
+                              Edit
+                            </Button>
+                          ) : null}
                           <Button size="sm" variant="ghost" asChild>
                             <Link href={`/dashboard/pro/view/${unit.id}`}>
                               View
@@ -627,14 +689,24 @@ export function RentalPlotsManager() {
       {/* Add vacant unit */}
       <Dialog
         open={!!unitOpen}
-        onOpenChange={(o) => !o && setUnitOpen(null)}
+        onOpenChange={(o) => {
+          if (!o) {
+            setUnitOpen(null);
+            setEditingUnit(null);
+            setUnitForm(EMPTY_UNIT_FORM);
+          }
+        }}
       >
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>Post vacant house</DialogTitle>
+            <DialogTitle>
+              {editingUnit ? "Edit listing" : "Post vacant house"}
+            </DialogTitle>
             <DialogDescription>
               {unitOpen
-                ? `Add vacant rentals at ${unitOpen.name}. Enter how many identical houses are free — each booking deducts one until none are left.`
+                ? editingUnit
+                  ? `Update this listing at ${unitOpen.name}. Changes go live on the public page.`
+                  : `Add vacant rentals at ${unitOpen.name}. Enter how many identical houses are free — each booking deducts one until none are left.`
                 : null}
             </DialogDescription>
           </DialogHeader>
@@ -711,7 +783,11 @@ export function RentalPlotsManager() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Total houses available</Label>
+              <Label>
+                {editingUnit
+                  ? "Total houses on this listing"
+                  : "Total houses available"}
+              </Label>
               <Input
                 type="number"
                 min={1}
@@ -725,9 +801,9 @@ export function RentalPlotsManager() {
                 }
               />
               <p className="text-xs text-muted-foreground">
-                How many identical houses of this type are vacant on this plot.
-                When one is rented, the number drops until all are booked. The
-                listing stays public until the last house is taken.
+                {editingUnit
+                  ? "Rented houses are kept. You can add more vacant houses or remove unused vacant ones."
+                  : "How many identical houses of this type are vacant on this plot. When one is rented, the number drops until all are booked. The listing stays public until the last house is taken."}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -788,11 +864,24 @@ export function RentalPlotsManager() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setUnitOpen(null)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setUnitOpen(null);
+                setEditingUnit(null);
+                setUnitForm(EMPTY_UNIT_FORM);
+              }}
+            >
               Cancel
             </Button>
             <Button disabled={busy} onClick={() => void addVacantUnit()}>
-              {busy ? "Posting…" : "Post vacant house"}
+              {busy
+                ? editingUnit
+                  ? "Saving…"
+                  : "Posting…"
+                : editingUnit
+                  ? "Save changes"
+                  : "Post vacant house"}
             </Button>
           </DialogFooter>
         </DialogContent>
