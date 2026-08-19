@@ -12,8 +12,13 @@ import { getAdminGrowthSummary } from "@/lib/admin-growth";
 const ADMIN_SECTIONS = [
   {
     title: "Accounts",
-    description: "Tenants, agents, landlords, and each account’s team",
+    description: "Tenants, agents, landlords, and admins",
     href: "/dashboard/admin/users",
+  },
+  {
+    title: "Teams",
+    description: "Account admins, member emails, and assigned roles",
+    href: "/dashboard/admin/teams",
   },
   {
     title: "Properties",
