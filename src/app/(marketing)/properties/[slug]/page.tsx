@@ -23,7 +23,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { auth } from "@/lib/auth";
-import { getPropertyBySlug, resolveListingHost } from "@/lib/properties";
+import { getPropertyBySlug, getPropertyBySlugFresh, resolveListingHost } from "@/lib/properties";
 import { resolveProfessionalActingContext } from "@/lib/account-team";
 import {
   breadcrumbJsonLd,
@@ -123,13 +123,15 @@ function getPropertyDescription(property: {
   return `${property.title} is available for ${property.listingType.toLowerCase()} in ${location}. This ${property.propertyType.toLowerCase().replace(/_/g, " ")}${property.bedrooms != null ? ` offers ${property.bedrooms} bedrooms` : ""} in one of Kenya's sought-after neighbourhoods. Contact the seller through Your Home to schedule a viewing or request more details about title verification and payment terms.`;
 }
 
-async function getProperty(slug: string) {
+async function getProperty(slug: string, fresh = false) {
+  if (fresh) return getPropertyBySlugFresh(slug);
   return getPropertyBySlug(slug);
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const result = await getProperty(slug);
+  const session = await auth();
+  const result = await getProperty(slug, Boolean(session?.user));
 
   if (!result) {
     return { title: "Property not found | Your Home" };
@@ -158,14 +160,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function PropertyDetailPage({ params }: PageProps) {
   const { slug } = await params;
-  const result = await getProperty(slug);
+  const session = await auth();
+  const result = await getProperty(slug, Boolean(session?.user));
 
   if (!result) notFound();
 
   const { property } = result;
 
   if (property.status !== "ACTIVE") {
-    const session = await auth();
     const isAdmin = session?.user?.role === "ADMIN";
     const isOwner = session?.user?.id === property.ownerId;
     let isOwnerTeam = false;

@@ -407,6 +407,16 @@ export function revalidatePropertySlug(slug: string) {
   revalidateTag(`property:${slug}`);
 }
 
+export async function getPropertyBySlugFresh(slug: string) {
+  try {
+    const property = await fetchPropertyBySlug(slug);
+    if (property) return { property };
+  } catch {
+    // database unavailable
+  }
+  return null;
+}
+
 export async function getRelatedProperties(
   slug: string,
   county: string,

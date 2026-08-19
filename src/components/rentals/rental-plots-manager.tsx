@@ -524,18 +524,11 @@ export function RentalPlotsManager() {
                                 : "Mark vacant again"}
                             </Button>
                           ) : null}
-                          {unit.status === "ACTIVE" ||
-                          unit.status === "RENTED" ? (
-                            <Button size="sm" variant="ghost" asChild>
-                              <a
-                                href={`/properties/${encodeURIComponent(unit.slug)}`}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                View
-                              </a>
-                            </Button>
-                          ) : null}
+                          <Button size="sm" variant="ghost" asChild>
+                            <Link href={`/dashboard/pro/view/${unit.id}`}>
+                              View
+                            </Link>
+                          </Button>
                         </div>
                       </div>
                     ))}
