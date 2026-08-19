@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Loader2, Search } from "lucide-react";
+import { Loader2, Search, ShieldBan, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -19,9 +19,11 @@ type TeamMemberRow = {
   email: string;
   isActive: boolean;
   roles: TeamRoleValue[];
+  restricted?: boolean;
 };
 
 type TeamInviteRow = {
+  id: string;
   email: string;
   roles: TeamRoleValue[];
   expiresAt: string;
@@ -42,13 +44,21 @@ function rolesText(roles?: TeamRoleValue[] | null) {
   return labels.length > 0 ? labels : ["No role"];
 }
 
+function isRestricted(member: TeamMemberRow) {
+  return (
+    member.restricted === true ||
+    (member.roles.length === 1 && member.roles[0] === "READ")
+  );
+}
+
 export default function AdminTeamsPage() {
   const [teams, setTeams] = useState<AdminTeam[]>([]);
   const [loading, setLoading] = useState(true);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
   const [query, setQuery] = useState("");
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const res = await fetch("/api/admin/teams");
       const json = await res.json();
@@ -62,13 +72,92 @@ export default function AdminTeamsPage() {
       toast.error("Could not load teams");
       setTeams([]);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  async function restrictMember(member: TeamMemberRow, restricted: boolean) {
+    const key = `member-${member.userId}`;
+    setBusyKey(key);
+    try {
+      const res = await fetch(`/api/admin/teams/members/${member.userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ restricted }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(json.error ?? "Unable to update member");
+        return;
+      }
+      toast.success(
+        restricted
+          ? `${member.email} is now read-only`
+          : `${member.email} can work on the team again`,
+      );
+      await load(true);
+    } catch {
+      toast.error("Unable to update member");
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  async function deleteMember(member: TeamMemberRow) {
+    if (
+      !window.confirm(
+        `Remove ${member.email} from this team? They will lose access to that account.`,
+      )
+    ) {
+      return;
+    }
+    const key = `member-${member.userId}`;
+    setBusyKey(key);
+    try {
+      const res = await fetch(`/api/admin/teams/members/${member.userId}`, {
+        method: "DELETE",
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(json.error ?? "Unable to remove member");
+        return;
+      }
+      toast.success(`${member.email} was removed from the team`);
+      await load(true);
+    } catch {
+      toast.error("Unable to remove member");
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  async function cancelInvite(invite: TeamInviteRow) {
+    if (!window.confirm(`Cancel the invitation to ${invite.email}?`)) {
+      return;
+    }
+    const key = `invite-${invite.id}`;
+    setBusyKey(key);
+    try {
+      const res = await fetch(`/api/admin/teams/invites/${invite.id}`, {
+        method: "DELETE",
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(json.error ?? "Unable to cancel invitation");
+        return;
+      }
+      toast.success(`Invitation to ${invite.email} was cancelled`);
+      await load(true);
+    } catch {
+      toast.error("Unable to cancel invitation");
+    } finally {
+      setBusyKey(null);
+    }
+  }
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -102,8 +191,8 @@ export default function AdminTeamsPage() {
         <div>
           <h1 className="text-2xl font-bold">Teams</h1>
           <p className="text-muted-foreground">
-            Each professional account admin, the people on that team, their
-            emails, and the roles they were given.
+            Each account admin, member emails, and roles. Restrict a member to
+            read-only or remove them from the team.
           </p>
         </div>
         <div className="flex gap-2">
@@ -175,6 +264,7 @@ export default function AdminTeamsPage() {
                         <th className="px-4 py-2 font-medium">Name</th>
                         <th className="px-4 py-2 font-medium">Roles</th>
                         <th className="px-4 py-2 font-medium">Status</th>
+                        <th className="px-4 py-2 font-medium">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -182,54 +272,108 @@ export default function AdminTeamsPage() {
                       team.pendingInvites.length === 0 ? (
                         <tr>
                           <td
-                            colSpan={4}
+                            colSpan={5}
                             className="px-4 py-4 text-muted-foreground"
                           >
                             No team members yet.
                           </td>
                         </tr>
                       ) : null}
-                      {team.members.map((member) => (
-                        <tr key={member.userId} className="border-b last:border-0">
-                          <td className="px-4 py-3 font-medium">{member.email}</td>
-                          <td className="px-4 py-3">{member.name}</td>
-                          <td className="px-4 py-3">
-                            <div className="flex flex-wrap gap-1">
-                              {rolesText(member.roles).map((role) => (
-                                <Badge key={role} variant="outline">
-                                  {role}
-                                </Badge>
-                              ))}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <Badge variant={member.isActive ? "default" : "destructive"}>
-                              {member.isActive ? "Member" : "Suspended"}
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))}
-                      {team.pendingInvites.map((invite) => (
-                        <tr
-                          key={`${invite.email}-${invite.expiresAt}`}
-                          className="border-b last:border-0"
-                        >
-                          <td className="px-4 py-3 font-medium">{invite.email}</td>
-                          <td className="px-4 py-3 text-muted-foreground">—</td>
-                          <td className="px-4 py-3">
-                            <div className="flex flex-wrap gap-1">
-                              {rolesText(invite.roles).map((role) => (
-                                <Badge key={role} variant="outline">
-                                  {role}
-                                </Badge>
-                              ))}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <Badge variant="secondary">Invited</Badge>
-                          </td>
-                        </tr>
-                      ))}
+                      {team.members.map((member) => {
+                        const restricted = isRestricted(member);
+                        const busy = busyKey === `member-${member.userId}`;
+                        return (
+                          <tr key={member.userId} className="border-b last:border-0">
+                            <td className="px-4 py-3 font-medium">{member.email}</td>
+                            <td className="px-4 py-3">{member.name}</td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-wrap gap-1">
+                                {rolesText(member.roles).map((role) => (
+                                  <Badge key={role} variant="outline">
+                                    {role}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <Badge
+                                variant={
+                                  restricted
+                                    ? "secondary"
+                                    : member.isActive
+                                      ? "default"
+                                      : "destructive"
+                                }
+                              >
+                                {restricted
+                                  ? "Restricted"
+                                  : member.isActive
+                                    ? "Member"
+                                    : "Suspended"}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-wrap gap-2">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    void restrictMember(member, !restricted)
+                                  }
+                                >
+                                  <ShieldBan className="mr-1 h-3.5 w-3.5" />
+                                  {restricted ? "Allow" : "Restrict"}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="destructive"
+                                  disabled={busy}
+                                  onClick={() => void deleteMember(member)}
+                                >
+                                  <Trash2 className="mr-1 h-3.5 w-3.5" />
+                                  Delete
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {team.pendingInvites.map((invite) => {
+                        const busy = busyKey === `invite-${invite.id}`;
+                        return (
+                          <tr key={invite.id} className="border-b last:border-0">
+                            <td className="px-4 py-3 font-medium">{invite.email}</td>
+                            <td className="px-4 py-3 text-muted-foreground">—</td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-wrap gap-1">
+                                {rolesText(invite.roles).map((role) => (
+                                  <Badge key={role} variant="outline">
+                                    {role}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <Badge variant="secondary">Invited</Badge>
+                            </td>
+                            <td className="px-4 py-3">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="destructive"
+                                disabled={busy}
+                                onClick={() => void cancelInvite(invite)}
+                              >
+                                <Trash2 className="mr-1 h-3.5 w-3.5" />
+                                Cancel invite
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

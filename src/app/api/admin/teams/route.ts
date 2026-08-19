@@ -54,12 +54,13 @@ export async function GET() {
             expiresAt: { gt: new Date() },
           },
           orderBy: { createdAt: "desc" },
-          select: {
-            teamId: true,
-            email: true,
-            roles: true,
-            expiresAt: true,
-          },
+            select: {
+              teamId: true,
+              id: true,
+              email: true,
+              roles: true,
+              expiresAt: true,
+            },
         })
       : [];
 
@@ -84,8 +85,10 @@ export async function GET() {
           email: member.user.email,
           isActive: member.user.isActive,
           roles: member.roles,
+          restricted: member.roles.length === 1 && member.roles[0] === "READ",
         })),
         pendingInvites: (invitesByTeamId.get(team.id) ?? []).map((invite) => ({
+          id: invite.id,
           email: invite.email,
           roles: invite.roles,
           expiresAt: invite.expiresAt.toISOString(),
