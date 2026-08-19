@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { Bath, BedDouble, Heart, MapPin, ShieldCheck, Star } from "lucide-react";
 import * as React from "react";
@@ -8,6 +7,8 @@ import * as React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ListingHostRow } from "@/components/properties/listing-host-row";
+import { PropertyMediaImage } from "@/components/property/property-media-image";
 import { cn, formatPrice } from "@/lib/utils";
 import { getListingTypeLabel, getPropertyTypeLabel } from "@/lib/kenya";
 import type { PropertyCard } from "@/types";
@@ -24,7 +25,7 @@ export function PropertyCardComponent({
   priority = false,
 }: PropertyCardProps) {
   const [favorited, setFavorited] = React.useState(false);
-  const imageUrl = property.primaryImage?.url ?? "/placeholder-property.jpg";
+  const imageUrl = property.primaryImage?.url ?? property.images?.[0]?.url ?? null;
   const location = [property.estate, property.town, property.county]
     .filter(Boolean)
     .join(", ");
@@ -44,8 +45,8 @@ export function PropertyCardComponent({
         <span className="sr-only">View {property.title}</span>
       </Link>
 
-      <div className="relative aspect-[4/3] overflow-hidden">
-        <Image
+      <div className="relative z-[1] aspect-[4/3] overflow-hidden">
+        <PropertyMediaImage
           src={imageUrl}
           alt={property.primaryImage?.alt ?? property.title}
           fill
@@ -122,6 +123,15 @@ export function PropertyCardComponent({
           </span>
         </div>
 
+        {property.listingType === "RENT" &&
+        property.rentalRoomsTotal != null &&
+        property.rentalRoomsTotal > 0 ? (
+          <p className="mt-1 text-xs font-medium text-primary">
+            {property.rentalRoomsAvailable ?? 0} of {property.rentalRoomsTotal}{" "}
+            rooms available
+          </p>
+        ) : null}
+
         <h3 className="mt-1 line-clamp-1 font-medium text-foreground">
           {property.title}
         </h3>
@@ -145,6 +155,25 @@ export function PropertyCardComponent({
                 {property.bathrooms} bath{property.bathrooms !== 1 ? "s" : ""}
               </span>
             )}
+          </div>
+        )}
+
+        {property.host ? (
+          <div className="relative z-20 mt-3 border-t border-border/60 pt-3">
+            <ListingHostRow host={property.host} showLabel />
+          </div>
+        ) : null}
+
+        {property.listingType === "RENT" && (
+          <div className="relative z-20 mt-4">
+            <Button className="w-full" size="sm" asChild>
+              <Link
+                href={`/properties/${property.slug}`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                Reserve rental
+              </Link>
+            </Button>
           </div>
         )}
       </div>

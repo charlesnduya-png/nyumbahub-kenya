@@ -3,8 +3,8 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
-async function main() {
-  console.log("🌱 Seeding NyumbaHub Kenya...");
+export async function main() {
+  console.log("🌱 Seeding Your Home...");
 
   await prisma.comparisonItem.deleteMany();
   await prisma.propertyComparison.deleteMany();
@@ -38,7 +38,7 @@ async function main() {
 
   const admin = await prisma.user.create({
     data: {
-      name: "NyumbaHub Admin",
+      name: "Your Home Admin",
       email: "admin@nyumbahub.co.ke",
       phone: "+254700000001",
       passwordHash,
@@ -401,11 +401,13 @@ async function main() {
   console.log("  buyer@nyumbahub.co.ke");
 }
 
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+if (require.main === module) {
+  main()
+    .catch((e) => {
+      console.error(e);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}

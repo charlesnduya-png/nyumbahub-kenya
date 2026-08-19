@@ -1,14 +1,17 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const subscriptions = [
-  { user: "Grace Wanjiku", plan: "AGENT_PRO", status: "ACTIVE", amount: "KES 4,999", renews: "2026-03-15" },
-  { user: "James Otieno", plan: "AGENT_PRO", status: "ACTIVE", amount: "KES 4,999", renews: "2026-03-22" },
-  { user: "Mary Wanjiru", plan: "PREMIUM", status: "ACTIVE", amount: "KES 2,499", renews: "2026-04-01" },
-  { user: "David Kimani", plan: "BASIC", status: "EXPIRED", amount: "KES 999", renews: "—" },
-];
+import { prisma } from "@/lib/prisma";
 
-export default function AdminSubscriptionsPage() {
+export default async function AdminSubscriptionsPage() {
+  const subscriptions = await prisma.subscription.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 100,
+    include: {
+      user: { select: { id: true, name: true } },
+    },
+  });
+
   return (
     <div className="space-y-6">
       <div>
@@ -30,14 +33,22 @@ export default function AdminSubscriptionsPage() {
             </thead>
             <tbody>
               {subscriptions.map((s) => (
-                <tr key={s.user} className="border-b last:border-0">
-                  <td className="py-3 pr-4 font-medium">{s.user}</td>
+                <tr key={s.id} className="border-b last:border-0">
+                  <td className="py-3 pr-4 font-medium">{s.user.name ?? "—"}</td>
                   <td className="py-3 pr-4"><Badge variant="outline">{s.plan}</Badge></td>
-                  <td className="py-3 pr-4">{s.amount}</td>
                   <td className="py-3 pr-4">
-                    <Badge variant={s.status === "ACTIVE" ? "default" : "secondary"}>{s.status}</Badge>
+                    {`KES ${s.amount.toLocaleString("en-KE")}`}
                   </td>
-                  <td className="py-3 text-muted-foreground">{s.renews}</td>
+                  <td className="py-3 pr-4">
+                    <Badge variant={s.status === "ACTIVE" ? "default" : "secondary"}>
+                      {s.status}
+                    </Badge>
+                  </td>
+                  <td className="py-3 text-muted-foreground">
+                    {s.endDate
+                      ? s.endDate.toLocaleDateString("en-KE")
+                      : "—"}
+                  </td>
                 </tr>
               ))}
             </tbody>

@@ -50,8 +50,14 @@ export default function RegisterPage() {
         return;
       }
 
-      toast.success("Customer account created! Please sign in.");
-      router.push("/login?registered=customer");
+      toast.success(
+        result.otpSent
+          ? "Account created! Check your email for the verification code."
+          : "Account created! Enter the verification code we sent (or request a new one).",
+      );
+      router.push(
+        `/verify-email?email=${encodeURIComponent(data.email.trim().toLowerCase())}`,
+      );
     } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {
@@ -61,25 +67,25 @@ export default function RegisterPage() {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-2xl border border-primary bg-primary/5 p-4">
+      <div className="grid gap-3 rounded-2xl bg-white p-3 shadow-sm sm:grid-cols-2">
+        <div className="rounded-xl border-2 border-primary bg-primary/10 p-4 text-slate-900">
           <div className="mb-2 flex items-center gap-2 text-primary">
             <UserRound className="h-4 w-4" />
             <span className="text-sm font-semibold">Customer</span>
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-slate-600">
             Browse, save homes, and contact sellers.
           </p>
         </div>
         <Link
           href="/register/professional"
-          className="rounded-2xl border p-4 transition hover:border-primary/40 hover:bg-muted/40"
+          className="rounded-xl border border-slate-200 bg-white p-4 text-slate-900 transition hover:border-primary/50 hover:bg-slate-50"
         >
           <div className="mb-2 flex items-center gap-2">
             <Building2 className="h-4 w-4 text-primary" />
             <span className="text-sm font-semibold">Professional</span>
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-slate-600">
             List properties for sale or rent (admin approval required).
           </p>
         </Link>

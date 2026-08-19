@@ -1,16 +1,14 @@
 /**
  * M-Pesa Daraja API helpers (Safaricom sandbox/production).
  *
- * Sandbox base URL: https://sandbox.safaricom.co.ke
- * Production base URL: https://api.safaricom.co.ke
- *
  * Required env vars:
  * - MPESA_CONSUMER_KEY
  * - MPESA_CONSUMER_SECRET
- * - MPESA_SHORTCODE (Paybill or Till number)
- * - MPESA_PASSKEY (Lipa Na M-Pesa online passkey)
- * - MPESA_CALLBACK_URL (your STK callback endpoint)
+ * - MPESA_SHORTCODE (BusinessShortCode / Paybill or Till)
+ * - MPESA_PASSKEY (Lipa Na M-Pesa Online passkey from Daraja)
+ * - MPESA_CALLBACK_URL (public HTTPS callback)
  * - MPESA_ENV ("sandbox" | "production")
+ * - MPESA_TRANSACTION_TYPE (optional: CustomerPayBillOnline | CustomerBuyGoodsOnline)
  */
 
 export class MpesaConfigError extends Error {
@@ -38,6 +36,7 @@ interface MpesaConfig {
   passkey: string;
   callbackUrl: string;
   baseUrl: string;
+  transactionType: "CustomerPayBillOnline" | "CustomerBuyGoodsOnline";
 }
 
 function getMpesaConfig(): MpesaConfig | null {
@@ -47,6 +46,12 @@ function getMpesaConfig(): MpesaConfig | null {
   const passkey = process.env.MPESA_PASSKEY?.trim();
   const callbackUrl = process.env.MPESA_CALLBACK_URL?.trim();
   const env = process.env.MPESA_ENV?.trim().toLowerCase() ?? "sandbox";
+  const transactionTypeRaw =
+    process.env.MPESA_TRANSACTION_TYPE?.trim() || "CustomerPayBillOnline";
+  const transactionType =
+    transactionTypeRaw === "CustomerBuyGoodsOnline"
+      ? "CustomerBuyGoodsOnline"
+      : "CustomerPayBillOnline";
 
   if (!consumerKey || !consumerSecret || !shortcode || !passkey || !callbackUrl) {
     return null;
@@ -64,6 +69,7 @@ function getMpesaConfig(): MpesaConfig | null {
     passkey,
     callbackUrl,
     baseUrl,
+    transactionType,
   };
 }
 
@@ -83,6 +89,10 @@ export function isMpesaConfigured(): boolean {
   return getMpesaConfig() !== null;
 }
 
+export function getMpesaShortcode(): string | null {
+  return process.env.MPESA_SHORTCODE?.trim() || null;
+}
+
 interface AccessTokenResponse {
   access_token: string;
   expires_in: string;
@@ -90,7 +100,6 @@ interface AccessTokenResponse {
 
 /**
  * Obtain an OAuth access token from Daraja.
- * Tokens expire after ~3599 seconds; cache in production (Redis/in-memory).
  */
 export async function getAccessToken(): Promise<string> {
   const config = ensureMpesaConfigured();
@@ -110,11 +119,14 @@ export async function getAccessToken(): Promise<string> {
 
   const body = (await response.json()) as AccessTokenResponse & {
     errorMessage?: string;
+    error_description?: string;
   };
 
   if (!response.ok || !body.access_token) {
     throw new MpesaApiError(
-      body.errorMessage ?? "Failed to obtain M-Pesa access token",
+      body.errorMessage ??
+        body.error_description ??
+        "Failed to obtain M-Pesa access token",
       response.status,
       body,
     );
@@ -139,17 +151,18 @@ export interface StkPushResponse {
 }
 
 /**
- * Generate the Lipa Na M-Pesa Online password:
- * Base64(Shortcode + Passkey + Timestamp)
+ * Generate Lipa Na M-Pesa Online password:
+ * Base64(BusinessShortCode + Passkey + Timestamp)
  */
 function generatePassword(shortcode: string, passkey: string): {
   password: string;
   timestamp: string;
 } {
-  const timestamp = new Date()
-    .toISOString()
-    .replace(/[-:TZ.]/g, "")
-    .slice(0, 14);
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const timestamp =
+    `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}` +
+    `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
 
   const password = Buffer.from(`${shortcode}${passkey}${timestamp}`).toString(
     "base64",
@@ -159,17 +172,17 @@ function generatePassword(shortcode: string, passkey: string): {
 }
 
 /**
- * Normalize Kenyan phone numbers to 2547XXXXXXXX format.
+ * Normalize Kenyan phone numbers to 2547XXXXXXXX / 2541XXXXXXXX.
  */
 export function normalizeMpesaPhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
 
-  if (digits.startsWith("254")) {
-    return digits;
+  if (digits.startsWith("254") && digits.length >= 12) {
+    return digits.slice(0, 12);
   }
 
-  if (digits.startsWith("0")) {
-    return `254${digits.slice(1)}`;
+  if (digits.startsWith("0") && digits.length >= 10) {
+    return `254${digits.slice(1, 10)}`;
   }
 
   if (digits.length === 9) {
@@ -181,7 +194,6 @@ export function normalizeMpesaPhone(phone: string): string {
 
 /**
  * Initiate an STK Push (Lipa Na M-Pesa Online) payment request.
- * This is a sandbox-ready stub; wire the callback handler to confirm payment.
  */
 export async function stkPush(input: StkPushInput): Promise<StkPushResponse> {
   const config = ensureMpesaConfigured();
@@ -190,19 +202,28 @@ export async function stkPush(input: StkPushInput): Promise<StkPushResponse> {
     config.shortcode,
     config.passkey,
   );
+  const phone = normalizeMpesaPhone(input.phoneNumber);
+
+  if (!/^254(7|1)\d{8}$/.test(phone)) {
+    throw new MpesaApiError(
+      "Enter a valid Kenyan M-Pesa number (e.g. 07XXXXXXXX)",
+    );
+  }
+
+  const amount = Math.max(1, Math.round(Number(input.amount)));
 
   const payload = {
     BusinessShortCode: config.shortcode,
     Password: password,
     Timestamp: timestamp,
-    TransactionType: "CustomerPayBillOnline",
-    Amount: Math.round(input.amount),
-    PartyA: normalizeMpesaPhone(input.phoneNumber),
+    TransactionType: config.transactionType,
+    Amount: amount,
+    PartyA: phone,
     PartyB: config.shortcode,
-    PhoneNumber: normalizeMpesaPhone(input.phoneNumber),
+    PhoneNumber: phone,
     CallBackURL: config.callbackUrl,
-    AccountReference: input.accountReference.slice(0, 12),
-    TransactionDesc: input.transactionDesc.slice(0, 13),
+    AccountReference: input.accountReference.slice(0, 12) || "YourHome",
+    TransactionDesc: (input.transactionDesc || "Your Home").slice(0, 13),
   };
 
   const response = await fetch(
@@ -219,6 +240,7 @@ export async function stkPush(input: StkPushInput): Promise<StkPushResponse> {
 
   const body = (await response.json()) as StkPushResponse & {
     errorMessage?: string;
+    errorCode?: string;
   };
 
   if (!response.ok) {
@@ -229,9 +251,9 @@ export async function stkPush(input: StkPushInput): Promise<StkPushResponse> {
     );
   }
 
-  if (body.ResponseCode !== "0") {
+  if (String(body.ResponseCode) !== "0") {
     throw new MpesaApiError(
-      body.ResponseDescription ?? "STK push was not accepted",
+      body.ResponseDescription ?? body.errorMessage ?? "STK push was not accepted",
       response.status,
       body,
     );

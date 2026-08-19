@@ -15,6 +15,10 @@ export interface MockAgent {
   listingsCount: number;
   image: string;
   specialties: string[];
+  /** Public contact number shown on the main site */
+  phone?: string;
+  /** When true, visitors can open this agent's listings */
+  showListings?: boolean;
 }
 
 export interface MockTestimonial {
@@ -672,6 +676,8 @@ export const mockAgents: MockAgent[] = [
     listingsCount: 42,
     image: unsplash("photo-1573496359142-b8d87734a5a2", 400),
     specialties: ["Luxury Homes", "Karen", "Runda"],
+    phone: "0722334455",
+    showListings: true,
   },
   {
     id: "agent-2",
@@ -684,6 +690,8 @@ export const mockAgents: MockAgent[] = [
     listingsCount: 38,
     image: unsplash("photo-1472099645785-5658abf4ff4e", 400),
     specialties: ["Beachfront", "Nyali", "Diani"],
+    phone: "0711223344",
+    showListings: true,
   },
   {
     id: "agent-3",
@@ -696,6 +704,8 @@ export const mockAgents: MockAgent[] = [
     listingsCount: 29,
     image: unsplash("photo-1580489944761-15a19d654956", 400),
     specialties: ["Apartments", "Commercial", "Land"],
+    phone: "0700112233",
+    showListings: false,
   },
   {
     id: "agent-4",
@@ -708,6 +718,8 @@ export const mockAgents: MockAgent[] = [
     listingsCount: 56,
     image: unsplash("photo-1507003211169-0a1dd7228f2d", 400),
     specialties: ["Maisonettes", "Plots", "Thika Road"],
+    phone: "0733445566",
+    showListings: true,
   },
 ];
 
@@ -763,7 +775,7 @@ export const mockTestimonials: MockTestimonial[] = [
     role: "Home Buyer",
     location: "Karen, Nairobi",
     quote:
-      "NyumbaHub made finding our dream home effortless. Verified listings and responsive agents gave us confidence every step of the way.",
+      "Your Home made finding our dream home effortless. Verified listings and responsive agents gave us confidence every step of the way.",
     rating: 5,
     avatar: unsplash("photo-1438761681033-6461ffad8d80", 200),
   },

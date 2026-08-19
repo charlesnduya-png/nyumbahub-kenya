@@ -12,6 +12,7 @@ import { formatPrice } from "@/lib/utils";
 
 interface PendingListing {
   id: string;
+  slug: string;
   title: string;
   description: string;
   listingType: string;
@@ -41,7 +42,6 @@ export default function AdminModerationPage() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [rejectReasons, setRejectReasons] = useState<Record<string, string>>({});
-  const [source, setSource] = useState<string>("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -54,7 +54,6 @@ export default function AdminModerationPage() {
         return;
       }
       setListings(json.data ?? []);
-      setSource(json.source ?? "");
     } catch {
       toast.error("Could not load pending listings");
     } finally {
@@ -101,20 +100,13 @@ export default function AdminModerationPage() {
         <div>
           <h1 className="text-2xl font-bold">Listing approvals</h1>
           <p className="text-muted-foreground">
-            Review professional listings before they appear on NyumbaHub.
+            Review professional listings before they appear on Your Home.
           </p>
         </div>
         <Button variant="outline" onClick={() => void load()} disabled={loading}>
           Refresh
         </Button>
       </div>
-
-      {source === "demo" && (
-        <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-100">
-          Demo mode: Postgres is offline, so approvals use the local demo queue.
-          Connect your database to manage real submissions.
-        </p>
-      )}
 
       <Card>
         <CardHeader>
@@ -218,7 +210,9 @@ export default function AdminModerationPage() {
                       Reject
                     </Button>
                     <Button size="sm" variant="outline" asChild>
-                      <Link href={`/properties/${item.id}`}>Preview</Link>
+                      <Link href={`/properties/${item.slug}`} target="_blank">
+                        Preview
+                      </Link>
                     </Button>
                   </div>
                 </div>

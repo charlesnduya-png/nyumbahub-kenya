@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+
 import { auth } from "@/lib/auth";
-import { createPayment, completePayment } from "@/lib/payments-store";
-import { isMpesaConfigured, MpesaConfigError, stkPush } from "@/lib/mpesa";
+import { createPayment } from "@/lib/payments-store";
+import {
+  isMpesaConfigured,
+  MpesaApiError,
+  MpesaConfigError,
+  stkPush,
+} from "@/lib/mpesa";
 import { getProduct } from "@/lib/pricing";
+import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
   phoneNumber: z.string().min(9),
@@ -12,7 +19,6 @@ const schema = z.object({
   description: z.string().min(1).max(100).optional(),
   propertyId: z.string().optional(),
   productId: z.string().optional(),
-  confirmDemo: z.boolean().optional(),
 });
 
 export async function POST(request: Request) {
@@ -23,6 +29,18 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { success: false, error: "Authentication required" },
         { status: 401 },
+      );
+    }
+
+    if (!isMpesaConfigured()) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "M-Pesa is not fully configured. Add Consumer Key, Secret, Shortcode, Passkey, and Callback URL.",
+          code: "MPESA_NOT_CONFIGURED",
+        },
+        { status: 503 },
       );
     }
 
@@ -56,25 +74,32 @@ export async function POST(request: Request) {
       phone: parsed.data.phoneNumber,
       propertyId: parsed.data.propertyId,
       method: "MPESA",
+      metadata: {
+        type: "PAYMENT",
+      },
     });
 
-    if (parsed.data.confirmDemo || !isMpesaConfigured()) {
-      const completed = parsed.data.confirmDemo
-        ? completePayment(payment.id)
-        : payment;
-
-      return NextResponse.json({
-        success: true,
-        stub: true,
+    try {
+      await prisma.payment.create({
         data: {
-          paymentId: completed?.id ?? payment.id,
-          reference: completed?.reference ?? payment.reference,
-          status: completed?.status ?? payment.status,
-          CustomerMessage: parsed.data.confirmDemo
-            ? "Demo payment confirmed"
-            : "M-Pesa STK simulated. Use confirmDemo or /api/payments/checkout.",
+          id: payment.id,
+          userId: session.user.id,
+          amount,
+          currency: "KES",
+          method: "MPESA",
+          status: "PENDING",
+          reference: payment.reference,
+          description:
+            parsed.data.description ?? product?.name ?? "Your Home payment",
+          metadata: {
+            productId: product?.id ?? null,
+            propertyId: parsed.data.propertyId ?? null,
+            type: "PAYMENT",
+          },
         },
       });
+    } catch {
+      // ignore persist race
     }
 
     const stkResponse = await stkPush({
@@ -83,25 +108,52 @@ export async function POST(request: Request) {
       accountReference:
         parsed.data.accountReference ?? payment.reference.slice(0, 12),
       transactionDesc:
-        parsed.data.description ?? product?.name ?? "NyumbaHub",
+        parsed.data.description ?? product?.name ?? "Your Home",
+    });
+
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: {
+        reference: stkResponse.CheckoutRequestID || payment.reference,
+        metadata: {
+          productId: product?.id ?? null,
+          propertyId: parsed.data.propertyId ?? null,
+          type: "PAYMENT",
+          checkoutRequestId: stkResponse.CheckoutRequestID,
+          merchantRequestId: stkResponse.MerchantRequestID,
+        },
+      },
     });
 
     return NextResponse.json({
       success: true,
       data: {
         paymentId: payment.id,
-        reference: payment.reference,
-        ...stkResponse,
+        reference: stkResponse.CheckoutRequestID || payment.reference,
+        CheckoutRequestID: stkResponse.CheckoutRequestID,
+        MerchantRequestID: stkResponse.MerchantRequestID,
+        CustomerMessage: stkResponse.CustomerMessage,
+        ResponseDescription: stkResponse.ResponseDescription,
       },
+      message:
+        stkResponse.CustomerMessage ||
+        "M-Pesa prompt sent. Enter your PIN on your phone.",
     });
   } catch (error) {
     if (error instanceof MpesaConfigError) {
       return NextResponse.json(
-        { success: false, error: error.message, stub: true },
+        { success: false, error: error.message, code: "MPESA_NOT_CONFIGURED" },
         { status: 503 },
       );
     }
+    if (error instanceof MpesaApiError) {
+      return NextResponse.json(
+        { success: false, error: error.message, details: error.responseBody },
+        { status: 502 },
+      );
+    }
 
+    console.error("M-Pesa STK error:", error);
     return NextResponse.json(
       { success: false, error: "Unable to initiate M-Pesa payment" },
       { status: 500 },

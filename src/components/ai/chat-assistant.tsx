@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
 const starter =
-  "Habari! I'm the NyumbaHub assistant. Ask me about buying, renting, or listing property in Kenya.";
+  "Habari! I'm Your Home's assistant. Ask me about buying, renting, or listing property in Kenya.";
 
 export function AiChatAssistant() {
   const [open, setOpen] = useState(false);
@@ -63,12 +63,12 @@ export function AiChatAssistant() {
         <div
           className="glass flex h-[420px] w-[min(100vw-2rem,360px)] flex-col overflow-hidden rounded-2xl border shadow-2xl"
           role="dialog"
-          aria-label="NyumbaHub AI assistant"
+          aria-label="Your Home AI assistant"
         >
           <div className="flex items-center justify-between bg-primary px-4 py-3 text-primary-foreground">
             <div className="flex items-center gap-2">
               <Bot className="h-4 w-4" aria-hidden />
-              <span className="font-medium">NyumbaHub Assistant</span>
+              <span className="font-medium">Your Home Assistant</span>
             </div>
             <button
               type="button"

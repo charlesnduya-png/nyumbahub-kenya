@@ -1,0 +1,283 @@
+import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { slugify } from "@/lib/utils";
+import {
+  createPlotUnitSchema,
+  updateRentalPlotSchema,
+} from "@/lib/validations/rental-plot";
+import {
+  assertCanCreateListing,
+} from "@/lib/listing-subscription";
+
+interface RouteParams {
+  params: Promise<{ id: string }>;
+}
+
+async function getOwnedPlot(plotId: string, userId: string, role?: string) {
+  const agent = await prisma.agent.findUnique({
+    where: { userId },
+    select: { id: true },
+  });
+
+  const plot = await prisma.rentalPlot.findUnique({ where: { id: plotId } });
+  if (!plot) return { error: "Plot not found" as const, status: 404 as const };
+
+  const allowed =
+    role === "ADMIN" ||
+    plot.ownerId === userId ||
+    (agent && plot.agentId === agent.id);
+
+  if (!allowed) {
+    return { error: "Forbidden" as const, status: 403 as const };
+  }
+
+  return { plot, agent };
+}
+
+export async function GET(_request: Request, { params }: RouteParams) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: "Sign in required" },
+        { status: 401 },
+      );
+    }
+
+    const { id } = await params;
+    const owned = await getOwnedPlot(id, session.user.id, session.user.role);
+    if ("error" in owned && owned.error) {
+      return NextResponse.json(
+        { success: false, error: owned.error },
+        { status: owned.status },
+      );
+    }
+
+    const plot = await prisma.rentalPlot.findUnique({
+      where: { id },
+      include: {
+        units: {
+          orderBy: { createdAt: "desc" },
+          include: {
+            images: { orderBy: { order: "asc" }, take: 1 },
+          },
+        },
+      },
+    });
+
+    return NextResponse.json({ success: true, data: plot });
+  } catch {
+    return NextResponse.json(
+      { success: false, error: "Unable to load plot" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function PATCH(request: Request, { params }: RouteParams) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: "Sign in required" },
+        { status: 401 },
+      );
+    }
+
+    const { id } = await params;
+    const owned = await getOwnedPlot(id, session.user.id, session.user.role);
+    if ("error" in owned && owned.error) {
+      return NextResponse.json(
+        { success: false, error: owned.error },
+        { status: owned.status },
+      );
+    }
+
+    const body = await request.json();
+    const parsed = updateRentalPlotSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: "Invalid update" },
+        { status: 400 },
+      );
+    }
+
+    const updated = await prisma.rentalPlot.update({
+      where: { id },
+      data: parsed.data,
+    });
+
+    return NextResponse.json({ success: true, data: updated });
+  } catch {
+    return NextResponse.json(
+      { success: false, error: "Unable to update plot" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(_request: Request, { params }: RouteParams) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: "Sign in required" },
+        { status: 401 },
+      );
+    }
+
+    const { id } = await params;
+    const owned = await getOwnedPlot(id, session.user.id, session.user.role);
+    if ("error" in owned && owned.error) {
+      return NextResponse.json(
+        { success: false, error: owned.error },
+        { status: owned.status },
+      );
+    }
+
+    await prisma.rentalPlot.delete({ where: { id } });
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json(
+      { success: false, error: "Unable to delete plot" },
+      { status: 500 },
+    );
+  }
+}
+
+/** Post a vacant rental unit under this plot */
+export async function POST(request: Request, { params }: RouteParams) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: "Sign in required" },
+        { status: 401 },
+      );
+    }
+
+    const { id } = await params;
+    const owned = await getOwnedPlot(id, session.user.id, session.user.role);
+    if ("error" in owned && owned.error) {
+      return NextResponse.json(
+        { success: false, error: owned.error },
+        { status: owned.status },
+      );
+    }
+
+    const plot = owned.plot!;
+    const body = await request.json();
+    const parsed = createPlotUnitSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid unit details",
+          details: parsed.error.flatten(),
+        },
+        { status: 400 },
+      );
+    }
+
+    const role = session.user.role;
+    const submitForReview = parsed.data.submitForReview !== false;
+
+    const canCreate = await assertCanCreateListing({
+      userId: session.user.id,
+      role,
+    });
+    if (!canCreate.ok) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: canCreate.error,
+          code: canCreate.code,
+          used: canCreate.used,
+          limit: canCreate.limit,
+        },
+        { status: canCreate.code === "LISTING_LIMIT_REACHED" ? 403 : 402 },
+      );
+    }
+
+    // Free tier / paid plan limits already enforced by assertCanCreateListing above.
+
+    const unitLabel = parsed.data.unitLabel;
+    const unitFloor = parsed.data.unitFloor;
+    const images = parsed.data.images;
+    const hasPrimary = images.some((img) => img.isPrimary);
+
+    const title =
+      parsed.data.title?.trim() ||
+      `${unitLabel}, ${unitFloor} — ${plot.name}, ${plot.town}`;
+    const description =
+      parsed.data.description?.trim() ||
+      `Vacant ${parsed.data.propertyType.toLowerCase()} (${unitLabel}, ${unitFloor}) available for rent at ${plot.name} in ${plot.town}, ${plot.county}.${plot.description ? ` ${plot.description}` : ""}`;
+
+    const baseSlug = slugify(`${title}-${unitLabel}`);
+    let slug = baseSlug;
+    let suffix = 1;
+    while (await prisma.property.findUnique({ where: { slug } })) {
+      slug = `${baseSlug}-${suffix++}`;
+    }
+
+    const status = submitForReview ? "PENDING" : "DRAFT";
+
+    const unit = await prisma.property.create({
+      data: {
+        title,
+        slug,
+        description,
+        listingType: "RENT",
+        propertyType: parsed.data.propertyType,
+        price: parsed.data.price,
+        bedrooms: parsed.data.bedrooms ?? null,
+        bathrooms: parsed.data.bathrooms ?? null,
+        furnished: parsed.data.furnished ?? false,
+        parkingSpaces: parsed.data.parkingSpaces ?? 0,
+        county: plot.county,
+        town: plot.town,
+        estate: plot.estate,
+        address: plot.address,
+        latitude: plot.latitude,
+        longitude: plot.longitude,
+        ownerId: session.user.id,
+        agentId: owned.agent?.id ?? plot.agentId,
+        rentalPlotId: plot.id,
+        unitLabel,
+        unitFloor,
+        status,
+        publishedAt: null,
+        images: {
+          create: images.map((img, index) => ({
+            url: img.url,
+            publicId: img.publicId ?? null,
+            alt: img.alt ?? `${unitLabel} at ${plot.name}`,
+            order: img.order ?? index,
+            isPrimary: hasPrimary ? Boolean(img.isPrimary) : index === 0,
+          })),
+        },
+      },
+      include: {
+        images: { orderBy: { order: "asc" } },
+      },
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: unit,
+        message:
+          status === "PENDING"
+            ? "Vacant unit submitted for admin approval"
+            : "Vacant unit saved as draft",
+      },
+      { status: 201 },
+    );
+  } catch {
+    return NextResponse.json(
+      { success: false, error: "Unable to add vacant unit" },
+      { status: 500 },
+    );
+  }
+}

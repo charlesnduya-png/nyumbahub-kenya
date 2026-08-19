@@ -13,7 +13,7 @@ const STUB_RESPONSES: Record<string, string> = {
   viewing:
     "To book a viewing, click 'Schedule Viewing' on the property page or WhatsApp the listing agent directly. Most agents offer weekday and Saturday slots.",
   default:
-    "I'm NyumbaHub's property assistant. I can help with mortgage estimates, viewing bookings, neighbourhood info, and title verification tips. What would you like to know about this listing?",
+    "I'm Your Home's property assistant. I can help with mortgage estimates, viewing bookings, neighbourhood info, and title verification tips. What would you like to know about this listing?",
 };
 
 export async function POST(request: Request) {

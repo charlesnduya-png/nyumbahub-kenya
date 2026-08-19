@@ -1,8 +1,8 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 
+import { createAndSendEmailOtp } from "@/lib/email-otp";
 import { prisma } from "@/lib/prisma";
-import { createDemoUser } from "@/lib/users-store";
 import { registerSchema } from "@/lib/validations/auth";
 
 export async function POST(request: Request) {
@@ -12,109 +12,118 @@ export async function POST(request: Request) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: "Validation failed", details: parsed.error.flatten() },
+        {
+          success: false,
+          error: "Validation failed",
+          details: parsed.error.flatten(),
+        },
         { status: 400 },
       );
     }
 
-    const { name, email, phone, password, role } = parsed.data;
+    const {
+      name,
+      email,
+      phone,
+      password,
+      role,
+      nationalId,
+      agencyName,
+      licenseNumber,
+      county,
+    } = parsed.data;
     const normalizedEmail = email.toLowerCase();
+    const cleanedNationalId = nationalId?.trim().toUpperCase() || null;
 
-    try {
-      const existing = await prisma.user.findFirst({
-        where: {
-          OR: [{ email: normalizedEmail }, { phone }],
-        },
-      });
+    const existing = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: normalizedEmail },
+          { phone },
+          ...(cleanedNationalId ? [{ nationalId: cleanedNationalId }] : []),
+        ],
+      },
+    });
 
-      if (existing) {
-        return NextResponse.json(
-          { success: false, error: "An account with this email or phone already exists" },
-          { status: 409 },
-        );
-      }
+    if (existing) {
+      const conflict =
+        cleanedNationalId && existing.nationalId === cleanedNationalId
+          ? "An account with this National ID already exists"
+          : "An account with this email or phone already exists";
+      return NextResponse.json(
+        { success: false, error: conflict },
+        { status: 409 },
+      );
+    }
 
-      const passwordHash = await bcrypt.hash(password, 12);
+    const passwordHash = await bcrypt.hash(password, 12);
+    const isProfessional = role === "SELLER" || role === "AGENT";
 
-      const user = await prisma.user.create({
-        data: {
-          name,
-          email: normalizedEmail,
-          phone,
-          passwordHash,
-          role,
-        },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          phone: true,
-          role: true,
-          createdAt: true,
-        },
-      });
-
-      if (role === "AGENT") {
-        await prisma.agent.create({
-          data: {
-            userId: user.id,
-            agencyName: `${name}'s Agency`,
-            county: "Nairobi",
-            town: "Nairobi CBD",
-            verificationStatus: "PENDING",
-          },
-        });
-      }
-
-      return NextResponse.json({ success: true, data: user }, { status: 201 });
-    } catch {
-      // On production (Vercel), we must not create "fake" demo users when Postgres is missing.
-      // The correct fix is to configure DATABASE_URL + run migrations.
-      if (process.env.NODE_ENV === "production") {
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              "Database is unavailable. Connect Postgres (DATABASE_URL) to create real accounts.",
-          },
-          { status: 503 },
-        );
-      }
-
-      const demo = createDemoUser({
+    const user = await prisma.user.create({
+      data: {
         name,
         email: normalizedEmail,
         phone,
-        password,
+        passwordHash,
         role,
-      });
+        nationalId: cleanedNationalId,
+        nationalIdVerified: cleanedNationalId ? "PENDING" : "UNVERIFIED",
+        verificationStatus: isProfessional ? "PENDING" : "UNVERIFIED",
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        nationalId: true,
+        createdAt: true,
+      },
+    });
 
-      if ("error" in demo) {
-        return NextResponse.json(
-          { success: false, error: "An account with this email or phone already exists" },
-          { status: 409 },
-        );
-      }
-
-      return NextResponse.json(
-        {
-          success: true,
-          source: "demo",
-          data: {
-            id: demo.id,
-            name: demo.name,
-            email: demo.email,
-            phone: demo.phone,
-            role: demo.role,
-            createdAt: demo.createdAt,
-          },
+    if (role === "AGENT") {
+      await prisma.agent.create({
+        data: {
+          userId: user.id,
+          agencyName: agencyName?.trim() || `${name}'s Agency`,
+          licenseNumber: licenseNumber?.trim() || null,
+          county: county?.trim() || "Nairobi",
+          town: county?.trim() || "Nairobi",
+          verificationStatus: "PENDING",
+          isVerified: false,
         },
-        { status: 201 },
-      );
+      });
     }
+
+    let otpSent = false;
+    let previewCode: string | undefined;
+    try {
+      const otp = await createAndSendEmailOtp({
+        email: user.email,
+        name: user.name,
+      });
+      otpSent = otp.sent;
+      if ("previewCode" in otp) previewCode = otp.previewCode;
+    } catch (error) {
+      console.error("Failed to send registration verification code:", error);
+    }
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: user,
+        requiresEmailVerification: true,
+        otpSent,
+        previewCode,
+      },
+      { status: 201 },
+    );
   } catch {
     return NextResponse.json(
-      { success: false, error: "Unable to create account. Please try again." },
+      {
+        success: false,
+        error: "Unable to create account. Please try again later.",
+      },
       { status: 500 },
     );
   }

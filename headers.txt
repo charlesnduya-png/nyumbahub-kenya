@@ -1,0 +1,15 @@
+HTTP/1.1 200 OK
+Cache-Control: public, max-age=0, must-revalidate
+Content-Type: application/json
+Date: Tue, 04 Aug 2026 11:26:22 GMT
+Location: https://nyumbahub-kenya.vercel.app/login
+Server: Vercel
+Set-Cookie: __Secure-authjs.callback-url=https%3A%2F%2Fnyumbahub-kenya.vercel.app%2Flogin; Path=/; HttpOnly; Secure; SameSite=Lax
+Set-Cookie: __Secure-authjs.session-token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2Q0JDLUhTNTEyIiwia2lkIjoiTGhNTTBBeUhRcFk0b29NWTY1MldnOGkwMFFZRElQR0YwSjRWbUZsZW9nOXA1c0JYekFaeWFSeGFZUmh5VjczUEZyM3lDbEx0dEVFdGtqdF9tOGdTRXcifQ..uAGKi0d1KbQ8VV14AtQq8Q.PJizYxijNv3cgJLL7yqKWg9DCeKszWOQFrBl2xuHtqGr5d6DDRvdNTbNdVCHebKmdSD0Nxv3yG22HHTMIygUPD6eFNbUZZjaZeVmrFS8jlosxmCBbPFs-1y-2UCHM2UzMSXemA5ZjBf7j9BrHKmuHxScs_U0Y79Qn45-ncSQRn6zxRSx2eszJGXWzpuFRWsdLIbh9nA1kdEta59oaLZgLC2NHh-FjijqB6ymjRG7k-uBq1Lhv2UR3Gp1RFjr-ox_IAE68NItBgubpOLiez2wQlBKweqMbmJw_Oopm0EfOQhw3hN8qp0LBEh8mPWZoaDT.WJSegssr7OqM9_jzEzYjWNx0r6T68BWl4vpwOhbjTZs; Path=/; Expires=Thu, 03 Sep 2026 11:26:22 GMT; HttpOnly; Secure; SameSite=Lax
+Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+Vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch
+X-Matched-Path: /api/auth/[...nextauth]
+X-Vercel-Cache: MISS
+X-Vercel-Id: cpt1::iad1::xpw4v-1785842782630-953e3d6eb3ea
+Transfer-Encoding: chunked
+

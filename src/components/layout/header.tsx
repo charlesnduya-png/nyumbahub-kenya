@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   GitCompareArrows,
   Heart,
+  LayoutDashboard,
   Menu,
   Palmtree,
   User,
@@ -14,6 +16,7 @@ import * as React from "react";
 
 import { BrandLogo } from "@/components/brand/logo";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -22,6 +25,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { dashboardHomeForRole } from "@/lib/site-owner";
 import { cn } from "@/lib/utils";
 
 const navLinks: {
@@ -32,21 +36,32 @@ const navLinks: {
   { href: "/properties?listingType=BUY", label: "Buy" },
   { href: "/rent", label: "Rent" },
   { href: "/bnb", label: "BnB", icon: Palmtree },
-  { href: "/properties?listingType=LAND", label: "Land" },
+  { href: "/properties?category=land-plots", label: "Land" },
   { href: "/properties?listingType=COMMERCIAL", label: "Commercial" },
   { href: "/agents", label: "Agents" },
-  { href: "/pricing", label: "Pricing" },
 ];
 
 export function Header() {
   const pathname = usePathname();
+  const { data: session, status } = useSession();
   const [open, setOpen] = React.useState(false);
 
+  const isLoggedIn = status === "authenticated" && Boolean(session?.user);
+  const dashboardHref = dashboardHomeForRole(
+    session?.user?.role,
+    session?.user?.email,
+  );
+  const firstName =
+    session?.user?.name?.split(" ")[0] ??
+    session?.user?.email?.split("@")[0] ??
+    "Account";
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-background/70 backdrop-blur-xl supports-[backdrop-filter]:bg-background/55">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-8">
-          <BrandLogo size="md" />
+    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-2 px-3 sm:h-16 sm:gap-4 sm:px-6 lg:px-8">
+        <div className="flex min-w-0 items-center gap-4 lg:gap-8">
+          <BrandLogo size="sm" className="min-w-0 shrink sm:hidden" />
+          <BrandLogo size="md" className="hidden shrink-0 sm:inline-flex" />
 
           <nav
             className="hidden items-center gap-1 lg:flex"
@@ -86,11 +101,11 @@ export function Header() {
           </nav>
         </div>
 
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="flex shrink-0 items-center gap-0.5 sm:gap-1.5">
           <Button
             variant="ghost"
             size="icon"
-            className="hidden rounded-full sm:inline-flex"
+            className="hidden rounded-full lg:inline-flex"
             asChild
           >
             <Link href="/compare" aria-label="Compare properties">
@@ -100,7 +115,7 @@ export function Header() {
           <Button
             variant="ghost"
             size="icon"
-            className="hidden rounded-full sm:inline-flex"
+            className="hidden rounded-full lg:inline-flex"
             asChild
           >
             <Link href="/wishlist" aria-label="Wishlist">
@@ -108,18 +123,34 @@ export function Header() {
             </Link>
           </Button>
 
+          {isLoggedIn ? <NotificationBell /> : null}
+
           <ThemeToggle />
 
-          <div className="hidden items-center gap-2 md:flex">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/login">Sign in</Link>
-            </Button>
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/register">Join free</Link>
-            </Button>
-            <Button size="sm" asChild>
-              <Link href="/register/professional">List your property</Link>
-            </Button>
+          {/* Desktop auth / account — only with full nav (lg+) to avoid crowding */}
+          <div className="hidden items-center gap-2 lg:flex">
+            {status === "loading" ? (
+              <div className="h-8 w-28 animate-pulse rounded-md bg-muted" />
+            ) : isLoggedIn ? (
+              <Button size="sm" asChild>
+                <Link href={dashboardHref}>
+                  <LayoutDashboard className="mr-1.5 h-4 w-4" />
+                  {firstName}
+                </Link>
+              </Button>
+            ) : (
+              <>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href="/login">Sign in</Link>
+                </Button>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/register">Join free</Link>
+                </Button>
+                <Button size="sm" asChild>
+                  <Link href="/register/professional">List property</Link>
+                </Button>
+              </>
+            )}
           </div>
 
           <Sheet open={open} onOpenChange={setOpen}>
@@ -133,7 +164,7 @@ export function Header() {
                 <Menu className="h-5 w-5" aria-hidden="true" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-full sm:max-w-sm">
+            <SheetContent side="right" className="w-[min(100vw,24rem)]">
               <SheetHeader>
                 <SheetTitle className="text-left">
                   <BrandLogo href={null} showKenya size="sm" />
@@ -150,7 +181,7 @@ export function Header() {
                       key={link.href}
                       href={link.href}
                       onClick={() => setOpen(false)}
-                      className="group inline-flex items-center gap-2 rounded-lg px-3 py-3 text-base font-medium text-foreground transition-colors hover:bg-accent"
+                      className="group inline-flex min-h-11 items-center gap-2 rounded-lg px-3 py-3 text-base font-medium text-foreground transition-colors hover:bg-accent"
                     >
                       {Icon ? (
                         <Icon
@@ -176,25 +207,36 @@ export function Header() {
                     Wishlist
                   </Link>
                 </Button>
-                <Button variant="outline" asChild>
-                  <Link href="/login" onClick={() => setOpen(false)}>
-                    <User className="h-4 w-4" aria-hidden="true" />
-                    Sign in
-                  </Link>
-                </Button>
-                <Button variant="outline" asChild>
-                  <Link href="/register" onClick={() => setOpen(false)}>
-                    Customer account
-                  </Link>
-                </Button>
-                <Button asChild>
-                  <Link
-                    href="/register/professional"
-                    onClick={() => setOpen(false)}
-                  >
-                    List your property
-                  </Link>
-                </Button>
+                {isLoggedIn ? (
+                  <Button asChild>
+                    <Link href={dashboardHref} onClick={() => setOpen(false)}>
+                      <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
+                      My dashboard
+                    </Link>
+                  </Button>
+                ) : (
+                  <>
+                    <Button variant="outline" asChild>
+                      <Link href="/login" onClick={() => setOpen(false)}>
+                        <User className="h-4 w-4" aria-hidden="true" />
+                        Sign in
+                      </Link>
+                    </Button>
+                    <Button variant="outline" asChild>
+                      <Link href="/register" onClick={() => setOpen(false)}>
+                        Customer account
+                      </Link>
+                    </Button>
+                    <Button asChild>
+                      <Link
+                        href="/register/professional"
+                        onClick={() => setOpen(false)}
+                      >
+                        List your property
+                      </Link>
+                    </Button>
+                  </>
+                )}
               </div>
             </SheetContent>
           </Sheet>

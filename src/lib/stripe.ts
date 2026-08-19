@@ -53,10 +53,10 @@ export interface CreateCheckoutSessionInput {
 }
 
 const PLAN_LABELS: Partial<Record<SubscriptionPlan, string>> = {
-  BASIC: "NyumbaHub Basic",
-  PREMIUM: "NyumbaHub Premium",
-  AGENT_PRO: "NyumbaHub Agent Pro",
-  AGENT_ENTERPRISE: "NyumbaHub Agent Enterprise",
+  BASIC: "Your Home Basic",
+  PREMIUM: "Your Home Premium",
+  AGENT_PRO: "Your Home Agent Pro",
+  AGENT_ENTERPRISE: "Your Home Agent Enterprise",
 };
 
 export async function createCheckoutSession(
@@ -68,7 +68,7 @@ export async function createCheckoutSession(
   const productName =
     input.purpose === "premium_listing"
       ? "Premium Property Listing"
-      : (input.plan ? PLAN_LABELS[input.plan] : undefined) ?? "NyumbaHub Subscription";
+      : (input.plan ? PLAN_LABELS[input.plan] : undefined) ?? "Your Home Subscription";
 
   const description =
     input.purpose === "premium_listing" && input.propertyId

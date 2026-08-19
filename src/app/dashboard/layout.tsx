@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { DashboardSidebar } from "@/components/dashboard/sidebar";
+import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { isSiteOwnerEmail } from "@/lib/site-owner";
 import type { Role } from "@/types";
 
 export default async function DashboardLayout({
@@ -20,14 +21,12 @@ export default async function DashboardLayout({
     redirect("/login?callbackUrl=/dashboard");
   }
 
-  const role = (session.user.role ?? "BUYER") as Role;
+  const owner = isSiteOwnerEmail(session.user.email);
+  const role = (owner ? "ADMIN" : (session.user.role ?? "BUYER")) as Role;
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <DashboardSidebar role={role} userName={session.user.name} />
-      <div className="flex-1 overflow-auto">
-        <div className="container mx-auto max-w-7xl p-6 lg:p-8">{children}</div>
-      </div>
-    </div>
+    <DashboardShell role={role} userName={session.user.name}>
+      {children}
+    </DashboardShell>
   );
 }

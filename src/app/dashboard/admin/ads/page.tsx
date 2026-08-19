@@ -2,13 +2,22 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const ads = [
-  { id: "1", title: "KCB Home Loan — March promo", placement: "HOME_BANNER", clicks: 1240, impressions: 45000, active: true },
-  { id: "2", title: "Diani Beach Villas", placement: "SEARCH_SPONSORED", clicks: 890, impressions: 22000, active: true },
-  { id: "3", title: "Ardhi Sasa awareness", placement: "SIDEBAR", clicks: 340, impressions: 18000, active: false },
-];
+import { prisma } from "@/lib/prisma";
 
-export default function AdminAdsPage() {
+export default async function AdminAdsPage() {
+  const ads = await prisma.advertisement.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 200,
+    select: {
+      id: true,
+      title: true,
+      placement: true,
+      clicks: true,
+      impressions: true,
+      isActive: true,
+    },
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -33,18 +42,41 @@ export default function AdminAdsPage() {
               </tr>
             </thead>
             <tbody>
-              {ads.map((ad) => (
-                <tr key={ad.id} className="border-b last:border-0">
-                  <td className="py-3 pr-4 font-medium">{ad.title}</td>
-                  <td className="py-3 pr-4"><Badge variant="outline">{ad.placement}</Badge></td>
-                  <td className="py-3 pr-4">{ad.clicks.toLocaleString()}</td>
-                  <td className="py-3 pr-4">{ad.impressions.toLocaleString()}</td>
-                  <td className="py-3 pr-4">
-                    <Badge variant={ad.active ? "default" : "secondary"}>{ad.active ? "Active" : "Paused"}</Badge>
+              {ads.length === 0 ? (
+                <tr>
+                  <td
+                    className="py-8 text-center text-sm text-muted-foreground"
+                    colSpan={6}
+                  >
+                    No advertisements yet.
                   </td>
-                  <td className="py-3"><Button size="sm" variant="outline">Edit</Button></td>
                 </tr>
-              ))}
+              ) : (
+                ads.map((ad) => (
+                  <tr key={ad.id} className="border-b last:border-0">
+                    <td className="py-3 pr-4 font-medium">{ad.title}</td>
+                    <td className="py-3 pr-4">
+                      <Badge variant="outline">{ad.placement}</Badge>
+                    </td>
+                    <td className="py-3 pr-4">
+                      {ad.clicks.toLocaleString("en-KE")}
+                    </td>
+                    <td className="py-3 pr-4">
+                      {ad.impressions.toLocaleString("en-KE")}
+                    </td>
+                    <td className="py-3 pr-4">
+                      <Badge variant={ad.isActive ? "default" : "secondary"}>
+                        {ad.isActive ? "Active" : "Paused"}
+                      </Badge>
+                    </td>
+                    <td className="py-3">
+                      <Button size="sm" variant="outline" disabled>
+                        Edit
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </CardContent>

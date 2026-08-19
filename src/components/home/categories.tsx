@@ -1,10 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import type { MockCategory } from "@/data/mock";
+import type { BrowseCategory } from "@/lib/marketing";
 
 interface CategoriesProps {
-  categories: MockCategory[];
+  categories: BrowseCategory[];
   title?: string;
   subtitle?: string;
 }
@@ -14,6 +14,10 @@ export function Categories({
   title = "Browse by Category",
   subtitle = "Find the perfect property type for your needs",
 }: CategoriesProps) {
+  if (categories.length === 0) {
+    return null;
+  }
+
   return (
     <section className="py-16 sm:py-20" aria-labelledby="categories-heading">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -37,10 +41,12 @@ export function Categories({
                 category.slug === "bnb"
                   ? "/bnb"
                   : category.slug === "land-plots"
-                    ? "/properties?listingType=LAND"
-                    : `/properties?propertyType=${category.propertyType}`
+                    ? "/properties?category=land-plots"
+                    : category.slug === "commercial"
+                      ? "/properties?category=commercial"
+                      : `/properties?propertyType=${category.propertyType}`
               }
-              className="group relative overflow-hidden rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="group relative z-10 block overflow-hidden rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <div className="relative aspect-[16/10]">
                 <Image

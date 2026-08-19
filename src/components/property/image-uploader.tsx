@@ -5,6 +5,8 @@ import * as React from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { compressImageFile } from "@/lib/compress-image";
+import { MAX_LISTING_IMAGES } from "@/lib/listing-media";
 import { cn } from "@/lib/utils";
 
 export interface UploadedImage {
@@ -27,7 +29,7 @@ const MAX_BYTES = 8 * 1024 * 1024;
 export function ImageUploader({
   value,
   onChange,
-  maxFiles = 12,
+  maxFiles = MAX_LISTING_IMAGES,
   className,
 }: ImageUploaderProps) {
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -60,8 +62,9 @@ export function ImageUploader({
           continue;
         }
 
+        const compressed = await compressImageFile(file);
         const formData = new FormData();
-        formData.append("file", file);
+        formData.append("file", compressed);
         formData.append("type", "image");
 
         const res = await fetch("/api/upload", {
@@ -81,14 +84,11 @@ export function ImageUploader({
           alt: file.name.replace(/\.[^.]+$/, ""),
         });
 
-        if (json.stub) {
-          // One notice is enough — only show for first stub in batch
-          if (uploaded.length === 1) {
-            toast.message("Demo upload", {
-              description:
-                "Cloudinary is not configured — photos are stored locally for this session.",
-            });
-          }
+        if (json.stub && uploaded.length === 1) {
+          toast.message("Photos saved without Cloudinary", {
+            description:
+              "Add Cloudinary env vars for reliable image hosting in production.",
+          });
         }
       }
 

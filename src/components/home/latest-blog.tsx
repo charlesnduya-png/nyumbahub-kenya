@@ -18,6 +18,10 @@ export function LatestBlog({
   title = "From the Blog",
   subtitle = "Market insights, guides, and neighbourhood spotlights",
 }: LatestBlogProps) {
+  if (posts.length === 0) {
+    return null;
+  }
+
   return (
     <section
       className="gradient-mesh py-16 sm:py-20"

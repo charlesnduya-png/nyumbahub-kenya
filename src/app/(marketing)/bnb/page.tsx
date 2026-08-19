@@ -3,13 +3,26 @@ import { Palmtree, Search, Sparkles, Waves } from "lucide-react";
 import { FeaturedProperties } from "@/components/home/featured-properties";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { bnbProperties } from "@/data/mock";
+import {
+  countActiveProperties,
+  getBnbPropertiesForHome,
+} from "@/lib/properties";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata = {
-  title: "BnB & Holiday Homes in Kenya",
+export const metadata = buildPageMetadata({
+  title: "BnB & Holiday Homes in Kenya | Diani, Watamu, Nairobi Stays",
   description:
-    "Book BnB stays, Airbnb-style apartments, beach villas, and safari cottages across Kenya on NyumbaHub.",
-};
+    "Book BnB stays, Airbnb-style apartments, beach villas, and safari cottages across Kenya. Diani, Watamu, Malindi, Naivasha, and city short stays on Your Home.",
+  path: "/bnb",
+  keywords: [
+    "BnB Kenya",
+    "Airbnb Kenya",
+    "holiday homes Diani",
+    "short stay Nairobi",
+    "beach villa Kenya",
+    "Watamu accommodation",
+  ],
+});
 
 const destinations = [
   { name: "Diani", href: "/properties?listingType=HOLIDAY&town=Diani" },
@@ -21,7 +34,12 @@ const destinations = [
   { name: "Nyali", href: "/properties?listingType=HOLIDAY&town=Nyali" },
 ];
 
-export default function BnbPage() {
+export default async function BnbPage() {
+  const [bnbProperties, bnbCount] = await Promise.all([
+    getBnbPropertiesForHome(24),
+    countActiveProperties("HOLIDAY"),
+  ]);
+
   return (
     <div className="gradient-mesh">
       <section className="relative overflow-hidden border-b">
@@ -35,7 +53,8 @@ export default function BnbPage() {
           </h1>
           <p className="mt-4 max-w-2xl text-lg text-muted-foreground">
             Beach villas, city Airbnb apartments, lake cottages, and safari
-            stays — priced per night. Book viewings or message hosts directly.
+            stays — priced per night. Book dates on Your Home; hosts approve
+            each stay from their dashboard.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button size="lg" asChild>
@@ -79,7 +98,7 @@ export default function BnbPage() {
       <FeaturedProperties
         properties={bnbProperties}
         title="Featured BnB stays"
-        subtitle={`${bnbProperties.length} holiday homes · prices shown per night (KES)`}
+        subtitle={`${bnbCount} holiday home${bnbCount === 1 ? "" : "s"} · prices shown per night (KES)`}
         viewAllHref="/properties?listingType=HOLIDAY"
         viewAllLabel="View all BnBs"
       />
@@ -87,12 +106,12 @@ export default function BnbPage() {
       <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
         <div className="rounded-3xl border bg-card/80 p-8 text-center backdrop-blur">
           <h2 className="font-display text-2xl font-semibold">
-            Become a NyumbaHub host
+            Become a host on Your Home
           </h2>
           <p className="mx-auto mt-2 max-w-xl text-muted-foreground">
-            List your BnB, Airbnb apartment, or holiday villa. Guests find you,
-            inquire, and book viewings — you get paid listing visibility after
-            admin approval.
+            List your BnB, Airbnb apartment, or holiday villa. Guests book stays
+            on the site, and you approve or decline each request from your
+            bookings inbox.
           </p>
           <Button className="mt-6" asChild>
             <Link href="/register/professional">List your BnB</Link>

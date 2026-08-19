@@ -103,13 +103,51 @@ export function AgentStatsCards({ stats }: { stats: AgentDashboardStats }) {
   );
 }
 
-export function AdminStatsCards() {
+export interface AdminDashboardCardsStats {
+  totalUsers: number;
+  activeListings: number;
+  pendingModeration: number;
+  revenueMTD: number;
+  agentRevenueMTD: number;
+}
+
+export function AdminStatsCards({ stats }: { stats: AdminDashboardCardsStats }) {
+  const revenueLabel =
+    stats.revenueMTD >= 1_000_000
+      ? `KES ${(stats.revenueMTD / 1_000_000).toFixed(1)}M`
+      : `KES ${stats.revenueMTD.toLocaleString("en-KE")}`;
+
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <StatCard title="Total users" value="2,847" icon={Users} trend="+8% MoM" />
-      <StatCard title="Active listings" value="1,203" icon={Building2} />
-      <StatCard title="Pending moderation" value="23" icon={MessageSquare} />
-      <StatCard title="Revenue (MTD)" value="KES 1.2M" icon={BarChart3} />
+      <StatCard
+        title="Total users"
+        value={stats.totalUsers.toLocaleString("en-KE")}
+        icon={Users}
+      />
+      <StatCard
+        title="Active listings"
+        value={stats.activeListings.toLocaleString("en-KE")}
+        icon={Building2}
+      />
+      <StatCard
+        title="Pending moderation"
+        value={stats.pendingModeration.toLocaleString("en-KE")}
+        icon={MessageSquare}
+      />
+      <StatCard
+        title="Revenue (MTD)"
+        value={revenueLabel}
+        icon={BarChart3}
+      />
+      <StatCard
+        title="Agent payments (MTD)"
+        value={
+          stats.agentRevenueMTD >= 1_000_000
+            ? `KES ${(stats.agentRevenueMTD / 1_000_000).toFixed(1)}M`
+            : `KES ${stats.agentRevenueMTD.toLocaleString("en-KE")}`
+        }
+        icon={BarChart3}
+      />
     </div>
   );
 }

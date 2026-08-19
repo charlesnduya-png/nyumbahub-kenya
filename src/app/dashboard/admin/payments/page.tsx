@@ -56,7 +56,7 @@ export default function AdminPaymentsPage() {
             <p className="text-sm text-muted-foreground">Loading…</p>
           ) : payments.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No payments yet. Demo checkouts will appear here after sellers pay.
+              No payments yet. Completed seller/agent payments will appear here.
             </p>
           ) : (
             <table className="w-full text-sm">

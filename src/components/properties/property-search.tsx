@@ -175,7 +175,6 @@ export function PropertySearchClient({
         <div className="mb-6 flex items-center justify-between gap-4">
           <p className="text-muted-foreground">
             {results.total} propert{results.total === 1 ? "y" : "ies"} found
-            {results.fallback && " (sample listings)"}
           </p>
           <Sheet>
             <SheetTrigger asChild>

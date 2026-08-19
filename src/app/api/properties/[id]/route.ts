@@ -1,12 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { getMockPropertyBySlug, mockProperties } from "@/data/mock";
-import {
-  deleteDemoListing,
-  getDemoListing,
-  updateDemoListing,
-} from "@/lib/listings-store";
 import { prisma } from "@/lib/prisma";
+import { resolveListingImagesForStorage, resolveListingVideosForStorage } from "@/lib/media-assets";
+import { resolveProfessionalActingContext } from "@/lib/account-team";
 import { updatePropertySchema } from "@/lib/validations/property";
 
 interface RouteParams {
@@ -17,62 +13,47 @@ export async function GET(_request: Request, { params }: RouteParams) {
   try {
     const { id } = await params;
 
-    try {
-      const property = await prisma.property.findFirst({
-        where: {
-          OR: [{ id }, { slug: id }],
-        },
-        include: {
-          images: { orderBy: { order: "asc" } },
-          videos: true,
-          amenities: { include: { amenity: true } },
-          nearbyPlaces: true,
-          owner: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              phone: true,
-              image: true,
-            },
+    const property = await prisma.property.findFirst({
+      where: {
+        OR: [{ id }, { slug: id }],
+      },
+      include: {
+        images: { orderBy: { order: "asc" } },
+        videos: true,
+        amenities: { include: { amenity: true } },
+        nearbyPlaces: true,
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            image: true,
           },
-          agent: {
-            include: {
-              user: {
-                select: { id: true, name: true, image: true, phone: true },
-              },
+        },
+        agent: {
+          include: {
+            user: {
+              select: { id: true, name: true, image: true, phone: true },
             },
           },
         },
-      });
+      },
+    });
 
-      if (property) {
-        await prisma.property.update({
-          where: { id: property.id },
-          data: { views: { increment: 1 } },
-        });
-        return NextResponse.json({ success: true, data: property });
-      }
-    } catch {
-      // fall through
-    }
-
-    const demo = getDemoListing(id);
-    if (demo) {
-      return NextResponse.json({ success: true, data: demo, source: "demo" });
-    }
-
-    const mock =
-      getMockPropertyBySlug(id) ?? mockProperties.find((p) => p.id === id);
-
-    if (!mock) {
+    if (!property) {
       return NextResponse.json(
         { success: false, error: "Property not found" },
         { status: 404 },
       );
     }
 
-    return NextResponse.json({ success: true, data: mock, fallback: true });
+    await prisma.property.update({
+      where: { id: property.id },
+      data: { views: { increment: 1 } },
+    });
+
+    return NextResponse.json({ success: true, data: property });
   } catch {
     return NextResponse.json(
       { success: false, error: "Unable to fetch property" },
@@ -107,15 +88,25 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       );
     }
 
-    const { id: _propertyId, images: _images, parking: _parking, ...rest } =
-      parsed.data;
+    const {
+      id: _propertyId,
+      images,
+      videos,
+      parking: _parking,
+      rentalRooms,
+      rentalRoomsCount,
+      ...rest
+    } = parsed.data;
     void _propertyId;
-    void _images;
     void _parking;
 
     const updateData = rest;
-
     const isAdmin = session.user.role === "ADMIN";
+    const ctx = await resolveProfessionalActingContext(session.user.id);
+
+    if (!isAdmin && !ctx.permissions.manageListings) {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    }
 
     if (
       updateData.status &&
@@ -131,63 +122,144 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       );
     }
 
-    try {
-      const existing = await prisma.property.findUnique({ where: { id } });
-
-      if (existing) {
-        const isOwner = existing.ownerId === session.user.id;
-        if (!isOwner && !isAdmin) {
-          return NextResponse.json(
-            { success: false, error: "Forbidden" },
-            { status: 403 },
-          );
-        }
-
-        if (
-          updateData.status &&
-          isOwner &&
-          !isAdmin &&
-          !["DRAFT", "PENDING", "ARCHIVED"].includes(updateData.status)
-        ) {
-          return NextResponse.json(
-            {
-              success: false,
-              error: "Owners can only set DRAFT, PENDING, or ARCHIVED",
-            },
-            { status: 403 },
-          );
-        }
-
-        const property = await prisma.property.update({
-          where: { id },
-          data: {
-            ...updateData,
-            ...(updateData.status === "ACTIVE"
-              ? { publishedAt: new Date(), isVerified: true }
-              : {}),
-          },
-        });
-
-        return NextResponse.json({ success: true, data: property });
-      }
-    } catch {
-      // demo fallback
-    }
-
-    const demo = updateDemoListing(id, updateData as Record<string, unknown>);
-    if (demo) {
-      return NextResponse.json({ success: true, data: demo, source: "demo" });
-    }
-
-    // Accept mock id updates for professional dashboard demo
-    return NextResponse.json({
-      success: true,
-      data: { id, ...updateData },
-      source: "demo",
+    const existing = await prisma.property.findUnique({
+      where: { id },
+      include: { agent: { select: { userId: true } } },
     });
-  } catch {
+
+    if (!existing) {
+      return NextResponse.json(
+        { success: false, error: "Property not found" },
+        { status: 404 },
+      );
+    }
+
+    const isOwner = existing.ownerId === ctx.actingOwnerId;
+    const isListingAgent = existing.agent?.userId === ctx.actingOwnerId;
+    if (!isOwner && !isListingAgent && !isAdmin) {
+      return NextResponse.json(
+        { success: false, error: "Forbidden" },
+        { status: 403 },
+      );
+    }
+
+    if (
+      updateData.status &&
+      (isOwner || isListingAgent) &&
+      !isAdmin &&
+      !["DRAFT", "PENDING", "ARCHIVED"].includes(updateData.status)
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Owners can only set DRAFT, PENDING, or ARCHIVED",
+        },
+        { status: 403 },
+      );
+    }
+
+    const property = await prisma.$transaction(async (tx) => {
+      if (images !== undefined) {
+        await tx.propertyImage.deleteMany({ where: { propertyId: id } });
+
+        if (images.length > 0) {
+          const resolvedImages = await resolveListingImagesForStorage(images);
+          const hasPrimary = resolvedImages.some((img) => img.isPrimary);
+          await tx.propertyImage.createMany({
+            data: resolvedImages.map((img, index) => ({
+              propertyId: id,
+              url: img.url,
+              publicId: img.publicId ?? null,
+              alt: img.alt ?? existing.title,
+              order: img.order ?? index,
+              isPrimary: hasPrimary ? Boolean(img.isPrimary) : index === 0,
+            })),
+          });
+        }
+      }
+
+      if (videos !== undefined) {
+        await tx.propertyVideo.deleteMany({ where: { propertyId: id } });
+
+        if (videos.length > 0) {
+          const resolvedVideos = await resolveListingVideosForStorage(videos);
+          await tx.propertyVideo.createMany({
+            data: resolvedVideos.map((video) => ({
+              propertyId: id,
+              url: video.url,
+              publicId: video.publicId ?? null,
+              title: video.title,
+              thumbnail: video.thumbnail,
+            })),
+          });
+        }
+      }
+
+      const nextListingType = updateData.listingType ?? existing.listingType;
+      const shouldReplaceRooms =
+        nextListingType === "RENT" &&
+        (rentalRooms !== undefined || rentalRoomsCount !== undefined);
+
+      if (shouldReplaceRooms) {
+        const rentedCount = await tx.propertyRentalRoom.count({
+          where: { propertyId: id, status: "RENTED" },
+        });
+        if (rentedCount > 0) {
+          throw new Error(
+            "Cannot change room inventory while some rooms are already rented",
+          );
+        }
+
+        await tx.propertyRentalRoom.deleteMany({ where: { propertyId: id } });
+
+        const roomRows =
+          rentalRooms && rentalRooms.length > 0
+            ? rentalRooms.map((room, index) => ({
+                propertyId: id,
+                label: room.label,
+                floor: room.floor ?? null,
+                price: room.price ?? null,
+                sortOrder: index,
+              }))
+            : rentalRoomsCount && rentalRoomsCount > 1
+              ? Array.from({ length: rentalRoomsCount }, (_, index) => ({
+                  propertyId: id,
+                  label: `Room ${index + 1}`,
+                  floor: null as string | null,
+                  price: null as number | null,
+                  sortOrder: index,
+                }))
+              : [];
+
+        if (roomRows.length > 0) {
+          await tx.propertyRentalRoom.createMany({ data: roomRows });
+        }
+      }
+
+      return tx.property.update({
+        where: { id },
+        data: {
+          ...updateData,
+          ...(updateData.status === "ACTIVE"
+            ? { publishedAt: new Date(), isVerified: true }
+            : {}),
+        },
+        include: {
+          images: { orderBy: { order: "asc" } },
+          videos: true,
+          rentalRooms: { orderBy: { sortOrder: "asc" } },
+        },
+      });
+    });
+
+    return NextResponse.json({ success: true, data: property });
+  } catch (error) {
     return NextResponse.json(
-      { success: false, error: "Unable to update property" },
+      {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Unable to update property",
+      },
       { status: 500 },
     );
   }
@@ -206,33 +278,30 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
 
     const { id } = await params;
     const isAdmin = session.user.role === "ADMIN";
+    const ctx = await resolveProfessionalActingContext(session.user.id);
 
-    try {
-      const existing = await prisma.property.findUnique({ where: { id } });
+    const existing = await prisma.property.findUnique({ where: { id } });
 
-      if (existing) {
-        const isOwner = existing.ownerId === session.user.id;
-        if (!isOwner && !isAdmin) {
-          return NextResponse.json(
-            { success: false, error: "Forbidden" },
-            { status: 403 },
-          );
-        }
-
-        await prisma.property.delete({ where: { id } });
-        return NextResponse.json({ success: true, data: { id } });
-      }
-    } catch {
-      // demo fallback
+    if (!existing) {
+      return NextResponse.json(
+        { success: false, error: "Property not found" },
+        { status: 404 },
+      );
     }
 
-    deleteDemoListing(id);
+    const isOwner = existing.ownerId === ctx.actingOwnerId;
+    if (!isAdmin && !ctx.permissions.manageListings) {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    }
+    if (!isOwner && !isAdmin) {
+      return NextResponse.json(
+        { success: false, error: "Forbidden" },
+        { status: 403 },
+      );
+    }
 
-    return NextResponse.json({
-      success: true,
-      data: { id },
-      source: "demo",
-    });
+    await prisma.property.delete({ where: { id } });
+    return NextResponse.json({ success: true, data: { id } });
   } catch {
     return NextResponse.json(
       { success: false, error: "Unable to delete property" },

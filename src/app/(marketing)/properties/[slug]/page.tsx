@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Image from "next/image";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -8,31 +8,94 @@ import {
   Calendar,
   Check,
   MapPin,
-  MessageCircle,
   ParkingCircle,
   Share2,
   Shield,
   Waves,
 } from "lucide-react";
-import { ContactSellerForm } from "@/components/properties/contact-seller-form";
-import { MortgageCalculator } from "@/components/properties/mortgage-calculator";
-import { PropertyCardItem } from "@/components/properties/property-card";
+import { ListingAgentSection } from "@/components/properties/listing-agent-section";
+import { PropertyDetailGallery } from "@/components/properties/property-detail-gallery";
+import { RelatedPropertiesSection } from "@/components/properties/related-properties-section";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { auth } from "@/lib/auth";
+import { getPropertyBySlug, resolveListingHost } from "@/lib/properties";
 import {
-  getMockPropertyBySlug,
-  mockProperties,
-} from "@/data/mock";
-import { prisma } from "@/lib/prisma";
-import {
+  breadcrumbJsonLd,
   generatePropertyMetadata,
   propertyJsonLd,
 } from "@/lib/seo";
+import { toWhatsAppNumber, telHref } from "@/lib/phone";
 import { formatPrice } from "@/lib/utils";
 import { getListingTypeLabel, getPropertyTypeLabel } from "@/lib/kenya";
+
+const BookStayForm = dynamic(
+  () =>
+    import("@/components/properties/book-stay-form").then((m) => m.BookStayForm),
+  { loading: () => <Skeleton className="h-40 w-full rounded-lg" /> },
+);
+
+const RentalListingActions = dynamic(
+  () =>
+    import("@/components/properties/rental-listing-actions").then(
+      (m) => m.RentalListingActions,
+    ),
+  { loading: () => <Skeleton className="h-32 w-full rounded-lg" /> },
+);
+
+const ContactSellerForm = dynamic(
+  () =>
+    import("@/components/properties/contact-seller-form").then(
+      (m) => m.ContactSellerForm,
+    ),
+  { loading: () => <Skeleton className="h-10 w-full rounded-lg" /> },
+);
+
+const PropertyOfferForm = dynamic(
+  () =>
+    import("@/components/properties/property-offer-form").then(
+      (m) => m.PropertyOfferForm,
+    ),
+  { loading: () => <Skeleton className="h-36 w-full rounded-lg" /> },
+);
+
+const GatedContactLinks = dynamic(
+  () =>
+    import("@/components/properties/gated-contact-links").then(
+      (m) => m.GatedContactLinks,
+    ),
+  { loading: () => <Skeleton className="h-10 w-full rounded-lg" /> },
+);
+
+const MortgageCalculator = dynamic(
+  () =>
+    import("@/components/properties/mortgage-calculator").then(
+      (m) => m.MortgageCalculator,
+    ),
+  { loading: () => <Skeleton className="h-48 w-full rounded-lg" /> },
+);
+
+const ScheduleViewingForm = dynamic(
+  () =>
+    import("@/components/properties/schedule-viewing-form").then(
+      (m) => m.ScheduleViewingForm,
+    ),
+  { loading: () => <Skeleton className="h-10 w-full rounded-lg" /> },
+);
+
+const PropertyLocationMap = dynamic(
+  () =>
+    import("@/components/maps/property-location-map").then(
+      (m) => m.PropertyLocationMap,
+    ),
+  { loading: () => <Skeleton className="aspect-video w-full rounded-lg" /> },
+);
+
+export const revalidate = 60;
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -56,36 +119,11 @@ function getPropertyDescription(property: {
     .filter(Boolean)
     .join(", ");
 
-  return `${property.title} is available for ${property.listingType.toLowerCase()} in ${location}. This ${property.propertyType.toLowerCase().replace(/_/g, " ")}${property.bedrooms != null ? ` offers ${property.bedrooms} bedrooms` : ""} in one of Kenya's sought-after neighbourhoods. Contact the seller through NyumbaHub to schedule a viewing or request more details about title verification and payment terms.`;
+  return `${property.title} is available for ${property.listingType.toLowerCase()} in ${location}. This ${property.propertyType.toLowerCase().replace(/_/g, " ")}${property.bedrooms != null ? ` offers ${property.bedrooms} bedrooms` : ""} in one of Kenya's sought-after neighbourhoods. Contact the seller through Your Home to schedule a viewing or request more details about title verification and payment terms.`;
 }
 
 async function getProperty(slug: string) {
-  try {
-    const property = await prisma.property.findUnique({
-      where: { slug },
-      include: {
-        images: { orderBy: { order: "asc" } },
-        videos: true,
-        amenities: { include: { amenity: true } },
-        nearbyPlaces: true,
-        owner: { select: { id: true, name: true, phone: true, image: true } },
-        agent: {
-          include: {
-            user: { select: { id: true, name: true, phone: true, image: true } },
-          },
-        },
-      },
-    });
-
-    if (property) return { property, fallback: false };
-  } catch {
-    // use mock
-  }
-
-  const mock = getMockPropertyBySlug(slug);
-  if (mock) return { property: mock, fallback: true };
-
-  return null;
+  return getPropertyBySlug(slug);
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -93,13 +131,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const result = await getProperty(slug);
 
   if (!result) {
-    return { title: "Property not found | NyumbaHub Kenya" };
+    return { title: "Property not found | Your Home" };
   }
 
   const { property } = result;
-  const imageUrl =
-    property.images?.[0]?.url ??
-    ("primaryImage" in property ? property.primaryImage?.url : null);
+  const imageUrl = property.images?.[0]?.url ?? null;
 
   return generatePropertyMetadata({
     title: property.title,
@@ -125,22 +161,50 @@ export default async function PropertyDetailPage({ params }: PageProps) {
 
   if (!result) notFound();
 
-  const { property, fallback } = result;
-  const images =
-    property.images?.length
-      ? property.images
-      : "primaryImage" in property && property.primaryImage
-        ? [property.primaryImage]
-        : [];
+  const { property } = result;
 
-  const related = mockProperties
-    .filter((p) => p.slug !== slug && p.county === property.county)
-    .slice(0, 3);
+  if (property.status !== "ACTIVE") {
+    const session = await auth();
+    const isAdmin = session?.user?.role === "ADMIN";
+    const isOwner = session?.user?.id === property.ownerId;
+    if (!isAdmin && !isOwner) {
+      notFound();
+    }
+  }
+  const images = property.images ?? [];
+  const propertyVideos =
+    "videos" in property && Array.isArray(property.videos)
+      ? property.videos
+      : [];
+  const rentalRooms = (
+    "rentalRooms" in property && Array.isArray(property.rentalRooms)
+      ? property.rentalRooms
+      : []
+  ).map((room) => ({
+    id: room.id,
+    label: room.label,
+    floor: room.floor,
+    price: room.price,
+    status: room.status as "AVAILABLE" | "RENTED",
+  }));
+  const roomsAvailable = rentalRooms.filter((r) => r.status === "AVAILABLE")
+    .length;
 
-  const whatsappPhone = "254712345678";
+  const rawContactPhone =
+    property.agent?.user?.phone || property.owner?.phone || null;
+  const hostUserId =
+    property.agent?.user?.id ?? property.owner?.id ?? undefined;
+  const whatsappPhone = rawContactPhone
+    ? toWhatsAppNumber(rawContactPhone)
+    : null;
+  const callPhone = rawContactPhone
+    ? telHref(rawContactPhone).replace(/^tel:/, "")
+    : null;
   const whatsappMessage = encodeURIComponent(
-    `Hi, I'm interested in ${property.title} on NyumbaHub Kenya (${property.slug})`,
+    `Hi, I'm interested in ${property.title} on Your Home (${property.slug})`,
   );
+
+  const listingHost = resolveListingHost(property);
 
   const description = getPropertyDescription(property);
 
@@ -165,36 +229,26 @@ export default async function PropertyDetailPage({ params }: PageProps) {
     publishedAt: property.publishedAt,
   });
 
+  const crumbs = breadcrumbJsonLd([
+    { name: "Home", path: "/" },
+    { name: "Properties", path: "/properties" },
+    { name: property.county, path: `/properties?county=${encodeURIComponent(property.county)}` },
+    { name: property.title, path: `/properties/${property.slug}` },
+  ]);
+
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify([jsonLd, crumbs]),
+        }}
       />
 
-      <div className="min-h-screen bg-background">
-        <header className="border-b bg-card">
-          <div className="container mx-auto flex items-center justify-between px-4 py-4">
-            <Link href="/" className="text-xl font-bold text-primary">
-              NyumbaHub Kenya
-            </Link>
-            <nav className="flex gap-4 text-sm">
-              <Link href="/properties">Properties</Link>
-              <Link href="/agents">Agents</Link>
-              <Link href="/wishlist">Wishlist</Link>
-            </nav>
-          </div>
-        </header>
-
-        <main className="container mx-auto px-4 py-8">
-          {fallback && (
-            <Badge variant="secondary" className="mb-4">
-              Sample listing — connect database for live data
-            </Badge>
-          )}
-
-          <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-            <div>
+      <div className="min-h-dvh bg-background pb-32 lg:pb-0">
+        <main className="mx-auto w-full max-w-7xl px-3 py-6 sm:px-6 sm:py-8 lg:px-8">
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+            <div className="min-w-0 flex-1">
               <div className="mb-2 flex flex-wrap gap-2">
                 <Badge>{getListingTypeLabel(property.listingType)}</Badge>
                 <Badge variant="outline">
@@ -204,16 +258,27 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                   <Badge className="bg-primary">Verified listing</Badge>
                 )}
               </div>
-              <h1 className="text-3xl font-bold">{property.title}</h1>
-              <p className="mt-2 flex items-center gap-1 text-muted-foreground">
-                <MapPin className="h-4 w-4" />
-                {[property.estate, property.town, property.county]
-                  .filter(Boolean)
-                  .join(", ")}
+              <h1 className="break-words text-2xl font-bold sm:text-3xl">
+                {property.title}
+              </h1>
+              {property.rentalPlot ? (
+                <p className="mt-1 text-sm text-primary">
+                  {property.unitLabel ? `${property.unitLabel} · ` : ""}
+                  {property.unitFloor ? `${property.unitFloor} · ` : ""}
+                  {property.rentalPlot.name}
+                </p>
+              ) : null}
+              <p className="mt-2 flex items-start gap-1 text-sm text-muted-foreground sm:text-base">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  {[property.estate, property.town, property.county]
+                    .filter(Boolean)
+                    .join(", ")}
+                </span>
               </p>
             </div>
-            <div className="text-right">
-              <p className="text-3xl font-bold text-primary">
+            <div className="sm:text-right">
+              <p className="text-2xl font-bold tabular-nums text-primary sm:text-3xl">
                 {formatPrice(property.price, { currency: property.currency })}
                 {property.listingType === "RENT" && (
                   <span className="text-base font-normal text-muted-foreground">
@@ -228,7 +293,12 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                   </span>
                 )}
               </p>
-              <div className="mt-2 flex gap-2">
+              <div className="mt-2 flex flex-wrap gap-2 sm:justify-end">
+                {property.listingType === "RENT" && rentalRooms.length > 0 ? (
+                  <Badge variant="secondary">
+                    {roomsAvailable} of {rentalRooms.length} rooms available
+                  </Badge>
+                ) : null}
                 <Button variant="outline" size="sm">
                   <Share2 className="mr-1 h-4 w-4" />
                   Share
@@ -242,35 +312,76 @@ export default async function PropertyDetailPage({ params }: PageProps) {
 
           <div className="grid gap-8 lg:grid-cols-3">
             <div className="space-y-8 lg:col-span-2">
-              <div className="grid gap-2 sm:grid-cols-2">
-                {images.length > 0 ? (
-                  images.map((img, i) => (
-                    <div
-                      key={img.id}
-                      className={`relative overflow-hidden rounded-lg bg-muted ${
-                        i === 0 ? "sm:col-span-2 aspect-[16/9]" : "aspect-[4/3]"
-                      }`}
-                    >
-                      <Image
-                        src={img.url}
-                        alt={img.alt ?? property.title}
-                        fill
-                        className="object-cover"
-                        priority={i === 0}
-                      />
-                    </div>
-                  ))
-                ) : (
-                  <div className="sm:col-span-2 aspect-[16/9] rounded-lg bg-muted" />
-                )}
-              </div>
+              <PropertyDetailGallery
+                slug={property.slug}
+                title={property.title}
+                initialImages={images.map((img) => ({
+                  id: img.id,
+                  url: img.url,
+                  alt: img.alt,
+                }))}
+                initialVideos={propertyVideos.map((video) => ({
+                  id: video.id,
+                  url: video.url,
+                  title: video.title,
+                  thumbnail: video.thumbnail,
+                }))}
+              />
+
+              {rentalRooms.length > 0 ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Rooms for rent</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="grid gap-2 sm:grid-cols-2">
+                      {rentalRooms.map((room) => (
+                        <li
+                          key={room.id}
+                          className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm"
+                        >
+                          <span>
+                            {room.label}
+                            {room.floor ? (
+                              <span className="text-muted-foreground">
+                                {" "}
+                                · Floor {room.floor}
+                              </span>
+                            ) : null}
+                          </span>
+                          <Badge
+                            variant={
+                              room.status === "AVAILABLE"
+                                ? "secondary"
+                                : "outline"
+                            }
+                          >
+                            {room.status === "AVAILABLE" ? "Available" : "Rented"}
+                          </Badge>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      This house stays listed until all rooms are booked.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : null}
 
               <Tabs defaultValue="description">
-                <TabsList>
-                  <TabsTrigger value="description">Description</TabsTrigger>
-                  <TabsTrigger value="amenities">Amenities</TabsTrigger>
-                  <TabsTrigger value="nearby">Nearby</TabsTrigger>
-                  <TabsTrigger value="map">Map</TabsTrigger>
+                <TabsList className="flex h-auto w-full flex-nowrap justify-start gap-1 overflow-x-auto bg-muted p-1">
+                  <TabsTrigger value="description" className="shrink-0">
+                    Description
+                  </TabsTrigger>
+                  <TabsTrigger value="amenities" className="shrink-0">
+                    Amenities
+                  </TabsTrigger>
+                  <TabsTrigger value="nearby" className="shrink-0">
+                    Nearby
+                  </TabsTrigger>
+                  <TabsTrigger value="map" className="shrink-0">
+                    Map
+                  </TabsTrigger>
                 </TabsList>
                 <TabsContent value="description" className="mt-4">
                   <Card>
@@ -359,14 +470,19 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                 </TabsContent>
                 <TabsContent value="map" className="mt-4">
                   <Card>
-                    <CardContent className="flex aspect-video items-center justify-center bg-muted p-6">
-                      <div className="text-center text-muted-foreground">
-                        <MapPin className="mx-auto mb-2 h-8 w-8" />
-                        <p>Map view — {property.town}, {property.county}</p>
-                        <p className="text-sm">
-                          Integrate Google Maps or Mapbox with coordinates
-                        </p>
-                      </div>
+                    <CardContent className="p-4 sm:p-6">
+                      <PropertyLocationMap
+                        latitude={
+                          "latitude" in property ? property.latitude : null
+                        }
+                        longitude={
+                          "longitude" in property ? property.longitude : null
+                        }
+                        county={property.county}
+                        town={property.town}
+                        estate={property.estate}
+                        title={property.title}
+                      />
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -400,41 +516,86 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                 <MortgageCalculator propertyPrice={property.price} />
               )}
 
-              {related.length > 0 && (
-                <section>
-                  <h2 className="mb-4 text-xl font-semibold">Similar properties</h2>
-                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                    {related.map((p) => (
-                      <PropertyCardItem key={p.id} property={p} />
-                    ))}
-                  </div>
-                </section>
-              )}
+              <RelatedPropertiesSection slug={slug} county={property.county} />
             </div>
 
-            <aside className="space-y-4">
-              <Card className="sticky top-24">
+            <aside className="space-y-4 lg:sticky lg:top-20">
+              {listingHost ? <ListingAgentSection host={listingHost} /> : null}
+              <Card>
                 <CardHeader>
-                  <CardTitle>Interested in this property?</CardTitle>
+                  <CardTitle>
+                    {property.listingType === "HOLIDAY"
+                      ? "Book this BnB stay"
+                      : property.listingType === "RENT"
+                        ? "Reserve this rental"
+                        : "Interested in this property?"}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <ContactSellerForm
-                    propertyId={property.id}
-                    propertyTitle={property.title}
-                  />
-                  <Button variant="outline" className="w-full" asChild>
-                    <a
-                      href={`https://wa.me/${whatsappPhone}?text=${whatsappMessage}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <MessageCircle className="mr-2 h-4 w-4" />
-                      WhatsApp agent
-                    </a>
-                  </Button>
-                  <Button variant="secondary" className="w-full">
-                    Book a viewing
-                  </Button>
+                  {property.listingType === "HOLIDAY" ? (
+                    <BookStayForm
+                      propertyId={property.id}
+                      propertySlug={property.slug}
+                      propertyTitle={property.title}
+                      pricePerNight={property.price}
+                      currency={property.currency}
+                      hostUserId={hostUserId}
+                    />
+                  ) : property.listingType === "RENT" ? (
+                    <RentalListingActions
+                      propertyId={property.id}
+                      propertySlug={property.slug}
+                      propertyTitle={property.title}
+                      price={property.price}
+                      currency={property.currency}
+                      hostUserId={hostUserId}
+                      whatsappPhone={whatsappPhone}
+                      whatsappMessage={whatsappMessage}
+                      callPhone={callPhone}
+                      rooms={rentalRooms}
+                    />
+                  ) : (
+                    <>
+                      <ContactSellerForm
+                        propertyId={property.id}
+                        propertyTitle={property.title}
+                        hostUserId={hostUserId}
+                      />
+                      <PropertyOfferForm
+                        propertyId={property.id}
+                        propertyTitle={property.title}
+                        listedPrice={property.price}
+                        currency={property.currency}
+                      />
+                    </>
+                  )}
+                  {property.listingType !== "RENT" ? (
+                    <GatedContactLinks
+                      whatsappPhone={whatsappPhone}
+                      whatsappMessage={whatsappMessage}
+                      callPhone={callPhone}
+                      whatsappLabel="WhatsApp agent"
+                    />
+                  ) : null}
+                  {property.listingType !== "HOLIDAY" ? (
+                    property.listingType === "RENT" ? null : (
+                      <ScheduleViewingForm
+                        propertyId={property.id}
+                        propertyTitle={property.title}
+                      />
+                    )
+                  ) : property.listingType === "HOLIDAY" ? (
+                    <p className="text-center text-xs text-muted-foreground">
+                      Or{" "}
+                      <Link href="/dashboard/tenant/messages" className="text-primary hover:underline">
+                        open your inbox
+                      </Link>{" "}
+                      ·{" "}
+                      <Link href="/dashboard/tenant/bookings" className="text-primary hover:underline">
+                        view bookings
+                      </Link>
+                    </p>
+                  ) : null}
                   <Separator />
                   <p className="text-sm text-muted-foreground">
                     {property.views.toLocaleString()} views · Listed{" "}
@@ -448,6 +609,21 @@ export default async function PropertyDetailPage({ params }: PageProps) {
           </div>
         </main>
       </div>
+      {property.listingType === "RENT" ? (
+        <RentalListingActions
+          propertyId={property.id}
+          propertySlug={property.slug}
+          propertyTitle={property.title}
+          price={property.price}
+          currency={property.currency}
+          hostUserId={hostUserId}
+          whatsappPhone={whatsappPhone}
+          whatsappMessage={whatsappMessage}
+          callPhone={callPhone}
+          rooms={rentalRooms}
+          sticky
+        />
+      ) : null}
     </>
   );
 }

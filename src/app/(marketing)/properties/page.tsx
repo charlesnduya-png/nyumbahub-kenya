@@ -1,13 +1,24 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { PropertySearchClient } from "@/components/properties/property-search";
-import { filterMockProperties } from "@/data/mock";
-import { prisma } from "@/lib/prisma";
+import { searchProperties } from "@/lib/properties";
+import { buildPropertiesSearchMetadata } from "@/lib/seo";
 import { propertySearchSchema } from "@/lib/validations/property";
 
 interface PageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
+
+export async function generateMetadata({
+  searchParams,
+}: PageProps): Promise<Metadata> {
+  const params = await searchParams;
+  return buildPropertiesSearchMetadata(params);
+}
+
+// This page must reflect the latest ACTIVE/RUNTED status changes immediately.
+export const dynamic = "force-dynamic";
 
 async function getProperties(searchParams: Record<string, string | string[] | undefined>) {
   const raw: Record<string, string> = {};
@@ -18,86 +29,50 @@ async function getProperties(searchParams: Record<string, string | string[] | un
   const parsed = propertySearchSchema.safeParse(raw);
   const filters = parsed.success ? parsed.data : { page: 1, limit: 12 };
 
-  try {
-    const skip = (filters.page - 1) * filters.limit;
-    const where = {
-      status: "ACTIVE" as const,
-      ...(filters.listingType ? { listingType: filters.listingType } : {}),
-      ...(filters.county
-        ? { county: { contains: filters.county, mode: "insensitive" as const } }
-        : {}),
-      ...(filters.town
-        ? { town: { contains: filters.town, mode: "insensitive" as const } }
-        : {}),
-      ...(filters.minPrice != null ? { price: { gte: filters.minPrice } } : {}),
-      ...(filters.maxPrice != null ? { price: { lte: filters.maxPrice } } : {}),
-      ...(filters.bedrooms != null ? { bedrooms: { gte: filters.bedrooms } } : {}),
-    };
-
-    const [data, total] = await Promise.all([
-      prisma.property.findMany({
-        where,
-        skip,
-        take: filters.limit,
-        orderBy: [{ isFeatured: "desc" }, { publishedAt: "desc" }],
-        include: { images: { where: { isPrimary: true }, take: 1 } },
-      }),
-      prisma.property.count({ where }),
-    ]);
-
-    const totalPages = Math.ceil(total / filters.limit);
-
-    return {
-      data: data.map((p) => ({
-        ...p,
-        primaryImage: p.images[0] ?? null,
-      })),
-      total,
-      page: filters.page,
-      limit: filters.limit,
-      totalPages,
-      hasMore: filters.page < totalPages,
-    };
-  } catch {
-    return filterMockProperties({ ...filters, limit: 12 });
-  }
+  return searchProperties({ ...filters, limit: filters.limit ?? 12 });
 }
 
 export default async function PropertiesPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const initialData = await getProperties(params);
+  const agentId =
+    typeof params.agentId === "string" ? params.agentId : undefined;
+  const category =
+    typeof params.category === "string" ? params.category : undefined;
+
+  const pageTitle =
+    category === "land-plots"
+      ? "Land & plots in Kenya"
+      : category === "commercial"
+        ? "Commercial property in Kenya"
+        : agentId
+          ? "Agent listings"
+          : "Properties in Kenya";
+
+  const pageDescription =
+    category === "land-plots"
+      ? "Browse vacant land, plots, and farms for sale across Kenya."
+      : category === "commercial"
+        ? "Offices, shops, and warehouse spaces for sale and rent."
+        : agentId
+          ? "Active homes listed by this agent on Your Home."
+          : "Browse verified homes, land, and commercial spaces from Nairobi to the coast.";
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
-        <div className="container mx-auto flex items-center justify-between px-4 py-4">
-          <Link href="/" className="text-xl font-bold text-primary">
-            NyumbaHub Kenya
-          </Link>
-          <nav className="flex gap-4 text-sm">
-            <Link href="/properties" className="font-medium text-primary">
-              Properties
-            </Link>
-            <Link href="/agents" className="text-muted-foreground hover:text-foreground">
-              Agents
-            </Link>
-            <Link href="/blog" className="text-muted-foreground hover:text-foreground">
-              Blog
-            </Link>
-            <Link href="/login" className="text-muted-foreground hover:text-foreground">
-              Sign in
-            </Link>
-          </nav>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold">Properties in Kenya</h1>
-          <p className="mt-2 text-muted-foreground">
-            Browse verified homes, land, and commercial spaces from Nairobi to the
-            coast.
+    <div className="min-h-dvh bg-background">
+      <main className="mx-auto w-full max-w-7xl px-3 py-6 sm:px-6 sm:py-8 lg:px-8">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl font-bold sm:text-3xl">{pageTitle}</h1>
+          <p className="mt-2 text-sm text-muted-foreground sm:text-base">
+            {pageDescription}
           </p>
+          {agentId ? (
+            <p className="mt-3">
+              <Link href="/agents" className="text-sm text-primary hover:underline">
+                ← Back to agents
+              </Link>
+            </p>
+          ) : null}
         </div>
 
         <Suspense fallback={<div className="py-12 text-center">Loading listings…</div>}>

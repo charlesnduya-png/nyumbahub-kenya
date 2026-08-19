@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { isMonthlyListingProduct } from "@/lib/listing-subscription";
 import { formatProductPrice, getProduct, type ProductId } from "@/lib/pricing";
 
 interface CheckoutProps {
@@ -31,9 +32,7 @@ export function PaymentCheckout({
 }: CheckoutProps) {
   const product = getProduct(productId);
   const [phone, setPhone] = useState("");
-  const [loading, setLoading] = useState<"mpesa" | "card" | "demo" | null>(
-    null,
-  );
+  const [loading, setLoading] = useState<"mpesa" | "card" | null>(null);
 
   if (!product) {
     return (
@@ -41,8 +40,49 @@ export function PaymentCheckout({
     );
   }
 
-  async function startCheckout(method: "MPESA" | "CARD", confirmDemo = false) {
-    setLoading(method === "MPESA" ? (confirmDemo ? "demo" : "mpesa") : "card");
+  async function activateMonthlyIfNeeded(payment: {
+    id: string;
+    reference?: string;
+    productId?: string;
+    amount?: number;
+    status?: string;
+  }) {
+    if (!isMonthlyListingProduct(String(productId))) {
+      onPaid?.({
+        id: payment.id,
+        reference: payment.reference ?? payment.id,
+        productId: String(productId),
+        amount: payment.amount ?? product!.price,
+        status: payment.status ?? "COMPLETED",
+      });
+      return;
+    }
+
+    const res = await fetch("/api/subscriptions/activate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paymentId: payment.id, productId }),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      toast.error(json.error ?? "Could not activate monthly plan");
+      return;
+    }
+
+    toast.success(
+      json.message ?? "Monthly listing plan active — list unlimited properties",
+    );
+    onPaid?.({
+      id: payment.id,
+      reference: payment.reference ?? payment.id,
+      productId: String(productId),
+      amount: payment.amount ?? product!.price,
+      status: "COMPLETED",
+    });
+  }
+
+  async function startCheckout(method: "MPESA" | "CARD") {
+    setLoading(method === "MPESA" ? "mpesa" : "card");
     try {
       const res = await fetch("/api/payments/checkout", {
         method: "POST",
@@ -50,9 +90,8 @@ export function PaymentCheckout({
         body: JSON.stringify({
           productId,
           propertyId,
-          phoneNumber: phone || "0712345678",
+          phoneNumber: phone || undefined,
           method,
-          confirmDemo,
         }),
       });
       const json = await res.json();
@@ -68,15 +107,16 @@ export function PaymentCheckout({
       }
 
       if (json.data?.status === "COMPLETED") {
-        toast.success(`Payment confirmed · ${json.data.reference}`);
-        onPaid?.(json.data);
+        await activateMonthlyIfNeeded(json.data);
         return;
       }
 
-      if (json.stub) {
-        toast.message("STK push simulated", {
-          description: "Click Confirm demo payment to continue without M-Pesa keys.",
-        });
+      // M-Pesa STK started (or pending) — activate monthly access for this payment
+      if (json.data?.id) {
+        if (json.data?.CustomerMessage) {
+          toast.message(json.data.CustomerMessage);
+        }
+        await activateMonthlyIfNeeded(json.data);
         return;
       }
 
@@ -88,6 +128,11 @@ export function PaymentCheckout({
     }
   }
 
+  const periodLabel =
+    product.category === "subscription"
+      ? `/ month`
+      : `/ ${product.durationDays} days`;
+
   return (
     <div className="space-y-4 rounded-2xl border bg-card p-4">
       <div>
@@ -95,9 +140,14 @@ export function PaymentCheckout({
         <p className="text-2xl font-bold text-primary">
           {formatProductPrice(product)}
           <span className="ml-2 text-sm font-normal text-muted-foreground">
-            / {product.durationDays} days
+            {periodLabel}
           </span>
         </p>
+        {product.category === "subscription" ? (
+          <p className="mt-1 text-xs text-muted-foreground">
+            Pay once — list unlimited properties for {product.durationDays} days.
+          </p>
+        ) : null}
       </div>
 
       <div className="space-y-2">
@@ -122,18 +172,6 @@ export function PaymentCheckout({
             <Smartphone className="mr-2 h-4 w-4" />
           )}
           {ctaLabel ?? "Pay with M-Pesa"}
-        </Button>
-
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={!!loading}
-          onClick={() => void startCheckout("MPESA", true)}
-        >
-          {loading === "demo" ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : null}
-          Confirm demo payment
         </Button>
 
         {showCard && (

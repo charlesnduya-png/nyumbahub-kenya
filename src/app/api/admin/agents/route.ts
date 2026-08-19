@@ -1,56 +1,91 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
-import { listDemoAgents } from "@/lib/agents-store";
 import { prisma } from "@/lib/prisma";
+import { isSiteOwnerEmail } from "@/lib/site-owner";
+
+import type { Session } from "next-auth";
+
+function isAdminSession(session: Session | null) {
+  return (
+    Boolean(session?.user?.id) &&
+    (session?.user?.role === "ADMIN" ||
+      isSiteOwnerEmail(session?.user?.email))
+  );
+}
 
 export async function GET() {
   try {
     const session = await auth();
 
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (!isAdminSession(session)) {
       return NextResponse.json(
         { success: false, error: "Admin access required" },
         { status: 403 },
       );
     }
 
-    try {
-      const agents = await prisma.agent.findMany({
-        include: {
-          user: { select: { id: true, name: true, image: true, email: true } },
-          _count: { select: { listings: true } },
+    const agentUsers = await prisma.user.findMany({
+      where: { role: "AGENT" },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        image: true,
+        email: true,
+        phone: true,
+        nationalId: true,
+        nationalIdVerified: true,
+        verificationStatus: true,
+        createdAt: true,
+        agentProfile: {
+          select: {
+            id: true,
+            agencyName: true,
+            licenseNumber: true,
+            county: true,
+            rating: true,
+            reviewCount: true,
+            isFeatured: true,
+            isVerified: true,
+            verificationStatus: true,
+            _count: { select: { listings: true } },
+          },
         },
-        orderBy: [{ isFeatured: "desc" }, { rating: "desc" }],
-      });
-
-      if (agents.length > 0) {
-        return NextResponse.json({
-          success: true,
-          source: "database",
-          data: agents.map((a) => ({
-            id: a.id,
-            name: a.user.name ?? "Agent",
-            agency: a.agencyName ?? "Independent",
-            county: a.county ?? "—",
-            rating: a.rating,
-            reviewCount: a.reviewCount,
-            listingsCount: a._count.listings,
-            image: a.user.image,
-            isFeatured: a.isFeatured,
-            isVerified: a.isVerified,
-            slug: a.id,
-          })),
-        });
-      }
-    } catch {
-      // fall through to demo
-    }
+        _count: { select: { properties: true } },
+      },
+    });
 
     return NextResponse.json({
       success: true,
-      source: "demo",
-      data: listDemoAgents(),
+      data: agentUsers.map((u) => {
+        const profile = u.agentProfile;
+        const listingsCount =
+          (profile?._count.listings ?? 0) + u._count.properties;
+        return {
+          id: profile?.id ?? u.id,
+          userId: u.id,
+          hasAgentProfile: Boolean(profile),
+          name: u.name ?? "Agent",
+          email: u.email,
+          phone: u.phone ?? "—",
+          nationalId: u.nationalId ?? null,
+          nationalIdVerified: u.nationalIdVerified,
+          agency: profile?.agencyName ?? "Independent",
+          licenseNumber: profile?.licenseNumber ?? null,
+          county: profile?.county ?? "—",
+          rating: profile?.rating ?? 0,
+          reviewCount: profile?.reviewCount ?? 0,
+          listingsCount,
+          image: u.image,
+          isFeatured: profile?.isFeatured ?? false,
+          isVerified: profile?.isVerified ?? false,
+          verificationStatus:
+            profile?.verificationStatus ?? u.verificationStatus,
+          slug: profile?.id ?? u.id,
+          createdAt: u.createdAt.toISOString(),
+        };
+      }),
     });
   } catch {
     return NextResponse.json(

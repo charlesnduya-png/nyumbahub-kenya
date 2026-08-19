@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Archive,
   Eye,
@@ -33,9 +33,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { portfolioViewsSeries } from "@/data/analytics";
-import { mockProperties } from "@/data/mock";
+import { LocationMapPicker } from "@/components/maps/location-map-picker";
+import {
+  ImageUploader,
+  type UploadedImage,
+} from "@/components/property/image-uploader";
+import {
+  PropertyVideoUploader,
+  type UploadedVideo,
+} from "@/components/property/property-video-uploader";
 import { getListingTypeLabel } from "@/lib/kenya";
+import { slimListingImagesForSubmit, slimListingVideosForSubmit } from "@/lib/media-assets";
+import { MAX_LISTING_VIDEOS } from "@/lib/listing-media";
 import { formatPrice } from "@/lib/utils";
 
 export type ManagedListing = {
@@ -52,18 +61,58 @@ export type ManagedListing = {
   estate?: string | null;
   bedrooms?: number | null;
   bathrooms?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
   status: string;
   views: number;
+  images?: UploadedImage[];
+  videos?: UploadedVideo[];
 };
 
-function buildInitialListings(): ManagedListing[] {
-  return mockProperties.slice(0, 8).map((p) => ({
+type EditDraft = Partial<ManagedListing> & {
+  images: UploadedImage[];
+  videos: UploadedVideo[];
+};
+
+function mapApiListing(p: {
+  id: string;
+  title: string;
+  slug: string;
+  listingType: ManagedListing["listingType"];
+  propertyType?: string;
+  description?: string;
+  price: number;
+  currency: string;
+  town: string;
+  county: string;
+  estate?: string | null;
+  bedrooms?: number | null;
+  bathrooms?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  status: string;
+  views: number;
+  images?: Array<{
+    url: string;
+    publicId?: string | null;
+    alt?: string | null;
+    isPrimary?: boolean;
+    order?: number;
+  }>;
+  videos?: Array<{
+    url: string;
+    publicId?: string | null;
+    title?: string | null;
+    thumbnail?: string | null;
+  }>;
+}): ManagedListing {
+  return {
     id: p.id,
     title: p.title,
     slug: p.slug,
     listingType: p.listingType,
     propertyType: p.propertyType,
-    description: `${p.title} in ${p.town}, ${p.county}.`,
+    description: p.description ?? "",
     price: p.price,
     currency: p.currency,
     town: p.town,
@@ -71,17 +120,50 @@ function buildInitialListings(): ManagedListing[] {
     estate: p.estate,
     bedrooms: p.bedrooms,
     bathrooms: p.bathrooms,
+    latitude: p.latitude,
+    longitude: p.longitude,
     status: p.status,
     views: p.views,
-  }));
+    images: (p.images ?? []).map((img, index) => ({
+      url: img.url,
+      publicId: img.publicId ?? undefined,
+      alt: img.alt ?? undefined,
+      isPrimary: img.isPrimary ?? index === 0,
+    })),
+    videos: (p.videos ?? []).map((video) => ({
+      url: video.url,
+      publicId: video.publicId ?? undefined,
+      title: video.title ?? undefined,
+      thumbnail: video.thumbnail ?? undefined,
+    })),
+  };
 }
 
 export function ListingsManager() {
-  const [listings, setListings] = useState<ManagedListing[]>(buildInitialListings);
+  const [listings, setListings] = useState<ManagedListing[]>([]);
+  const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<ManagedListing | null>(null);
   const [deleting, setDeleting] = useState<ManagedListing | null>(null);
   const [busy, setBusy] = useState(false);
-  const [draft, setDraft] = useState<Partial<ManagedListing>>({});
+  const [draft, setDraft] = useState<EditDraft>({ images: [], videos: [] });
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch("/api/properties/mine");
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          setListings(json.data.map(mapApiListing));
+        }
+      } catch {
+        setListings([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void load();
+  }, []);
 
   const counts = useMemo(
     () => ({
@@ -96,7 +178,50 @@ export function ListingsManager() {
 
   function openEdit(listing: ManagedListing) {
     setEditing(listing);
-    setDraft({ ...listing });
+    setDraft({
+      ...listing,
+      images: listing.images ?? [],
+      videos: listing.videos ?? [],
+    });
+
+    void (async () => {
+      try {
+        const res = await fetch(`/api/properties/${listing.id}`);
+        const json = await res.json();
+        if (res.ok && json.success && json.data) {
+          if (json.data.images) {
+            const fullImages = (json.data.images as Array<{
+              url: string;
+              publicId?: string | null;
+              alt?: string | null;
+              isPrimary?: boolean;
+            }>).map((img, index) => ({
+              url: img.url,
+              publicId: img.publicId ?? undefined,
+              alt: img.alt ?? undefined,
+              isPrimary: img.isPrimary ?? index === 0,
+            }));
+            setDraft((d) => ({ ...d, images: fullImages }));
+          }
+          if (json.data.videos) {
+            const fullVideos = (json.data.videos as Array<{
+              url: string;
+              publicId?: string | null;
+              title?: string | null;
+              thumbnail?: string | null;
+            }>).map((video) => ({
+              url: video.url,
+              publicId: video.publicId ?? undefined,
+              title: video.title ?? undefined,
+              thumbnail: video.thumbnail ?? undefined,
+            }));
+            setDraft((d) => ({ ...d, videos: fullVideos }));
+          }
+        }
+      } catch {
+        // keep media from listing summary
+      }
+    })();
   }
 
   async function saveEdit() {
@@ -117,6 +242,23 @@ export function ListingsManager() {
         bathrooms:
           draft.bathrooms != null ? Number(draft.bathrooms) : undefined,
         listingType: draft.listingType,
+        latitude: draft.latitude ?? null,
+        longitude: draft.longitude ?? null,
+        images: slimListingImagesForSubmit(draft.images ?? []).map(
+          (img, index) => ({
+            url: img.url,
+            publicId: img.publicId,
+            alt: img.alt,
+            isPrimary: Boolean(img.isPrimary) || index === 0,
+            order: index,
+          }),
+        ),
+        videos: slimListingVideosForSubmit(draft.videos ?? []).map((video) => ({
+          url: video.url,
+          publicId: video.publicId,
+          title: video.title,
+          thumbnail: video.thumbnail,
+        })),
       };
 
       const desc = (draft.description ?? "").trim();
@@ -131,7 +273,31 @@ export function ListingsManager() {
       });
       const json = await res.json().catch(() => ({}));
 
-      // Always update local UI (demo-friendly even if API/DB fails)
+      if (!res.ok || !json.success) {
+        toast.error(json.error ?? "Unable to update listing");
+        return;
+      }
+
+      const savedImages =
+        Array.isArray(json.data?.images) && json.data.images.length > 0
+          ? json.data.images.map(
+              (
+                img: {
+                  url: string;
+                  publicId?: string | null;
+                  alt?: string | null;
+                  isPrimary?: boolean;
+                },
+                index: number,
+              ) => ({
+                url: img.url,
+                publicId: img.publicId ?? undefined,
+                alt: img.alt ?? undefined,
+                isPrimary: img.isPrimary ?? index === 0,
+              }),
+            )
+          : draft.images;
+
       setListings((prev) =>
         prev.map((p) =>
           p.id === editing.id
@@ -152,34 +318,17 @@ export function ListingsManager() {
                 listingType:
                   (draft.listingType as ManagedListing["listingType"]) ??
                   p.listingType,
+                latitude: draft.latitude ?? null,
+                longitude: draft.longitude ?? null,
+                images: savedImages,
               }
             : p,
         ),
       );
-
-      if (!res.ok && !json.success) {
-        toast.message("Listing updated locally", {
-          description: "Database offline — changes saved in this session.",
-        });
-      } else {
-        toast.success("Listing updated");
-      }
+      toast.success("Listing updated");
       setEditing(null);
     } catch {
-      setListings((prev) =>
-        prev.map((p) =>
-          p.id === editing.id
-            ? {
-                ...p,
-                ...draft,
-                title: String(draft.title),
-                price: Number(draft.price),
-              }
-            : p,
-        ),
-      );
-      toast.success("Listing updated (demo)");
-      setEditing(null);
+      toast.error("Unable to update listing");
     } finally {
       setBusy(false);
     }
@@ -189,14 +338,19 @@ export function ListingsManager() {
     if (!deleting) return;
     setBusy(true);
     try {
-      await fetch(`/api/properties/${deleting.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/properties/${deleting.id}`, {
+        method: "DELETE",
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) {
+        toast.error(json.error ?? "Unable to delete listing");
+        return;
+      }
       setListings((prev) => prev.filter((p) => p.id !== deleting.id));
       toast.success("Listing deleted");
       setDeleting(null);
     } catch {
-      setListings((prev) => prev.filter((p) => p.id !== deleting.id));
-      toast.success("Listing deleted (demo)");
-      setDeleting(null);
+      toast.error("Unable to delete listing");
     } finally {
       setBusy(false);
     }
@@ -222,7 +376,7 @@ export function ListingsManager() {
         <div>
           <h1 className="text-2xl font-bold">All listings</h1>
           <p className="text-muted-foreground">
-            Update, delete, archive, and track views for every property.
+            Update photos, location, details, and track views for every property.
           </p>
         </div>
         <Button asChild>
@@ -244,112 +398,148 @@ export function ListingsManager() {
         </Badge>
       </div>
 
-      <ViewsChart data={portfolioViewsSeries} />
+      {counts.views > 0 ? (
+        <ViewsChart
+          data={[{ label: "Total", views: counts.views, inquiries: 0 }]}
+          title="Listing views"
+        />
+      ) : null}
 
       <Card>
         <CardHeader>
           <CardTitle>Listings inventory</CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-muted-foreground">
-                <th className="pb-3 pr-4 font-medium">Title</th>
-                <th className="pb-3 pr-4 font-medium">Type</th>
-                <th className="pb-3 pr-4 font-medium">Price</th>
-                <th className="pb-3 pr-4 font-medium">Location</th>
-                <th className="pb-3 pr-4 font-medium">Status</th>
-                <th className="pb-3 pr-4 font-medium">Views</th>
-                <th className="pb-3 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {listings.map((p) => (
-                <tr key={p.id} className="border-b last:border-0">
-                  <td className="max-w-[220px] truncate py-3 pr-4 font-medium">
-                    {p.title}
-                  </td>
-                  <td className="py-3 pr-4">
-                    {getListingTypeLabel(p.listingType)}
-                  </td>
-                  <td className="py-3 pr-4">
-                    {formatPrice(p.price, { currency: p.currency })}
-                  </td>
-                  <td className="py-3 pr-4 text-muted-foreground">
-                    {p.town}, {p.county}
-                  </td>
-                  <td className="py-3 pr-4">
-                    <Badge
-                      variant={
-                        p.status === "ACTIVE"
-                          ? "default"
-                          : p.status === "PENDING"
-                            ? "outline"
-                            : "secondary"
-                      }
-                    >
-                      {p.status}
-                    </Badge>
-                  </td>
-                  <td className="py-3 pr-4 font-medium">
-                    {p.views.toLocaleString()}
-                  </td>
-                  <td className="py-3">
-                    <div className="flex flex-wrap gap-1">
-                      <Button size="sm" variant="ghost" asChild>
-                        <Link href={`/properties/${p.slug}`}>
-                          <Eye className="h-3.5 w-3.5" />
-                        </Link>
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openEdit(p)}
-                        aria-label={`Edit ${p.title}`}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button size="sm" variant="secondary" asChild>
-                        <Link href="/dashboard/seller/promote">
-                          <Megaphone className="h-3.5 w-3.5" />
-                        </Link>
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => archiveListing(p)}
-                        aria-label={`Archive ${p.title}`}
-                      >
-                        <Archive className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => setDeleting(p)}
-                        aria-label={`Delete ${p.title}`}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </td>
+          {loading ? (
+            <p className="py-8 text-center text-muted-foreground">
+              Loading listings…
+            </p>
+          ) : listings.length === 0 ? (
+            <div className="py-8 text-center">
+              <p className="text-muted-foreground">
+                You have no listings yet. Add your first property to start
+                selling or renting on Your Home.
+              </p>
+              <Button asChild className="mt-4">
+                <Link href="/dashboard/seller/properties/new">Add property</Link>
+              </Button>
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-muted-foreground">
+                  <th className="pb-3 pr-4 font-medium">Title</th>
+                  <th className="pb-3 pr-4 font-medium">Type</th>
+                  <th className="pb-3 pr-4 font-medium">Price</th>
+                  <th className="pb-3 pr-4 font-medium">Location</th>
+                  <th className="pb-3 pr-4 font-medium">Status</th>
+                  <th className="pb-3 pr-4 font-medium">Views</th>
+                  <th className="pb-3 font-medium">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {listings.map((p) => (
+                  <tr key={p.id} className="border-b last:border-0">
+                    <td className="max-w-[220px] truncate py-3 pr-4 font-medium">
+                      {p.title}
+                    </td>
+                    <td className="py-3 pr-4">
+                      {getListingTypeLabel(p.listingType)}
+                    </td>
+                    <td className="py-3 pr-4">
+                      {formatPrice(p.price, { currency: p.currency })}
+                    </td>
+                    <td className="py-3 pr-4 text-muted-foreground">
+                      {p.town}, {p.county}
+                    </td>
+                    <td className="py-3 pr-4">
+                      <Badge
+                        variant={
+                          p.status === "ACTIVE"
+                            ? "default"
+                            : p.status === "PENDING"
+                              ? "outline"
+                              : "secondary"
+                        }
+                      >
+                        {p.status}
+                      </Badge>
+                    </td>
+                    <td className="py-3 pr-4 font-medium">
+                      {p.views.toLocaleString()}
+                    </td>
+                    <td className="py-3">
+                      <div className="flex flex-wrap gap-1">
+                        <Button size="sm" variant="ghost" asChild>
+                          <Link href={`/properties/${p.slug}`}>
+                            <Eye className="h-3.5 w-3.5" />
+                          </Link>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openEdit(p)}
+                          aria-label={`Edit ${p.title}`}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button size="sm" variant="secondary" asChild>
+                          <Link href="/dashboard/seller/promote">
+                            <Megaphone className="h-3.5 w-3.5" />
+                          </Link>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => archiveListing(p)}
+                          aria-label={`Archive ${p.title}`}
+                        >
+                          <Archive className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => setDeleting(p)}
+                          aria-label={`Delete ${p.title}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </CardContent>
       </Card>
 
-      {/* Edit dialog */}
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg md:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Update listing</DialogTitle>
             <DialogDescription>
-              Changes apply to your professional listing. Republish may need
-              admin approval if status was live.
+              Edit photos, videos, map pin, price, and details for this listing.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 py-2">
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Photos</Label>
+              <ImageUploader
+                value={draft.images}
+                onChange={(images) => setDraft((d) => ({ ...d, images }))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Video links (optional)</Label>
+              <PropertyVideoUploader
+                value={draft.videos}
+                onChange={(videos) => setDraft((d) => ({ ...d, videos }))}
+                maxFiles={MAX_LISTING_VIDEOS}
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="edit-title">Title</Label>
               <Input
@@ -434,15 +624,36 @@ export function ListingsManager() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {(["BUY", "RENT", "LAND", "COMMERCIAL", "HOLIDAY"] as const).map(
-                    (t) => (
-                      <SelectItem key={t} value={t}>
-                        {t}
-                      </SelectItem>
-                    ),
-                  )}
+                  {(
+                    ["BUY", "RENT", "LAND", "COMMERCIAL", "HOLIDAY"] as const
+                  ).map((t) => (
+                    <SelectItem key={t} value={t}>
+                      {t}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Map location</Label>
+              <LocationMapPicker
+                latitude={draft.latitude ?? null}
+                longitude={draft.longitude ?? null}
+                county={draft.county}
+                town={draft.town}
+                onChange={({ latitude, longitude }) =>
+                  setDraft((d) => ({ ...d, latitude, longitude }))
+                }
+                onPlaceSelect={(place) =>
+                  setDraft((d) => ({
+                    ...d,
+                    latitude: place.latitude,
+                    longitude: place.longitude,
+                    town: place.town || d.town,
+                    county: place.county || d.county,
+                  }))
+                }
+              />
             </div>
             <div className="space-y-2">
               <Label>Description</Label>
@@ -466,7 +677,6 @@ export function ListingsManager() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete confirm */}
       <Dialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
         <DialogContent>
           <DialogHeader>

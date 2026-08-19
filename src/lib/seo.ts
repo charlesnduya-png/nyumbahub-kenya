@@ -2,18 +2,352 @@ import type { Metadata } from "next";
 import { formatPrice } from "@/lib/utils";
 
 const APP_NAME =
-  process.env.NEXT_PUBLIC_APP_NAME?.trim() || "NyumbaHub Kenya";
+  process.env.NEXT_PUBLIC_APP_NAME?.trim() || "Your Home";
 
-const APP_URL =
+const APP_URL = (
   process.env.NEXT_PUBLIC_APP_URL?.trim() ||
   process.env.AUTH_URL?.trim() ||
-  "http://localhost:3000";
+  "https://yourhome.co.ke"
+).replace(/\/$/, "");
 
-export { APP_NAME, APP_URL };
+const APP_DESCRIPTION =
+  "Your Home (yourhome.co.ke) — Kenya's marketplace for verified houses, apartments, land, plots, rentals, and BnB stays. Search Nairobi, Mombasa, Kisumu, Nakuru, Kiambu and all 47 counties. List free. M-Pesa ready.";
+
+/** Core + long-tail Kenya real estate keywords for metadata. */
+const SEO_KEYWORDS = [
+  "Your Home Kenya",
+  "yourhome.co.ke",
+  "Kenya real estate",
+  "property Kenya",
+  "nyumba za kuuza Kenya",
+  "nyumba za kukodi Nairobi",
+  "houses for sale Kenya",
+  "houses for rent Nairobi",
+  "apartments for rent Kenya",
+  "bedsitter Nairobi",
+  "single room rent Nairobi",
+  "land for sale Kenya",
+  "plots for sale Nairobi",
+  "land for sale Kiambu",
+  "plots for sale Kenya",
+  "commercial property Kenya",
+  "office space Nairobi",
+  "warehouses for rent Kenya",
+  "BnB Kenya",
+  "Airbnb Kenya",
+  "holiday homes Kenya",
+  "property for sale Nairobi",
+  "property for sale Mombasa",
+  "property for sale Kisumu",
+  "real estate agents Kenya",
+  "estate agents Nairobi",
+  "verified property listings Kenya",
+  "Kilimani apartments",
+  "Westlands rentals",
+  "Karen houses for sale",
+  "Syokimau houses",
+  "Runda property",
+  "Lavington apartments",
+  "Nyali beach property",
+  "Diani land for sale",
+  "Nakuru houses for sale",
+  "Eldoret rentals",
+  "affordable housing Kenya",
+  "M-Pesa property listing",
+  "list property free Kenya",
+];
+
+export { APP_NAME, APP_URL, APP_DESCRIPTION, SEO_KEYWORDS };
 
 export function absoluteUrl(path = "/"): string {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   return new URL(normalizedPath, APP_URL).toString();
+}
+
+export function truncateDescription(text: string, maxLength = 160): string {
+  const cleaned = text.replace(/\s+/g, " ").trim();
+  if (cleaned.length <= maxLength) {
+    return cleaned;
+  }
+  return `${cleaned.slice(0, maxLength - 1).trimEnd()}…`;
+}
+
+export function buildPageMetadata(input: {
+  title: string;
+  description: string;
+  path?: string;
+  image?: string | null;
+  keywords?: string[];
+  noIndex?: boolean;
+}): Metadata {
+  const url = absoluteUrl(input.path ?? "/");
+  const image = input.image ?? absoluteUrl("/opengraph-image");
+  const fullTitle = input.title.includes(APP_NAME)
+    ? input.title
+    : `${input.title} | ${APP_NAME}`;
+  const pageKeywords = input.keywords ?? [];
+  const keywords = [
+    ...pageKeywords,
+    ...SEO_KEYWORDS.filter((k) => !pageKeywords.includes(k)).slice(0, 12),
+  ];
+
+  return {
+    title: input.title,
+    description: truncateDescription(input.description),
+    keywords,
+    alternates: {
+      canonical: url,
+      languages: { "en-KE": url },
+    },
+    robots: input.noIndex
+      ? { index: false, follow: false }
+      : {
+          index: true,
+          follow: true,
+          googleBot: {
+            index: true,
+            follow: true,
+            "max-image-preview": "large",
+            "max-snippet": -1,
+            "max-video-preview": -1,
+          },
+        },
+    openGraph: {
+      type: "website",
+      locale: "en_KE",
+      url,
+      siteName: APP_NAME,
+      title: fullTitle,
+      description: truncateDescription(input.description),
+      images: [{ url: image, width: 1200, height: 630, alt: fullTitle }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: fullTitle,
+      description: truncateDescription(input.description),
+      images: [image],
+    },
+  };
+}
+
+/** Dynamic metadata for /properties with filters (county, town, category, etc.). */
+export function buildPropertiesSearchMetadata(
+  params: Record<string, string | string[] | undefined>,
+): Metadata {
+  const str = (key: string) => {
+    const v = params[key];
+    return typeof v === "string" ? v.trim() : undefined;
+  };
+
+  const category = str("category");
+  const listingType = str("listingType");
+  const propertyType = str("propertyType");
+  const county = str("county");
+  const town = str("town");
+  const agentId = str("agentId");
+
+  const location = [town, county].filter(Boolean).join(", ");
+  const locationSuffix = location ? ` in ${location}` : " in Kenya";
+
+  let title = "Properties for Sale & Rent in Kenya";
+  let description =
+    "Search verified houses, apartments, land, commercial space, and holiday homes across Kenya. Filter by county, price, and bedrooms on Your Home.";
+  const keywords: string[] = [
+    "property Kenya",
+    "real estate Kenya",
+    "verified listings Kenya",
+  ];
+  const pathParts = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value === "string" && value.trim()) {
+      pathParts.set(key, value.trim());
+    }
+  }
+  const path = pathParts.toString()
+    ? `/properties?${pathParts.toString()}`
+    : "/properties";
+
+  if (agentId) {
+    title = "Agent property listings";
+    description =
+      "Browse active homes and land listed by this verified agent on Your Home Kenya.";
+  } else if (category === "land-plots") {
+    title = `Land & Plots for Sale${locationSuffix}`;
+    description = `Find verified vacant land, plots, and farms${locationSuffix}. Compare prices in KES and contact sellers on Your Home — Kenya's property marketplace.`;
+    keywords.push(
+      "land for sale Kenya",
+      "plots for sale Nairobi",
+      "agricultural land Kenya",
+      "title deed land Kenya",
+    );
+  } else if (category === "commercial") {
+    title = `Commercial Property${locationSuffix}`;
+    description = `Offices, shops, and warehouses for sale and rent${locationSuffix}. Verified commercial listings on Your Home Kenya.`;
+    keywords.push(
+      "commercial property Kenya",
+      "office space Nairobi",
+      "shop for rent Kenya",
+    );
+  } else if (listingType === "RENT") {
+    title = `Houses & Apartments for Rent${locationSuffix}`;
+    description = `Browse monthly rentals — bedsitters, apartments, maisonettes, and family homes${locationSuffix}. Verified landlords on Your Home.`;
+    keywords.push(
+      "houses for rent Nairobi",
+      "apartments for rent Kenya",
+      "rentals Kenya",
+    );
+  } else if (listingType === "BUY") {
+    title = `Houses & Property for Sale${locationSuffix}`;
+    description = `Homes, apartments, and townhouses for sale${locationSuffix}. Verified sellers and agents on Your Home Kenya.`;
+    keywords.push("houses for sale Kenya", "property for sale Nairobi");
+  } else if (listingType === "HOLIDAY") {
+    title = `BnB & Holiday Stays${locationSuffix}`;
+    description = `Short-stay apartments, beach villas, and city Airbnbs${locationSuffix}. Book on Your Home Kenya.`;
+    keywords.push("BnB Kenya", "Airbnb Kenya", "holiday homes Kenya");
+  } else if (propertyType === "APARTMENT") {
+    title = `Apartments${locationSuffix}`;
+    description = `Flats and apartments for sale and rent${locationSuffix} on Your Home — Kenya real estate you can trust.`;
+    keywords.push("apartments Kenya", "flats Nairobi");
+  } else if (propertyType === "HOUSE" || propertyType === "VILLA") {
+    title = `Houses & Villas${locationSuffix}`;
+    description = `Standalone houses, bungalows, and villas${locationSuffix}. Browse verified listings on Your Home.`;
+    keywords.push("houses Kenya", "villas for sale Kenya");
+  } else if (county) {
+    title = `Property in ${county}, Kenya`;
+    description = `Homes, land, and rentals in ${county} county. Search verified listings on Your Home Kenya.`;
+    keywords.push(`${county} property`, `${county} real estate`);
+  }
+
+  if (town) {
+    keywords.push(`${town} property`, `${town} houses`, `${town} rentals`);
+  }
+
+  return buildPageMetadata({ title, description, path, keywords });
+}
+
+export function organizationJsonLd() {
+  return {
+    "@context": "https://schema.org",
+    "@type": ["Organization", "RealEstateAgent"],
+    "@id": `${APP_URL}/#organization`,
+    name: APP_NAME,
+    alternateName: ["Your Home Kenya", "yourhome.co.ke", "YourHome Kenya"],
+    url: APP_URL,
+    logo: absoluteUrl("/opengraph-image"),
+    image: absoluteUrl("/opengraph-image"),
+    description: APP_DESCRIPTION,
+    foundingDate: "2026",
+    areaServed: {
+      "@type": "Country",
+      name: "Kenya",
+    },
+    address: {
+      "@type": "PostalAddress",
+      addressCountry: "KE",
+      addressLocality: "Nairobi",
+      addressRegion: "Nairobi",
+    },
+    contactPoint: {
+      "@type": "ContactPoint",
+      contactType: "customer support",
+      availableLanguage: ["English", "Swahili"],
+      email: "charlesnduya84@gmail.com",
+      areaServed: "KE",
+    },
+    knowsAbout: [
+      "Kenya real estate",
+      "property sales",
+      "rentals",
+      "land and plots",
+      "BnB stays",
+      "commercial property",
+    ],
+  };
+}
+
+export function websiteJsonLd() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${APP_URL}/#website`,
+    name: APP_NAME,
+    alternateName: "yourhome.co.ke",
+    url: APP_URL,
+    description: APP_DESCRIPTION,
+    inLanguage: "en-KE",
+    publisher: { "@id": `${APP_URL}/#organization` },
+    potentialAction: [
+      {
+        "@type": "SearchAction",
+        target: {
+          "@type": "EntryPoint",
+          urlTemplate: `${APP_URL}/properties?town={search_term_string}`,
+        },
+        "query-input": "required name=search_term_string",
+      },
+      {
+        "@type": "SearchAction",
+        target: {
+          "@type": "EntryPoint",
+          urlTemplate: `${APP_URL}/properties?county={search_term_string}`,
+        },
+        "query-input": "required name=search_term_string",
+      },
+    ],
+  };
+}
+
+export function homeFaqJsonLd() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: HOME_FAQ_ITEMS.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: item.answer,
+      },
+    })),
+  };
+}
+
+export const HOME_FAQ_ITEMS = [
+  {
+    question: "Where can I find houses for sale in Kenya?",
+    answer:
+      "Browse verified houses, apartments, and land for sale across all 47 counties on Your Home (yourhome.co.ke). Search by Nairobi, Mombasa, Kisumu, Nakuru, Kiambu, and more.",
+  },
+  {
+    question: "How do I rent an apartment in Nairobi?",
+    answer:
+      "Use Your Home to search rentals in Westlands, Kilimani, Lavington, Syokimau, and other Nairobi neighbourhoods. Filter by price and bedrooms, then contact verified landlords.",
+  },
+  {
+    question: "Can I list my property for free in Kenya?",
+    answer:
+      "Yes. Landlords, agents, and sellers can register on Your Home and list properties. Listings are reviewed for quality before going live.",
+  },
+  {
+    question: "Does Your Home have land and plots for sale?",
+    answer:
+      "Yes. Search land and plots across Kenya including Kiambu, Kajiado, Nakuru, and coastal counties. Filter by category Land & Plots on yourhome.co.ke.",
+  },
+] as const;
+
+export function breadcrumbJsonLd(
+  items: Array<{ name: string; path: string }>,
+) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((item, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: item.name,
+      item: absoluteUrl(item.path),
+    })),
+  };
 }
 
 export interface PropertyMetadataInput {
@@ -43,14 +377,6 @@ export interface BlogMetadataInput {
   authorName?: string | null;
 }
 
-function truncateDescription(text: string, maxLength = 160): string {
-  const cleaned = text.replace(/\s+/g, " ").trim();
-  if (cleaned.length <= maxLength) {
-    return cleaned;
-  }
-  return `${cleaned.slice(0, maxLength - 1).trimEnd()}…`;
-}
-
 export function generatePropertyMetadata(
   property: PropertyMetadataInput,
 ): Metadata {
@@ -60,57 +386,103 @@ export function generatePropertyMetadata(
   const priceLabel = formatPrice(property.price, {
     currency: property.currency ?? "KES",
   });
-  const title = `${property.title} | ${priceLabel} | ${APP_NAME}`;
+  const listingLabel =
+    property.listingType === "RENT"
+      ? "for rent"
+      : property.listingType === "HOLIDAY"
+        ? "BnB / holiday"
+        : property.listingType === "LAND"
+          ? "land for sale"
+          : property.listingType === "COMMERCIAL"
+            ? "commercial"
+            : "for sale";
+  const typeLabel = property.propertyType.replace(/_/g, " ").toLowerCase();
+  const title = `${property.title} — ${typeLabel} ${listingLabel} in ${property.town}, Kenya`;
   const description = truncateDescription(
     property.description ||
-      `${property.listingType} ${property.propertyType} in ${location}. ${priceLabel}.`,
+      `${typeLabel} ${listingLabel} in ${location}. ${priceLabel}. Verified listing on Your Home Kenya (yourhome.co.ke).`,
   );
   const url = absoluteUrl(`/properties/${property.slug}`);
-  const image = property.imageUrl ?? absoluteUrl("/og-default.jpg");
+  const image = property.imageUrl ?? absoluteUrl("/opengraph-image");
 
   return {
     title,
     description,
-    alternates: { canonical: url },
+    alternates: { canonical: url, languages: { "en-KE": url } },
     openGraph: {
       type: "website",
       locale: "en_KE",
       url,
       siteName: APP_NAME,
-      title: property.title,
+      title: `${property.title} | ${priceLabel}`,
       description,
       images: [{ url: image, alt: property.title }],
     },
     twitter: {
       card: "summary_large_image",
-      title: property.title,
+      title: `${property.title} | ${priceLabel}`,
       description,
       images: [image],
     },
     keywords: [
-      property.propertyType,
+      property.title,
+      `${property.town} ${typeLabel}`,
+      `${property.town} property ${listingLabel}`,
+      `${property.county} real estate`,
+      `${property.county} ${typeLabel}`,
       property.listingType,
-      property.county,
-      property.town,
-      "Kenya real estate",
-      "property",
+      property.propertyType,
+      "Kenya property",
+      "yourhome.co.ke",
       APP_NAME,
     ],
   };
 }
 
-export function generateBlogMetadata(post: BlogMetadataInput): Metadata {
-  const title = `${post.title} | ${APP_NAME}`;
+export function generateAgentMetadata(input: {
+  name: string;
+  agencyName?: string | null;
+  county?: string | null;
+  town?: string | null;
+  id: string;
+  image?: string | null;
+}): Metadata {
+  const location = [input.town, input.county].filter(Boolean).join(", ");
+  const title = location
+    ? `${input.name} — Real Estate Agent in ${location}`
+    : `${input.name} — Real Estate Agent Kenya`;
   const description = truncateDescription(
-    post.excerpt ?? `Read ${post.title} on ${APP_NAME}.`,
+    `${input.name}${input.agencyName ? ` at ${input.agencyName}` : ""} — verified estate agent on Your Home Kenya. Browse active property listings${location ? ` in ${location}` : " across Kenya"}.`,
+  );
+
+  return buildPageMetadata({
+    title,
+    description,
+    path: `/agents/${input.id}`,
+    image: input.image,
+    keywords: [
+      `${input.name} agent`,
+      "real estate agent Kenya",
+      input.county ? `${input.county} estate agent` : "Nairobi estate agent",
+      "property agent Kenya",
+      "yourhome.co.ke agents",
+    ],
+  });
+}
+
+export function generateBlogMetadata(post: BlogMetadataInput): Metadata {
+  const title = post.title;
+  const description = truncateDescription(
+    post.excerpt ??
+      `Kenya property guide: ${post.title}. Market tips, buying, renting, and investing on ${APP_NAME}.`,
   );
   const url = absoluteUrl(`/blog/${post.slug}`);
-  const image = post.coverImage ?? absoluteUrl("/og-default.jpg");
+  const image = post.coverImage ?? absoluteUrl("/opengraph-image");
 
   return {
     title,
     description,
-    alternates: { canonical: url },
+    alternates: { canonical: url, languages: { "en-KE": url } },
     openGraph: {
       type: "article",
       locale: "en_KE",
@@ -131,7 +503,15 @@ export function generateBlogMetadata(post: BlogMetadataInput): Metadata {
       description,
       images: [image],
     },
-    keywords: [post.category, "Kenya property", "real estate blog", APP_NAME],
+    keywords: [
+      post.category,
+      "Kenya property blog",
+      "real estate tips Kenya",
+      "housing market Kenya",
+      "buy property Kenya",
+      "yourhome.co.ke",
+      APP_NAME,
+    ],
   };
 }
 
@@ -152,7 +532,7 @@ export function propertyJsonLd(property: PropertyJsonLdInput): object {
       ? property.images
       : property.imageUrl
         ? [property.imageUrl]
-        : [absoluteUrl("/og-default.jpg")];
+        : [absoluteUrl("/opengraph-image")];
 
   return {
     "@context": "https://schema.org",
@@ -180,7 +560,6 @@ export function propertyJsonLd(property: PropertyJsonLdInput): object {
       addressCountry: "KE",
       ...(property.estate ? { streetAddress: property.estate } : {}),
     },
-    geo: undefined,
     image: images,
     mainEntity: {
       "@type": "Product",
@@ -196,13 +575,31 @@ export function propertyJsonLd(property: PropertyJsonLdInput): object {
       },
       additionalProperty: [
         ...(property.bedrooms != null
-          ? [{ "@type": "PropertyValue", name: "bedrooms", value: property.bedrooms }]
+          ? [
+              {
+                "@type": "PropertyValue",
+                name: "bedrooms",
+                value: property.bedrooms,
+              },
+            ]
           : []),
         ...(property.bathrooms != null
-          ? [{ "@type": "PropertyValue", name: "bathrooms", value: property.bathrooms }]
+          ? [
+              {
+                "@type": "PropertyValue",
+                name: "bathrooms",
+                value: property.bathrooms,
+              },
+            ]
           : []),
         ...(property.floorArea != null
-          ? [{ "@type": "PropertyValue", name: "floorArea", value: property.floorArea }]
+          ? [
+              {
+                "@type": "PropertyValue",
+                name: "floorArea",
+                value: property.floorArea,
+              },
+            ]
           : []),
         {
           "@type": "PropertyValue",

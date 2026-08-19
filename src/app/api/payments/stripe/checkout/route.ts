@@ -33,8 +33,6 @@ export async function POST(request: Request) {
         {
           success: false,
           error: "Stripe is not configured",
-          stub: true,
-          checkoutUrl: `${APP_URL}/dashboard/seller/promote?demo=1`,
         },
         { status: 503 },
       );

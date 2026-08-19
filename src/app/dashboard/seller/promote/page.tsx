@@ -5,13 +5,25 @@ import { Megaphone } from "lucide-react";
 import { toast } from "sonner";
 import { PaymentCheckout } from "@/components/payments/payment-checkout";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   BOOST_PRODUCTS,
+  PUBLIC_BOOST_PRODUCTS,
   formatProductPrice,
   type BoostProductId,
 } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
+
+const PROMOTE_OPTIONS = [
+  ...PUBLIC_BOOST_PRODUCTS,
+  ...BOOST_PRODUCTS.filter((p) => p.id === "mpesa_test"),
+];
 
 export default function SellerPromotePage() {
   const [selected, setSelected] = useState<BoostProductId>("featured_boost");
@@ -27,8 +39,8 @@ export default function SellerPromotePage() {
       <div>
         <h1 className="text-2xl font-bold">Promote your listings</h1>
         <p className="text-muted-foreground">
-          Pay with M-Pesa to boost visibility. Featured and premium placements
-          start after payment confirmation.
+          Featured listings from KES 500 · Property promotions from KES 1,000.
+          Pay with M-Pesa.
         </p>
       </div>
 
@@ -40,8 +52,8 @@ export default function SellerPromotePage() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-        <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-          {BOOST_PRODUCTS.map((plan) => (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {PROMOTE_OPTIONS.map((plan) => (
             <button
               key={plan.id}
               type="button"
@@ -73,7 +85,7 @@ export default function SellerPromotePage() {
           <CardHeader>
             <CardTitle>Checkout</CardTitle>
             <CardDescription>
-              Selected: {product.name}. Demo mode works without M-Pesa API keys.
+              Selected: {product.name}. Enter your M-Pesa number to pay.
             </CardDescription>
           </CardHeader>
           <CardContent>

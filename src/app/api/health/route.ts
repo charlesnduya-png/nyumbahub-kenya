@@ -19,7 +19,7 @@ export async function GET() {
   return NextResponse.json(
     {
       ok,
-      service: "nyumbahub",
+      service: "your-home",
       database,
       timestamp: new Date().toISOString(),
     },

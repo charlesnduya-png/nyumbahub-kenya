@@ -16,6 +16,10 @@ export function LatestProperties({
   title = "Latest Listings",
   subtitle = "Fresh properties added this week across Kenya",
 }: LatestPropertiesProps) {
+  if (properties.length === 0) {
+    return null;
+  }
+
   return (
     <section
       className="gradient-mesh py-16 sm:py-20"

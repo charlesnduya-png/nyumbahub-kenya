@@ -1,8 +1,16 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { DM_Sans, Fraunces } from "next/font/google";
 
 import { AppProviders } from "@/components/providers/app-providers";
-import { APP_NAME, APP_URL } from "@/lib/seo";
+import {
+  APP_DESCRIPTION,
+  APP_NAME,
+  APP_URL,
+  SEO_KEYWORDS,
+  absoluteUrl,
+  organizationJsonLd,
+  websiteJsonLd,
+} from "@/lib/seo";
 
 import "./globals.css";
 
@@ -18,34 +26,65 @@ const fraunces = Fraunces({
   display: "swap",
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: "#0b6e4f",
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
   title: {
-    default: `${APP_NAME} — Find Your Perfect Home in Kenya`,
+    default: `${APP_NAME} — Kenya Real Estate | Houses, Rent, Land & BnB`,
     template: `%s | ${APP_NAME}`,
   },
-  description:
-    "Discover verified homes, land, and commercial properties across Kenya. Buy, rent, or list with trusted agents on NyumbaHub Kenya.",
-  keywords: [
-    "Kenya real estate",
-    "property for sale Kenya",
-    "rentals Nairobi",
-    "land for sale Kenya",
-    "NyumbaHub",
-  ],
+  description: APP_DESCRIPTION,
+  applicationName: APP_NAME,
+  authors: [{ name: APP_NAME, url: APP_URL }],
+  creator: APP_NAME,
+  publisher: APP_NAME,
+  category: "real estate",
+  keywords: SEO_KEYWORDS,
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
   openGraph: {
     type: "website",
     locale: "en_KE",
+    url: APP_URL,
     siteName: APP_NAME,
-    title: `${APP_NAME} — Find Your Perfect Home in Kenya`,
-    description:
-      "Discover verified homes, land, and commercial properties across Kenya.",
+    title: `${APP_NAME} — Kenya Real Estate | Houses, Rent, Land & BnB`,
+    description: APP_DESCRIPTION,
+    images: [
+      {
+        url: absoluteUrl("/opengraph-image"),
+        width: 1200,
+        height: 630,
+        alt: `${APP_NAME} — Kenya real estate`,
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: APP_NAME,
-    description:
-      "Discover verified homes, land, and commercial properties across Kenya.",
+    title: `${APP_NAME} — Kenya Real Estate | Houses, Rent, Land & BnB`,
+    description: APP_DESCRIPTION,
+    images: [absoluteUrl("/opengraph-image")],
+  },
+  icons: {
+    icon: "/favicon.ico",
+  },
+  other: {
+    "geo.region": "KE",
+    "geo.placename": "Kenya",
   },
 };
 
@@ -54,11 +93,19 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const structuredData = [organizationJsonLd(), websiteJsonLd()];
+
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en-KE" suppressHydrationWarning>
       <body
         className={`${dmSans.variable} ${fraunces.variable} font-sans antialiased`}
       >
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(structuredData),
+          }}
+        />
         <a href="#main-content" className="skip-link">
           Skip to main content
         </a>

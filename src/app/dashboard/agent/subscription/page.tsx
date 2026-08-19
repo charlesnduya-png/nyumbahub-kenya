@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { PaymentCheckout } from "@/components/payments/payment-checkout";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -11,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FREE_TIER_MAX_LISTINGS, LISTINGS_ARE_FREE } from "@/lib/listing-flags";
 import {
   AGENT_PRODUCTS,
   formatProductPrice,
@@ -27,13 +30,43 @@ export default function AgentSubscriptionPage() {
     [selected],
   );
 
+  if (LISTINGS_ARE_FREE) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-2xl font-bold">Agent plan</h1>
+          <p className="text-muted-foreground">
+            Paid subscriptions are paused — Your Home is free to use for now.
+          </p>
+        </div>
+        <Card className="border-primary/30">
+          <CardHeader>
+            <CardTitle>Free access</CardTitle>
+            <CardDescription>
+              List up to {FREE_TIER_MAX_LISTINGS} properties at no charge. Chat
+              and contact tools are unlocked without a viewing pass.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Badge>Active · Free</Badge>
+            <Button asChild>
+              <Link href="/dashboard/seller/properties/new">
+                List a property
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold">Agent subscription</h1>
         <p className="text-muted-foreground">
-          Monthly M-Pesa billing for agents. Higher plans unlock more active
-          listings and CRM tools.
+          Free accounts get {FREE_TIER_MAX_LISTINGS} listings. Upgrade from KES
+          1,000/month for more inventory and tools.
         </p>
       </div>
 
@@ -42,15 +75,17 @@ export default function AgentSubscriptionPage() {
           <CardTitle>Current plan</CardTitle>
           <CardDescription>
             {activePlan
-              ? `${activePlan} is active on this demo account.`
-              : "No paid subscription yet — choose a plan below."}
+              ? `${activePlan} is active on your account.`
+              : `Free tier · up to ${FREE_TIER_MAX_LISTINGS} listings. Choose a paid plan below to scale.`}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {activePlan ? (
             <Badge>Active · {activePlan}</Badge>
           ) : (
-            <Badge variant="secondary">Inactive</Badge>
+            <Badge variant="secondary">
+              Free · {FREE_TIER_MAX_LISTINGS} listings
+            </Badge>
           )}
         </CardContent>
       </Card>
@@ -93,11 +128,11 @@ export default function AgentSubscriptionPage() {
           <CardHeader>
             <CardTitle>Pay for {product.name}</CardTitle>
             <CardDescription>
-              {formatProductPrice(product)} billed every{" "}
-              {product.durationDays} days via M-Pesa.
+              {formatProductPrice(product)} billed every {product.durationDays}{" "}
+              days via M-Pesa.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <PaymentCheckout
               productId={selected}
               ctaLabel="Subscribe with M-Pesa"
@@ -106,6 +141,16 @@ export default function AgentSubscriptionPage() {
                 toast.success(`Subscribed · ${payment.reference}`);
               }}
             />
+            <p className="text-xs text-muted-foreground">
+              Prefer to stay free?{" "}
+              <Link
+                href="/dashboard/seller/properties/new"
+                className="underline"
+              >
+                List up to {FREE_TIER_MAX_LISTINGS} properties
+              </Link>{" "}
+              without paying.
+            </p>
           </CardContent>
         </Card>
       </div>

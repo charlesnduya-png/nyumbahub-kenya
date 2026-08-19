@@ -1,9 +1,14 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useState } from "react";
+import { MessageCircle } from "lucide-react";
 import { toast } from "sonner";
+
+import { useTenantContactGate } from "@/components/tenant/tenant-access-paywall";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -11,45 +16,79 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 
 interface ContactSellerFormProps {
   propertyId: string;
   propertyTitle: string;
+  hostUserId?: string;
+  variant?: "default" | "outline" | "secondary";
+  label?: string;
+  /** Keep dialog for logged-in users instead of inbox redirect only */
+  preferDialog?: boolean;
 }
 
 export function ContactSellerForm({
   propertyId,
   propertyTitle,
+  hostUserId,
+  variant = "default",
+  label = "Contact seller",
+  preferDialog = false,
 }: ContactSellerFormProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { data: session, status } = useSession();
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const { runWithAccess, paywall } = useTenantContactGate("chat with landlords");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
+    const message = String(formData.get("message") ?? "").trim();
 
     try {
-      const res = await fetch(`/api/properties/${propertyId}/leads`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formData.get("name"),
-          email: formData.get("email"),
-          phone: formData.get("phone"),
-          message: formData.get("message"),
-        }),
-      });
+      if (status === "authenticated" && session?.user && hostUserId) {
+        const res = await fetch("/api/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            receiverId: hostUserId,
+            propertyId,
+            content:
+              message ||
+              `Hi, I'm interested in ${propertyTitle} on Your Home.`,
+          }),
+        });
+        const json = (await res.json()) as {
+          success?: boolean;
+          error?: string;
+          code?: string;
+        };
 
-      if (res.ok) {
-        toast.success("Enquiry sent! The seller will contact you shortly.");
+        if (!res.ok || !json.success) {
+          if (json.code === "TENANT_ACCESS_REQUIRED") {
+            toast.error(json.error ?? "Viewing pass required");
+            setOpen(false);
+            runWithAccess(() => setOpen(true));
+            return;
+          }
+          toast.error(json.error ?? "Unable to send message");
+          return;
+        }
+
+        toast.success("Message sent! Continue in your inbox.");
         setOpen(false);
-      } else {
-        toast.error("Unable to send enquiry. Please try again.");
+        router.push(
+          `/dashboard/tenant/messages?peer=${hostUserId}&property=${propertyId}`,
+        );
+        return;
       }
+
+      toast.error("Sign in and unlock a 24-hour viewing pass to contact landlords.");
     } catch {
       toast.error("Something went wrong.");
     } finally {
@@ -57,42 +96,81 @@ export function ContactSellerForm({
     }
   }
 
+  if (status === "authenticated" && hostUserId && !preferDialog) {
+    return (
+      <>
+        <Button
+          className="w-full"
+          variant={variant}
+          onClick={() =>
+            runWithAccess(() =>
+              router.push(
+                `/dashboard/tenant/messages?peer=${hostUserId}&property=${propertyId}`,
+              ),
+            )
+          }
+        >
+          <MessageCircle className="mr-2 h-4 w-4" />
+          {label}
+        </Button>
+        {paywall}
+      </>
+    );
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="w-full">Contact seller</Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Enquire about {propertyTitle}</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Your name</Label>
-            <Input id="name" name="name" required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone</Label>
-            <Input id="phone" name="phone" placeholder="0712345678" required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="message">Message</Label>
-            <Textarea
-              id="message"
-              name="message"
-              placeholder="I'm interested in viewing this property…"
-              rows={3}
-            />
-          </div>
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Sending…" : "Send enquiry"}
-          </Button>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <Button
+          className="w-full"
+          variant={variant}
+          onClick={() => runWithAccess(() => setOpen(true))}
+        >
+          <MessageCircle className="mr-2 h-4 w-4" />
+          {label}
+        </Button>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enquire about {propertyTitle}</DialogTitle>
+          </DialogHeader>
+          {status !== "authenticated" ? (
+            <p className="text-sm text-muted-foreground">
+              <Link
+                href={`/login?callbackUrl=${encodeURIComponent(pathname)}`}
+                className="text-primary hover:underline"
+              >
+                Sign in
+              </Link>{" "}
+              and pay KES 150 for a 24-hour viewing pass to chat with the host.
+            </p>
+          ) : null}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {status === "authenticated" ? (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="message">Message</Label>
+                  <Textarea
+                    id="message"
+                    name="message"
+                    placeholder="I'm interested in viewing this property…"
+                    rows={3}
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Sending…" : "Send message"}
+                </Button>
+              </>
+            ) : (
+              <Button asChild className="w-full">
+                <Link href={`/login?callbackUrl=${encodeURIComponent(pathname)}`}>
+                  Sign in to continue
+                </Link>
+              </Button>
+            )}
+          </form>
+        </DialogContent>
+      </Dialog>
+      {paywall}
+    </>
   );
 }

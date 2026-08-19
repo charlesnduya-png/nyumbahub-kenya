@@ -16,14 +16,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  mockInboxMessages,
   type ProfessionalInboxMessage,
 } from "@/data/professional";
 import { cn, formatRelativeDate } from "@/lib/utils";
 
 export function ProfessionalInbox() {
-  const [messages, setMessages] = useState(mockInboxMessages);
-  const [selectedId, setSelectedId] = useState(messages[0]?.id ?? "");
+  const [messages, setMessages] = useState<ProfessionalInboxMessage[]>([]);
+  const [selectedId, setSelectedId] = useState("");
   const [query, setQuery] = useState("");
   const [reply, setReply] = useState("");
 
@@ -202,7 +201,7 @@ export function ProfessionalInbox() {
                           toast.error("Write a reply first");
                           return;
                         }
-                        toast.success("Reply sent (demo)");
+                        toast.success("Reply saved locally");
                         setReply("");
                         markStatus(selected.id, "READ");
                       }}

@@ -48,7 +48,13 @@ export function HeroSearch() {
     e.preventDefault();
     const params = new URLSearchParams();
     if (query.trim()) params.set("query", query.trim());
-    params.set("listingType", listingType);
+    if (listingType === "LAND") {
+      params.set("category", "land-plots");
+    } else if (listingType === "COMMERCIAL") {
+      params.set("category", "commercial");
+    } else {
+      params.set("listingType", listingType);
+    }
     if (county) params.set("county", county);
     if (town) params.set("town", town);
     if (minPrice) params.set("minPrice", minPrice);
@@ -58,20 +64,20 @@ export function HeroSearch() {
   }
 
   return (
-    <div className="w-full max-w-4xl rounded-3xl border border-white/30 bg-white/85 p-4 shadow-2xl shadow-black/20 backdrop-blur-2xl dark:border-white/10 dark:bg-black/55 sm:p-6">
+    <div className="w-full max-w-4xl rounded-2xl border border-white/30 bg-white/85 p-3 shadow-2xl shadow-black/20 backdrop-blur-2xl dark:border-white/10 dark:bg-black/55 sm:rounded-3xl sm:p-6">
       <Tabs
         value={listingType}
         onValueChange={(v) => setListingType(v as ListingType)}
       >
         <TabsList
-          className="mb-4 h-auto w-full flex-wrap justify-start gap-1 bg-transparent p-0"
+          className="mb-4 flex h-auto w-full flex-nowrap justify-start gap-1 overflow-x-auto rounded-2xl bg-muted/60 p-1.5 dark:bg-white/10 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           aria-label="Property search type"
         >
           {SEARCH_TABS.map((tab) => (
             <TabsTrigger
               key={tab.value}
               value={tab.value}
-              className="rounded-full border border-transparent px-4 py-2 text-foreground/80 transition-all data-[state=active]:border-primary/20 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md"
+              className="shrink-0 rounded-full border px-3 py-2 text-sm font-medium transition-all data-[state=inactive]:border-border/70 data-[state=inactive]:bg-muted data-[state=inactive]:text-foreground data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-white data-[state=active]:shadow-md dark:data-[state=inactive]:border-white/25 dark:data-[state=inactive]:bg-white/15 dark:data-[state=inactive]:text-white dark:data-[state=active]:border-primary dark:data-[state=active]:bg-primary dark:data-[state=active]:text-white sm:px-4"
             >
               {tab.label}
             </TabsTrigger>
@@ -204,7 +210,7 @@ export function HeroSearch() {
               <Button
                 type="submit"
                 size="lg"
-                className="mt-4 w-full rounded-xl bg-gradient-to-r from-[#0B6E4F] to-[#0d8a62] shadow-lg shadow-primary/30 transition hover:brightness-110 sm:w-auto sm:px-10"
+                className="mt-4 w-full rounded-xl bg-primary text-white shadow-lg shadow-primary/30 transition hover:bg-primary/90 sm:w-auto sm:px-10"
               >
                 <Search className="h-4 w-4" aria-hidden="true" />
                 Search properties

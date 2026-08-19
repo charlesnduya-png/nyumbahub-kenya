@@ -3,12 +3,20 @@ import Link from "next/link";
 
 import { BrandLogo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "About Us",
+export const metadata: Metadata = buildPageMetadata({
+  title: "About Your Home — Kenya Real Estate Marketplace",
   description:
-    "Learn about NyumbaHub Kenya — the marketplace for verified homes, land, rentals, and BnB stays across Kenya.",
-};
+    "Your Home (yourhome.co.ke) is Kenya's marketplace for verified homes, land, plots, rentals, and BnB stays. We connect buyers, tenants, sellers, and agents across all 47 counties.",
+  path: "/about",
+  keywords: [
+    "Your Home Kenya",
+    "Kenya real estate platform",
+    "verified property listings Kenya",
+    "yourhome.co.ke",
+  ],
+});
 
 export default function AboutPage() {
   return (
@@ -17,10 +25,10 @@ export default function AboutPage() {
         <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
           <BrandLogo showKenya size="lg" className="mb-8" />
           <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">
-            About NyumbaHub
+            About Your Home
           </h1>
           <p className="mt-4 text-lg text-muted-foreground">
-            We built NyumbaHub so Kenyans can buy, rent, list, and book stays
+            We built Your Home so Kenyans can buy, rent, list, and book stays
             with clearer listings, verified professionals, and payments that
             work locally.
           </p>
@@ -31,7 +39,7 @@ export default function AboutPage() {
         <div>
           <h2 className="font-display text-2xl font-semibold">What we do</h2>
           <p className="mt-3 leading-relaxed text-muted-foreground">
-            NyumbaHub is a Kenya-focused real estate marketplace for homes,
+            Your Home is a Kenya-focused real estate marketplace for homes,
             land, commercial space, monthly rentals, and BnB stays. Buyers and
             tenants browse for free. Sellers and agents list through paid plans,
             then go live after admin review.

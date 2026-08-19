@@ -41,7 +41,7 @@ export const mockInboxMessages: ProfessionalInboxMessage[] = [
     fromPhone: "0712345678",
     subject: "Viewing request — Kilimani apartment",
     preview: "Hi, can we view the Kilimani 3BR this Saturday at 10am?",
-    body: "Hi, I saw your Modern 3BR Apartment in Kilimani on NyumbaHub. Can we view it this Saturday at 10am? I'm a serious buyer with pre-approval from Equity Bank.",
+    body: "Hi, I saw your Modern 3BR Apartment in Kilimani on Your Home. Can we view it this Saturday at 10am? I'm a serious buyer with pre-approval from Equity Bank.",
     propertyTitle: "Modern 3BR Apartment in Kilimani",
     propertyId: "prop-1",
     status: "UNREAD",

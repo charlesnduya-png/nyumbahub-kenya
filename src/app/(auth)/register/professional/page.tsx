@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm, type Resolver } from "react-hook-form";
-import { BadgeCheck, Building2, UserRound } from "lucide-react";
+import { BadgeCheck, Building2, IdCard, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { KENYA_COUNTIES } from "@/lib/kenya";
 import { registerSchema, type RegisterInput } from "@/lib/validations/auth";
 
 export default function ProfessionalRegisterPage() {
@@ -39,10 +40,16 @@ export default function ProfessionalRegisterPage() {
     formState: { errors },
   } = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema) as Resolver<RegisterInput>,
-    defaultValues: { role: "SELLER" },
+    defaultValues: {
+      role: "SELLER",
+      county: "Nairobi",
+      nationalId: "",
+      agencyName: "",
+    },
   });
 
   const role = watch("role");
+  const county = watch("county");
 
   async function onSubmit(data: RegisterInput) {
     if (data.role !== "SELLER" && data.role !== "AGENT") {
@@ -67,9 +74,13 @@ export default function ProfessionalRegisterPage() {
       }
 
       toast.success(
-        "Professional account created! Sign in to submit listings for admin approval.",
+        result.otpSent
+          ? "Account created! Check your email for the verification code."
+          : "Account created! Verify your email to continue.",
       );
-      router.push("/login?registered=professional");
+      router.push(
+        `/verify-email?email=${encodeURIComponent(data.email.trim().toLowerCase())}`,
+      );
     } catch {
       toast.error("Something went wrong. Please try again.");
     } finally {
@@ -79,26 +90,27 @@ export default function ProfessionalRegisterPage() {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 rounded-2xl bg-white p-3 shadow-sm sm:grid-cols-2">
         <Link
           href="/register"
-          className="rounded-2xl border p-4 transition hover:border-primary/40 hover:bg-muted/40"
+          className="rounded-xl border border-slate-200 bg-white p-4 text-slate-900 transition hover:border-primary/50 hover:bg-slate-50"
         >
           <div className="mb-2 flex items-center gap-2">
             <UserRound className="h-4 w-4 text-primary" />
             <span className="text-sm font-semibold">Customer</span>
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-slate-600">
             Browse and save homes only.
           </p>
         </Link>
-        <div className="rounded-2xl border border-primary bg-primary/5 p-4">
+        <div className="rounded-xl border-2 border-primary bg-primary/10 p-4 text-slate-900">
           <div className="mb-2 flex items-center gap-2 text-primary">
             <Building2 className="h-4 w-4" />
             <span className="text-sm font-semibold">Professional</span>
           </div>
-          <p className="text-xs text-muted-foreground">
-            List houses for sale or rent after admin approval.
+          <p className="text-xs text-slate-600">
+            List houses for sale or rent after ID verification and admin
+            approval.
           </p>
         </div>
       </div>
@@ -107,8 +119,8 @@ export default function ProfessionalRegisterPage() {
         <CardHeader className="text-center">
           <CardTitle>Create a professional account</CardTitle>
           <CardDescription>
-            For landlords, owners, and agents who want to list properties on
-            NyumbaHub.
+            For landlords, owners, and agents — free for now (up to 5 listings).
+            Official ID details are required and reviewed by Your Home admin.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -118,8 +130,8 @@ export default function ProfessionalRegisterPage() {
                 <BadgeCheck className="h-4 w-4 text-primary" />
                 How listing works
               </div>
-              Submit your property → Admin reviews it → Once approved, it goes
-              live on the marketplace.
+              Free professional account → Submit up to 5 properties → Admin
+              approves each listing → Goes live.
             </div>
 
             <div className="space-y-2">
@@ -127,7 +139,9 @@ export default function ProfessionalRegisterPage() {
               <Select
                 value={role}
                 onValueChange={(value) =>
-                  setValue("role", value as RegisterInput["role"])
+                  setValue("role", value as RegisterInput["role"], {
+                    shouldValidate: true,
+                  })
                 }
               >
                 <SelectTrigger>
@@ -146,14 +160,18 @@ export default function ProfessionalRegisterPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="name">Full name / agency contact</Label>
-              <Input id="name" placeholder="David Ochieng" {...register("name")} />
+              <Label htmlFor="name">Full legal name</Label>
+              <Input
+                id="name"
+                placeholder="As on your National ID"
+                {...register("name")}
+              />
               {errors.name && (
                 <p className="text-sm text-destructive">{errors.name.message}</p>
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Work email</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -175,6 +193,69 @@ export default function ProfessionalRegisterPage() {
                 <p className="text-sm text-destructive">{errors.phone.message}</p>
               )}
             </div>
+
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-4">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <IdCard className="h-4 w-4 text-primary" />
+                Official identity (required)
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="nationalId">National ID / Passport number</Label>
+                <Input
+                  id="nationalId"
+                  placeholder="e.g. 12345678"
+                  {...register("nationalId")}
+                />
+                {errors.nationalId && (
+                  <p className="text-sm text-destructive">
+                    {errors.nationalId.message}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Used for verification only. Shown to admin on your agent /
+                  landlord account.
+                </p>
+              </div>
+
+              {role === "AGENT" ? (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="agencyName">Agency / company name</Label>
+                    <Input
+                      id="agencyName"
+                      placeholder="e.g. Greenview Homes Ltd"
+                      {...register("agencyName")}
+                    />
+                    {errors.agencyName && (
+                      <p className="text-sm text-destructive">
+                        {errors.agencyName.message}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Primary county</Label>
+                    <Select
+                      value={county ?? "Nairobi"}
+                      onValueChange={(value) =>
+                        setValue("county", value, { shouldValidate: true })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select county" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {KENYA_COUNTIES.map((c) => (
+                          <SelectItem key={c} value={c}>
+                            {c}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              ) : null}
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input id="password" type="password" {...register("password")} />

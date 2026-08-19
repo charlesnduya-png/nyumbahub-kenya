@@ -20,6 +20,10 @@ export function FeaturedProperties({
   viewAllHref = "/properties?isFeatured=true",
   viewAllLabel = "View all featured",
 }: FeaturedPropertiesProps) {
+  if (properties.length === 0) {
+    return null;
+  }
+
   return (
     <section className="py-16 sm:py-20" aria-labelledby="featured-heading">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -41,11 +45,11 @@ export function FeaturedProperties({
           </Button>
         </div>
 
-        <div className="scrollbar-thin -mx-4 mt-10 flex gap-5 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="scrollbar-thin -mx-4 mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:gap-5 sm:overflow-visible sm:px-0 lg:grid-cols-3 xl:grid-cols-4">
           {properties.map((property, index) => (
             <div
               key={property.id}
-              className="w-[280px] shrink-0 sm:w-auto sm:shrink"
+              className="w-[min(280px,85vw)] shrink-0 snap-start sm:w-auto sm:shrink"
             >
               <PropertyCardComponent
                 property={property}

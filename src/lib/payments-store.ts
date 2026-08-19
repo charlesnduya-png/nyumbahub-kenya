@@ -58,7 +58,7 @@ export function createPayment(input: {
     phone: input.phone,
     propertyId: input.propertyId,
     reference: `NH-${Date.now().toString().slice(-8)}`,
-    description: product?.name ?? "NyumbaHub payment",
+    description: product?.name ?? "Your Home payment",
     metadata: input.metadata,
     createdAt: now,
     updatedAt: now,

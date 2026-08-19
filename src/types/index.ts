@@ -90,6 +90,25 @@ export interface PropertyCard {
   publishedAt?: Date | string | null;
   primaryImage?: PropertyImageSummary | null;
   images?: PropertyImageSummary[];
+  /** Optional: presence of video links for marketplace cards */
+  videos?: Array<{
+    url: string;
+    title?: string | null;
+  }>;
+  /** Multi-room RENT inventory */
+  rentalRoomsAvailable?: number;
+  rentalRoomsTotal?: number;
+  host?: ListingHostSummary | null;
+}
+
+export interface ListingHostSummary {
+  id: string;
+  name: string;
+  image?: string | null;
+  role?: string;
+  isVerified?: boolean;
+  agencyName?: string | null;
+  agentProfileId?: string | null;
 }
 
 export interface PropertyDetail extends PropertyCard {

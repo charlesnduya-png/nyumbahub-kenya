@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import { PropertyCardItem } from "@/components/properties/property-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { mockProperties } from "@/data/mock";
 import type { PropertyCard } from "@/types";
 
 export default function WishlistPage() {
@@ -29,10 +28,10 @@ export default function WishlistPage() {
             ),
           );
         } else {
-          setFavorites(mockProperties.slice(0, 2));
+          setFavorites([]);
         }
       } catch {
-        setFavorites(mockProperties.slice(0, 2));
+        setFavorites([]);
       } finally {
         setLoading(false);
       }
@@ -46,7 +45,7 @@ export default function WishlistPage() {
       <header className="border-b bg-card">
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
           <Link href="/" className="text-xl font-bold text-primary">
-            NyumbaHub Kenya
+            Your Home
           </Link>
           <Link href="/login" className="text-sm text-primary">
             Sign in to sync wishlist

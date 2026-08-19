@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { useForm, type Resolver } from "react-hook-form";
 import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -11,6 +13,10 @@ import {
   ImageUploader,
   type UploadedImage,
 } from "@/components/property/image-uploader";
+import {
+  PropertyVideoUploader,
+  type UploadedVideo,
+} from "@/components/property/property-video-uploader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,11 +36,15 @@ import {
   LISTING_TYPES,
   PROPERTY_CATEGORIES,
 } from "@/lib/kenya";
+import { LocationMapPicker } from "@/components/maps/location-map-picker";
 import {
   LISTING_PRODUCTS,
   formatProductPrice,
   type ListingProductId,
 } from "@/lib/pricing";
+import { FREE_TIER_MAX_LISTINGS, LISTINGS_ARE_FREE } from "@/lib/listing-flags";
+import { slimListingImagesForSubmit, slimListingVideosForSubmit } from "@/lib/media-assets";
+import { MAX_LISTING_IMAGES, MAX_LISTING_VIDEOS } from "@/lib/listing-media";
 import {
   createPropertySchema,
   type CreatePropertyInput,
@@ -49,6 +59,17 @@ export default function NewPropertyPage() {
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [paymentRef, setPaymentRef] = useState<string | null>(null);
   const [images, setImages] = useState<UploadedImage[]>([]);
+  const [videos, setVideos] = useState<UploadedVideo[]>([]);
+  const [monthlyActive, setMonthlyActive] = useState(false);
+  const [monthlyEndDate, setMonthlyEndDate] = useState<string | null>(null);
+  const [subLoading, setSubLoading] = useState(true);
+  const [listingUsed, setListingUsed] = useState(0);
+  const [listingRemaining, setListingRemaining] = useState(FREE_TIER_MAX_LISTINGS);
+  const [atLimit, setAtLimit] = useState(false);
+
+  const { data: session } = useSession();
+  const isAgent = session?.user?.role === "AGENT";
+  const canSubmitWithoutPay = monthlyActive || !atLimit;
 
   const {
     register,
@@ -69,14 +90,53 @@ export default function NewPropertyPage() {
       security: true,
       parking: true,
       images: [],
+      videos: [],
+      latitude: null,
+      longitude: null,
+      rentalRoomsCount: null,
     },
   });
 
   const values = watch();
+  const isRentListing = values.listingType === "RENT";
+
+  useEffect(() => {
+    async function loadSubscription() {
+      try {
+        const res = await fetch("/api/subscriptions/mine");
+        const json = await res.json();
+        if (json.success && json.data) {
+          if (json.data.active) {
+            setMonthlyActive(true);
+            setMonthlyEndDate(json.data.subscription?.endDate ?? null);
+          }
+          if (typeof json.data.used === "number") {
+            setListingUsed(json.data.used);
+          }
+          if (typeof json.data.remaining === "number") {
+            setListingRemaining(json.data.remaining);
+          }
+          if (typeof json.data.atLimit === "boolean") {
+            setAtLimit(json.data.atLimit);
+          }
+        }
+      } catch {
+        // ignore
+      } finally {
+        setSubLoading(false);
+      }
+    }
+    void loadSubscription();
+  }, []);
 
   function syncImages(next: UploadedImage[]) {
     setImages(next);
     setValue("images", next, { shouldValidate: true });
+  }
+
+  function syncVideos(next: UploadedVideo[]) {
+    setVideos(next);
+    setValue("videos", next, { shouldValidate: true });
   }
 
   async function generateDescription() {
@@ -116,46 +176,105 @@ export default function NewPropertyPage() {
   }
 
   async function onSubmit(data: CreatePropertyInput, submitForReview = true) {
-    if (submitForReview && !paymentId) {
-      toast.error("Pay for a listing plan before submitting for approval");
+    if (submitForReview && images.length === 0) {
+      toast.error("Add at least one property photo before submitting");
+      return;
+    }
+
+    if (submitForReview && !canSubmitWithoutPay) {
+      toast.error(
+        `Free accounts can list up to ${FREE_TIER_MAX_LISTINGS} properties. Upgrade your plan or archive an existing listing.`,
+      );
+      return;
+    }
+
+    if (atLimit && !monthlyActive) {
+      toast.error(
+        `Free accounts can list up to ${FREE_TIER_MAX_LISTINGS} properties. Archive one or upgrade.`,
+      );
       return;
     }
 
     setSubmitting(true);
     try {
+      const payloadImages = slimListingImagesForSubmit(images).map(
+        (img, index) => ({
+          url: img.url,
+          publicId: img.publicId,
+          alt: img.alt,
+          isPrimary: img.isPrimary ?? index === 0,
+          order: index,
+        }),
+      );
+
+      const payloadVideos = slimListingVideosForSubmit(videos).map((video) => ({
+        url: video.url,
+        publicId: video.publicId,
+        title: video.title,
+      }));
+
       const res = await fetch("/api/properties", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
-          images,
+          images: payloadImages,
+          videos: payloadVideos,
           submitForReview,
           paymentId,
           productId,
         }),
       });
-      const json = await res.json();
-      if (json.success) {
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && json.success) {
         toast.success(
           json.message ??
             (submitForReview
               ? "Submitted for admin approval"
               : "Saved as draft"),
         );
-        router.push("/dashboard/seller/properties");
-      } else if (json.code === "PROFESSIONAL_REQUIRED") {
+        router.push(
+          isAgent ? "/dashboard/pro/listings" : "/dashboard/seller/properties",
+        );
+        return;
+      }
+
+      if (json.code === "PROFESSIONAL_REQUIRED") {
         toast.error(json.error);
         router.push("/register/professional");
       } else if (json.code === "PAYMENT_REQUIRED") {
         toast.error(json.error);
+        setMonthlyActive(false);
+      } else if (json.code === "LISTING_LIMIT_REACHED") {
+        toast.error(json.error);
+        setAtLimit(true);
+        if (typeof json.used === "number") setListingUsed(json.used);
+        if (typeof json.limit === "number") {
+          setListingRemaining(0);
+        }
+      } else if (json.code === "IMAGES_INVALID") {
+        toast.error(json.error ?? "Re-upload your photos and try again.");
       } else {
         toast.error(json.error ?? "Failed to create property");
       }
     } catch {
-      toast.error("Something went wrong");
+      toast.error(
+        "Could not create property. If you added many photos, try again with fewer or smaller images.",
+      );
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function onInvalid(formErrors: typeof errors) {
+    const first =
+      formErrors.title?.message ||
+      formErrors.description?.message ||
+      formErrors.price?.message ||
+      formErrors.town?.message ||
+      formErrors.parkingSpaces?.message ||
+      "Please fill in the required fields before submitting.";
+    toast.error(String(first));
   }
 
   return (
@@ -163,92 +282,198 @@ export default function NewPropertyPage() {
       <div>
         <h1 className="text-2xl font-bold">Add new property</h1>
         <p className="text-muted-foreground">
-          Choose a paid plan, pay with M-Pesa, then submit for admin approval.
+          {LISTINGS_ARE_FREE
+            ? `Free to use for now — up to ${FREE_TIER_MAX_LISTINGS} listings. Submit for admin approval when ready.`
+            : `Free accounts get up to ${FREE_TIER_MAX_LISTINGS} listings. Upgrade anytime for more inventory.`}
         </p>
       </div>
 
       <div className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
-        <strong>Pay → Admin approves → Live.</strong> Buyers browse free;
-        professionals pay to list.
+        {LISTINGS_ARE_FREE ? (
+          <>
+            <strong>Launch free access.</strong>{" "}
+            {subLoading
+              ? "Checking your listing allowance…"
+              : atLimit
+                ? `You have used all ${FREE_TIER_MAX_LISTINGS} listings. Archive one to add another.`
+                : `You have used ${listingUsed} of ${FREE_TIER_MAX_LISTINGS} listings (${listingRemaining} remaining).`}
+          </>
+        ) : monthlyActive ? (
+          <>
+            <strong>Paid plan active.</strong>{" "}
+            {monthlyEndDate
+              ? `Valid until ${new Date(monthlyEndDate).toLocaleDateString("en-KE", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}.`
+              : "You can list within your plan limit."}
+          </>
+        ) : (
+          <>
+            <strong>Free tier.</strong>{" "}
+            {subLoading
+              ? "Checking your listing allowance…"
+              : atLimit
+                ? `You have used all ${FREE_TIER_MAX_LISTINGS} free listings. Upgrade below or archive an existing listing.`
+                : `You have used ${listingUsed} of ${FREE_TIER_MAX_LISTINGS} free listings (${listingRemaining} remaining).`}
+          </>
+        )}
       </div>
 
       <form
-        onSubmit={handleSubmit((data) => onSubmit(data, true))}
+        onSubmit={handleSubmit((data) => onSubmit(data, true), onInvalid)}
         className="space-y-6"
       >
+        {!LISTINGS_ARE_FREE ? (
+          <>
         <Card>
           <CardHeader>
-            <CardTitle>1. Choose listing plan</CardTitle>
+            <CardTitle>1. Listing plan (optional upgrade)</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-3">
-            {LISTING_PRODUCTS.map((plan) => (
-              <button
-                key={plan.id}
-                type="button"
-                onClick={() => {
-                  setProductId(plan.id as ListingProductId);
-                  setPaymentId(null);
-                  setPaymentRef(null);
-                }}
-                className={cn(
-                  "rounded-2xl border p-3 text-left transition",
-                  productId === plan.id
-                    ? "border-primary bg-primary/5"
-                    : "hover:border-primary/40",
-                )}
-              >
-                <div className="mb-1 flex items-center gap-2">
-                  <span className="text-sm font-semibold">{plan.name}</span>
-                  {plan.popular && <Badge>Popular</Badge>}
-                </div>
-                <p className="text-lg font-bold">{formatProductPrice(plan)}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {plan.durationDays} days
-                </p>
-              </button>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>2. Pay with M-Pesa</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {paymentId ? (
+          <CardContent className="space-y-4">
+            {subLoading ? (
+              <p className="text-sm text-muted-foreground">Checking plan…</p>
+            ) : monthlyActive ? (
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm">
-                Payment confirmed · ref <strong>{paymentRef}</strong>. You can
-                submit for admin approval.
+                <p className="font-medium text-emerald-800 dark:text-emerald-200">
+                  Monthly plan active — higher listing limit unlocked
+                </p>
+                {monthlyEndDate ? (
+                  <p className="mt-1 text-muted-foreground">
+                    Valid until{" "}
+                    {new Date(monthlyEndDate).toLocaleDateString("en-KE", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </p>
+                ) : null}
               </div>
             ) : (
-              <PaymentCheckout
-                productId={productId}
-                onPaid={(payment) => {
-                  setPaymentId(payment.id);
-                  setPaymentRef(payment.reference);
-                }}
-                ctaLabel="Pay listing fee"
-              />
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Stay on free ({FREE_TIER_MAX_LISTINGS} listings) or choose a
+                  monthly plan for more capacity. Agents can also upgrade from{" "}
+                  <Link
+                    href="/dashboard/agent/subscription"
+                    className="underline"
+                  >
+                    Agent subscription
+                  </Link>
+                  .
+                </p>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {LISTING_PRODUCTS.map((plan) => (
+                    <button
+                      key={plan.id}
+                      type="button"
+                      onClick={() => {
+                        setProductId(plan.id as ListingProductId);
+                        setPaymentId(null);
+                        setPaymentRef(null);
+                      }}
+                      className={cn(
+                        "rounded-2xl border p-3 text-left transition",
+                        productId === plan.id
+                          ? "border-primary bg-primary/5"
+                          : "hover:border-primary/40",
+                      )}
+                    >
+                      <div className="mb-1 flex items-center gap-2">
+                        <span className="text-sm font-semibold">
+                          {plan.name}
+                        </span>
+                        {plan.popular && <Badge>Popular</Badge>}
+                      </div>
+                      <p className="text-lg font-bold">
+                        {formatProductPrice(plan)}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        / month · up to {plan.maxListings ?? "more"} listings
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
 
+        {!monthlyActive ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>2. Pay monthly with M-Pesa (optional)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {paymentId ? (
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm">
+                  Monthly plan confirmed · ref <strong>{paymentRef}</strong>.
+                  Higher listing limit unlocked.
+                </div>
+              ) : (
+                <PaymentCheckout
+                  productId={productId}
+                  onPaid={(payment) => {
+                    setPaymentId(payment.id);
+                    setPaymentRef(payment.reference);
+                    setMonthlyActive(true);
+                    setAtLimit(false);
+                    const end = new Date();
+                    end.setDate(end.getDate() + 30);
+                    setMonthlyEndDate(end.toISOString());
+                  }}
+                  ctaLabel="Upgrade monthly listing plan"
+                />
+              )}
+            </CardContent>
+          </Card>
+        ) : null}
+          </>
+        ) : null}
+
         <Card>
           <CardHeader>
-            <CardTitle>3. Photos</CardTitle>
+            <CardTitle>{LISTINGS_ARE_FREE ? "1" : monthlyActive ? "2" : "3"}. Photos</CardTitle>
           </CardHeader>
           <CardContent>
-            <ImageUploader value={images} onChange={syncImages} maxFiles={12} />
+            <ImageUploader
+              value={images}
+              onChange={syncImages}
+              maxFiles={MAX_LISTING_IMAGES}
+            />
             <p className="mt-2 text-xs text-muted-foreground">
-              Add at least one clear exterior or living-room photo. First photo
-              (or the one marked Cover) is the listing image.
+              Add up to {MAX_LISTING_IMAGES} clear photos. First photo (or the one
+              marked Cover) is the listing image.
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>4. Property details</CardTitle>
+            <CardTitle>
+              {LISTINGS_ARE_FREE ? "1b" : monthlyActive ? "2b" : "3b"}. Video
+              links (optional)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <PropertyVideoUploader
+              value={videos}
+              onChange={syncVideos}
+              maxFiles={MAX_LISTING_VIDEOS}
+            />
+            <p className="mt-2 text-xs text-muted-foreground">
+              Add up to {MAX_LISTING_VIDEOS} video links (YouTube, Vimeo, or
+              direct MP4/WebM).
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              {LISTINGS_ARE_FREE ? "2" : monthlyActive ? "3" : "4"}. Property details
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -334,6 +559,27 @@ export default function NewPropertyPage() {
                 />
               </div>
             </div>
+
+            {isRentListing ? (
+              <div className="space-y-2 rounded-xl border border-dashed bg-muted/20 p-4">
+                <Label htmlFor="rentalRoomsCount">
+                  Rooms available for rent in this house
+                </Label>
+                <Input
+                  id="rentalRoomsCount"
+                  type="number"
+                  min={1}
+                  max={40}
+                  placeholder="e.g. 4"
+                  {...register("rentalRoomsCount")}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Set more than 1 if this house has multiple rooms/units to rent
+                  separately. The listing stays public until every room is
+                  booked. Leave blank for a whole-house rental.
+                </p>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 
@@ -369,6 +615,29 @@ export default function NewPropertyPage() {
             <div className="space-y-2">
               <Label htmlFor="estate">Estate / Street (optional)</Label>
               <Input id="estate" {...register("estate")} />
+            </div>
+            <div className="space-y-2">
+              <Label>Pin on map</Label>
+              <LocationMapPicker
+                latitude={values.latitude}
+                longitude={values.longitude}
+                county={values.county}
+                town={values.town}
+                onChange={({ latitude, longitude }) => {
+                  setValue("latitude", latitude, { shouldDirty: true });
+                  setValue("longitude", longitude, { shouldDirty: true });
+                }}
+                onPlaceSelect={(place) => {
+                  setValue("latitude", place.latitude, { shouldDirty: true });
+                  setValue("longitude", place.longitude, { shouldDirty: true });
+                  if (place.town) {
+                    setValue("town", place.town, { shouldDirty: true });
+                  }
+                  if (place.county) {
+                    setValue("county", place.county, { shouldDirty: true });
+                  }
+                }}
+              />
             </div>
           </CardContent>
         </Card>
@@ -432,20 +701,27 @@ export default function NewPropertyPage() {
         </Card>
 
         <div className="flex flex-wrap gap-3">
-          <Button type="submit" disabled={submitting || !paymentId}>
+          <Button
+            type="submit"
+            disabled={
+              submitting ||
+              atLimit ||
+              (!canSubmitWithoutPay && !paymentId)
+            }
+          >
             {submitting
               ? "Submitting…"
-              : paymentId
+              : canSubmitWithoutPay || paymentId
                 ? "Submit for admin approval"
-                : "Pay first to submit"}
+                : "Pay monthly plan first"}
           </Button>
           <Button
             type="button"
             variant="secondary"
-            disabled={submitting}
-            onClick={handleSubmit((data) => onSubmit(data, false))}
+            disabled={submitting || atLimit}
+            onClick={handleSubmit((data) => onSubmit(data, false), onInvalid)}
           >
-            Save as draft (no payment)
+            Save as draft
           </Button>
           <Button type="button" variant="outline" onClick={() => router.back()}>
             Cancel

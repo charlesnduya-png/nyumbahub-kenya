@@ -1,51 +1,87 @@
 import Link from "next/link";
 import {
   Building2,
+  HandCoins,
   Inbox,
   MessageSquareWarning,
   Plus,
   TrendingUp,
 } from "lucide-react";
+import { ProfilePhotoCard } from "@/components/professional/profile-photo-card";
 import { ViewsChart } from "@/components/professional/views-chart";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { portfolioViewsSeries } from "@/data/analytics";
-import {
-  mockInboxMessages,
-  mockProfessionalInquiries,
-  mockProfessionalStats,
-} from "@/data/professional";
-import { getPendingDemoListings } from "@/lib/listings-store";
-import { mockProperties } from "@/data/mock";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { formatPrice, formatRelativeDate } from "@/lib/utils";
 
-export default function ProfessionalAdminPage() {
-  const pending = getPendingDemoListings();
-  const listings = [
-    ...pending.map((p) => ({
-      id: p.id,
-      title: p.title,
-      status: p.status,
-      town: p.town,
-      county: p.county,
-      price: p.price,
-      slug: p.slug,
-    })),
-    ...mockProperties.slice(0, 4).map((p) => ({
-      id: p.id,
-      title: p.title,
-      status: p.status,
-      town: p.town,
-      county: p.county,
-      price: p.price,
-      slug: p.slug,
-    })),
-  ];
+export default async function ProfessionalAdminPage() {
+  const session = await auth();
+  const userId = session?.user?.id;
 
-  const unread = mockInboxMessages.filter((m) => m.status === "UNREAD");
-  const newInquiries = mockProfessionalInquiries.filter((i) => i.status === "NEW");
-  const stats = mockProfessionalStats;
+  if (!userId) {
+    return null;
+  }
+
+  const [properties, messages, leads, pendingOffers] = await Promise.all([
+    prisma.property.findMany({
+      where: { ownerId: userId },
+      orderBy: { updatedAt: "desc" },
+      take: 12,
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        town: true,
+        county: true,
+        price: true,
+        slug: true,
+        views: true,
+      },
+    }),
+    prisma.message.findMany({
+      where: { receiverId: userId },
+      orderBy: { createdAt: "desc" },
+      take: 4,
+      include: {
+        sender: { select: { name: true } },
+      },
+    }),
+    prisma.lead.findMany({
+      where: {
+        OR: [{ agentId: userId }, { property: { ownerId: userId } }],
+      },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      include: {
+        property: { select: { title: true } },
+      },
+    }),
+    prisma.propertyOffer
+      .count({
+        where: {
+          status: "PENDING",
+          property: { ownerId: userId },
+        },
+      })
+      .catch(() => 0),
+  ]);
+
+  const activeListings = properties.filter((p) => p.status === "ACTIVE").length;
+  const pendingListings = properties.filter((p) => p.status === "PENDING").length;
+  const unread = messages.filter((m) => !m.isRead);
+  const newInquiries = leads.filter((l) => l.status === "NEW");
+
+  const viewsSeries = [
+    { label: "Mon", views: properties.reduce((s, p) => s + p.views, 0), inquiries: 0 },
+    { label: "Tue", views: 0, inquiries: 0 },
+    { label: "Wed", views: 0, inquiries: 0 },
+    { label: "Thu", views: 0, inquiries: 0 },
+    { label: "Fri", views: 0, inquiries: 0 },
+    { label: "Sat", views: 0, inquiries: 0 },
+    { label: "Sun", views: 0, inquiries: 0 },
+  ];
 
   return (
     <div className="space-y-8">
@@ -75,17 +111,19 @@ export default function ProfessionalAdminPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <ProfilePhotoCard compact />
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {[
           {
             label: "Active listings",
-            value: stats.activeListings,
+            value: activeListings,
             icon: Building2,
             href: "/dashboard/pro/listings",
           },
           {
             label: "Pending approval",
-            value: stats.pendingListings,
+            value: pendingListings,
             icon: TrendingUp,
             href: "/dashboard/pro/listings",
           },
@@ -100,6 +138,12 @@ export default function ProfessionalAdminPage() {
             value: newInquiries.length,
             icon: MessageSquareWarning,
             href: "/dashboard/pro/inquiries",
+          },
+          {
+            label: "Pending offers",
+            value: pendingOffers,
+            icon: HandCoins,
+            href: "/dashboard/pro/offers",
           },
         ].map((item) => (
           <Link key={item.label} href={item.href}>
@@ -116,7 +160,9 @@ export default function ProfessionalAdminPage() {
         ))}
       </div>
 
-      <ViewsChart data={portfolioViewsSeries} />
+      {properties.length > 0 ? (
+        <ViewsChart data={viewsSeries} />
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
@@ -127,30 +173,36 @@ export default function ProfessionalAdminPage() {
             </Button>
           </CardHeader>
           <CardContent className="space-y-3">
-            {listings.slice(0, 5).map((p) => (
-              <div
-                key={p.id}
-                className="flex items-center justify-between gap-3 border-b pb-3 last:border-0"
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{p.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {p.town}, {p.county} · {formatPrice(p.price)}
-                  </p>
-                </div>
-                <Badge
-                  variant={
-                    p.status === "ACTIVE"
-                      ? "default"
-                      : p.status === "PENDING"
-                        ? "outline"
-                        : "secondary"
-                  }
+            {properties.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No listings yet. Add your first property to get started.
+              </p>
+            ) : (
+              properties.slice(0, 5).map((p) => (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between gap-3 border-b pb-3 last:border-0"
                 >
-                  {p.status}
-                </Badge>
-              </div>
-            ))}
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{p.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {p.town}, {p.county} · {formatPrice(p.price)}
+                    </p>
+                  </div>
+                  <Badge
+                    variant={
+                      p.status === "ACTIVE"
+                        ? "default"
+                        : p.status === "PENDING"
+                          ? "outline"
+                          : "secondary"
+                    }
+                  >
+                    {p.status}
+                  </Badge>
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
 
@@ -162,21 +214,27 @@ export default function ProfessionalAdminPage() {
             </Button>
           </CardHeader>
           <CardContent className="space-y-3">
-            {mockInboxMessages.slice(0, 4).map((m) => (
-              <div
-                key={m.id}
-                className="border-b pb-3 last:border-0 last:pb-0"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <p className="font-medium">{m.fromName}</p>
-                  {m.status === "UNREAD" && <Badge>New</Badge>}
+            {messages.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No messages yet. Buyer enquiries will appear here.
+              </p>
+            ) : (
+              messages.map((m) => (
+                <div
+                  key={m.id}
+                  className="border-b pb-3 last:border-0 last:pb-0"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium">{m.sender.name ?? "Buyer"}</p>
+                    {!m.isRead && <Badge>New</Badge>}
+                  </div>
+                  <p className="truncate text-sm">{m.content}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatRelativeDate(m.createdAt)}
+                  </p>
                 </div>
-                <p className="truncate text-sm">{m.subject}</p>
-                <p className="text-xs text-muted-foreground">
-                  {formatRelativeDate(m.createdAt)}
-                </p>
-              </div>
-            ))}
+              ))
+            )}
           </CardContent>
         </Card>
       </div>
@@ -189,35 +247,41 @@ export default function ProfessionalAdminPage() {
           </Button>
         </CardHeader>
         <CardContent className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-muted-foreground">
-                <th className="pb-3 pr-4 font-medium">Buyer</th>
-                <th className="pb-3 pr-4 font-medium">Listing</th>
-                <th className="pb-3 pr-4 font-medium">Status</th>
-                <th className="pb-3 font-medium">When</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mockProfessionalInquiries.slice(0, 5).map((i) => (
-                <tr key={i.id} className="border-b last:border-0">
-                  <td className="py-3 pr-4">
-                    <p className="font-medium">{i.name}</p>
-                    <p className="text-muted-foreground">{i.phone}</p>
-                  </td>
-                  <td className="py-3 pr-4">{i.propertyTitle}</td>
-                  <td className="py-3 pr-4">
-                    <Badge variant="secondary">
-                      {i.status.replace(/_/g, " ")}
-                    </Badge>
-                  </td>
-                  <td className="py-3 text-muted-foreground">
-                    {formatRelativeDate(i.createdAt)}
-                  </td>
+          {leads.length === 0 ? (
+            <p className="py-4 text-sm text-muted-foreground">
+              No inquiries yet. When buyers contact you about a listing, they will show up here.
+            </p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-muted-foreground">
+                  <th className="pb-3 pr-4 font-medium">Buyer</th>
+                  <th className="pb-3 pr-4 font-medium">Listing</th>
+                  <th className="pb-3 pr-4 font-medium">Status</th>
+                  <th className="pb-3 font-medium">When</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {leads.map((i) => (
+                  <tr key={i.id} className="border-b last:border-0">
+                    <td className="py-3 pr-4">
+                      <p className="font-medium">{i.name}</p>
+                      <p className="text-muted-foreground">{i.phone ?? i.email ?? "—"}</p>
+                    </td>
+                    <td className="py-3 pr-4">{i.property.title}</td>
+                    <td className="py-3 pr-4">
+                      <Badge variant="secondary">
+                        {i.status.replace(/_/g, " ")}
+                      </Badge>
+                    </td>
+                    <td className="py-3 text-muted-foreground">
+                      {formatRelativeDate(i.createdAt)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </CardContent>
       </Card>
     </div>

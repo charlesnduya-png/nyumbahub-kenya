@@ -77,7 +77,7 @@ export async function uploadImage(
   const result = await cloudinary.uploader.upload(
     typeof file === "string" ? file : `data:image/jpeg;base64,${file.toString("base64")}`,
     {
-      folder: options?.folder ?? "nyumbahub/properties",
+      folder: options?.folder ?? "your-home/properties",
       public_id: options?.publicId,
       tags: options?.tags ?? ["property", "image"],
       resource_type: "image",
@@ -101,7 +101,7 @@ export async function uploadVideo(
   const result = await cloudinary.uploader.upload(
     typeof file === "string" ? file : `data:video/mp4;base64,${file.toString("base64")}`,
     {
-      folder: options?.folder ?? "nyumbahub/properties/videos",
+      folder: options?.folder ?? "your-home/properties/videos",
       public_id: options?.publicId,
       tags: options?.tags ?? ["property", "video"],
       resource_type: "video",

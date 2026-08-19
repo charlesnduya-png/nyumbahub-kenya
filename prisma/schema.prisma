@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("POSTGRES_PRISMA_URL")
-  directUrl = env("POSTGRES_URL_NON_POOLING")
+  directUrl = env("POSTGRES_PRISMA_URL")
 }
 
 enum Role {
@@ -79,6 +79,7 @@ enum SubscriptionPlan {
   PREMIUM
   AGENT_PRO
   AGENT_ENTERPRISE
+  TENANT_PASS
 }
 
 enum SubscriptionStatus {
@@ -105,6 +106,58 @@ enum NotificationType {
   LISTING
   SYSTEM
   ALERT
+  BOOKING
+  AGENT_REPORT
+  OFFER
+  RENTAL_RESERVATION
+}
+
+enum RentalReservationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  RENTED
+}
+
+enum RentalRoomStatus {
+  AVAILABLE
+  RENTED
+}
+
+enum RentalRepublishStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PropertyOfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum AgentReportReason {
+  FRAUD
+  HARASSMENT
+  MISLEADING
+  UNRESPONSIVE
+  OTHER
+}
+
+enum AgentReportStatus {
+  PENDING
+  REVIEWED
+  DISMISSED
+}
+
+enum BookingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  COMPLETED
 }
 
 enum AdPlacement {
@@ -153,6 +206,15 @@ model User {
   viewings              Viewing[]          @relation("BuyerViewings")
   advertisements        Advertisement[]
   priceAlerts           PriceAlert[]
+  bookingsAsGuest       Booking[]          @relation("GuestBookings")
+  agentReportsSubmitted AgentReport[]
+  propertyOffersMade    PropertyOffer[]
+  rentalReservations    RentalReservation[]
+  rentalRepublishRequests RentalRepublishRequest[] @relation("RepublishRequester")
+  rentalPlots           RentalPlot[] @relation("PlotOwner")
+  mediaAssets           MediaAsset[]
+  accountTeamOwned     AccountTeam?
+  accountTeamMembers   AccountTeamMember[]
 
   @@index([role])
   @@index([email])
@@ -204,6 +266,11 @@ model Agent {
   totalSales      Int                @default(0)
   bio             String?            @db.Text
   website         String?
+  facebookUrl     String?
+  instagramUrl    String?
+  linkedinUrl     String?
+  twitterUrl      String?
+  tiktokUrl       String?
   county          String?
   town            String?
   isFeatured      Boolean            @default(false)
@@ -215,9 +282,96 @@ model Agent {
   user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   clients         Client[]
   listings        Property[]         @relation("AgentListings")
+  reports         AgentReport[]
+  rentalRepublishRequests RentalRepublishRequest[]
+  rentalPlots     RentalPlot[] @relation("PlotAgent")
 
   @@index([isFeatured])
   @@index([county])
+}
+
+model AgentReport {
+  id         String             @id @default(cuid())
+  agentId    String
+  reporterId String
+  reason     AgentReportReason
+  details    String?            @db.Text
+  status     AgentReportStatus  @default(PENDING)
+  adminNotes String?            @db.Text
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  agent      Agent              @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  reporter   User               @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+  @@index([status])
+  @@index([reporterId])
+}
+
+model PropertyOffer {
+  id         String              @id @default(cuid())
+  propertyId String
+  buyerId    String
+  amount     Float
+  currency   String              @default("KES")
+  message    String?             @db.Text
+  status     PropertyOfferStatus @default(PENDING)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+
+  property   Property            @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  buyer      User                @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@index([buyerId])
+  @@index([status])
+}
+
+model RentalReservation {
+  id           String                  @id @default(cuid())
+  propertyId   String
+  rentalRoomId String?
+  tenantId     String
+  moveInDate   DateTime?
+  message      String?                 @db.Text
+  status       RentalReservationStatus @default(PENDING)
+  adminNotes   String?                 @db.Text
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+
+  property     Property                @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  rentalRoom   PropertyRentalRoom?     @relation(fields: [rentalRoomId], references: [id], onDelete: SetNull)
+  tenant       User                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  republishRequests RentalRepublishRequest[]
+
+  @@index([propertyId])
+  @@index([rentalRoomId])
+  @@index([tenantId])
+  @@index([status])
+}
+
+model RentalRepublishRequest {
+  id                 String               @id @default(cuid())
+  propertyId         String
+  rentalReservationId String
+  requesterId        String
+  agentId            String?
+  reason             String?              @db.Text
+  status             RentalRepublishStatus @default(PENDING)
+  adminNotes         String?              @db.Text
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  property           Property            @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  rentalReservation  RentalReservation  @relation(fields: [rentalReservationId], references: [id], onDelete: Cascade)
+  requester          User                @relation("RepublishRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  agent              Agent?              @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@index([status])
+  @@index([agentId])
+  @@index([requesterId])
 }
 
 model Client {
@@ -235,6 +389,31 @@ model Client {
   agent     Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
 
   @@index([agentId])
+}
+
+/// Landlord compound / apartment block — not the same as PropertyType.PLOT (land for sale).
+model RentalPlot {
+  id          String   @id @default(cuid())
+  name        String
+  description String?  @db.Text
+  county      String
+  town        String
+  estate      String?
+  address     String?
+  latitude    Float?
+  longitude   Float?
+  ownerId     String
+  agentId     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner       User     @relation("PlotOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  agent       Agent?   @relation("PlotAgent", fields: [agentId], references: [id])
+  units       Property[]
+
+  @@index([ownerId])
+  @@index([agentId])
+  @@index([county, town])
 }
 
 model Property {
@@ -272,11 +451,15 @@ model Property {
   publishedAt       DateTime?
   ownerId           String
   agentId           String?
+  rentalPlotId      String?
+  unitLabel         String?
+  unitFloor         String?
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 
   owner             User           @relation("PropertyOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   agent             Agent?         @relation("AgentListings", fields: [agentId], references: [id])
+  rentalPlot        RentalPlot?    @relation(fields: [rentalPlotId], references: [id], onDelete: SetNull)
   images            PropertyImage[]
   videos            PropertyVideo[]
   amenities         PropertyAmenity[]
@@ -288,6 +471,11 @@ model Property {
   nearbyPlaces      NearbyPlace[]
   viewings          Viewing[]
   comparisons       ComparisonItem[]
+  bookings          Booking[]
+  offers            PropertyOffer[]
+  rentalReservations RentalReservation[]
+  rentalRepublishRequests RentalRepublishRequest[]
+  rentalRooms       PropertyRentalRoom[]
 
   @@index([listingType, status])
   @@index([county, town])
@@ -295,12 +483,55 @@ model Property {
   @@index([isFeatured])
   @@index([ownerId])
   @@index([slug])
+  @@index([rentalPlotId])
+}
+
+/// Bookable room / unit inside a single RENT listing (house stays listed until all are rented).
+model PropertyRentalRoom {
+  id         String          @id @default(cuid())
+  propertyId String
+  label      String
+  floor      String?
+  price      Float?
+  status     RentalRoomStatus @default(AVAILABLE)
+  sortOrder  Int             @default(0)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  property   Property        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  reservations RentalReservation[]
+
+  @@index([propertyId, status])
+}
+
+model Booking {
+  id           String        @id @default(cuid())
+  propertyId   String
+  guestId      String
+  checkIn      DateTime
+  checkOut     DateTime
+  guests       Int           @default(1)
+  nights       Int
+  totalAmount  Float
+  currency     String        @default("KES")
+  status       BookingStatus @default(PENDING)
+  guestMessage String?       @db.Text
+  ownerNote    String?       @db.Text
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  property     Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  guest        User          @relation("GuestBookings", fields: [guestId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, status])
+  @@index([guestId])
+  @@index([status, createdAt])
 }
 
 model PropertyImage {
   id         String   @id @default(cuid())
   propertyId String
-  url        String
+  url        String   @db.Text
   publicId   String?
   alt        String?
   order      Int      @default(0)
@@ -310,6 +541,19 @@ model PropertyImage {
   property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
   @@index([propertyId])
+}
+
+model MediaAsset {
+  id        String   @id @default(cuid())
+  userId    String
+  publicId  String   @unique
+  url       String   @db.Text
+  mimeType  String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model PropertyVideo {
@@ -613,4 +857,51 @@ model PriceAlert {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model SiteVisit {
+  id        String   @id @default(cuid())
+  sessionId String
+  path      String
+  referrer  String?
+  createdAt DateTime @default(now())
+
+  @@index([sessionId])
+  @@index([createdAt])
+  @@index([path, createdAt])
+}
+
+enum TeamRole {
+  FULL
+  LISTINGS
+  INQUIRIES
+  VIEWINGS
+  OFFERS
+  BOOKINGS
+  MESSAGES
+  READ
+}
+
+// A team/workspace is owned by a single user account (the agent or land owner).
+// Team members are additional user accounts that can act on behalf of that owner.
+model AccountTeam {
+  id        String                @id @default(cuid())
+  ownerId   String                @unique
+  owner     User                  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  members   AccountTeamMember[]
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+}
+
+model AccountTeamMember {
+  id        String   @id @default(cuid())
+  teamId    String
+  userId    String   @unique
+  role      TeamRole @default(INQUIRIES)
+  team      AccountTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([teamId])
 }

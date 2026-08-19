@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { dashboardHomeForRole } from "@/lib/site-owner";
 
 export default async function DashboardPage() {
   let session = null;
@@ -14,15 +15,7 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const role = session.user.role ?? "BUYER";
-
-  switch (role) {
-    case "SELLER":
-    case "AGENT":
-      redirect("/dashboard/pro");
-    case "ADMIN":
-      redirect("/dashboard/admin");
-    default:
-      redirect("/dashboard/tenant");
-  }
+  redirect(
+    dashboardHomeForRole(session.user.role, session.user.email),
+  );
 }

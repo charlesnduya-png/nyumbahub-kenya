@@ -1,30 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { GitCompare } from "lucide-react";
-import { mockProperties } from "@/data/mock";
 import { PropertyCardItem } from "@/components/properties/property-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
 import { getListingTypeLabel, getPropertyTypeLabel } from "@/lib/kenya";
+import type { PropertyCard } from "@/types";
 
-export default function ComparePageClient() {
-  const searchParams = useSearchParams();
-  const ids = searchParams.get("ids")?.split(",").filter(Boolean) ?? [];
+interface ComparePageClientProps {
+  compared: PropertyCard[];
+}
 
-  const compared =
-    ids.length > 0
-      ? mockProperties.filter((p) => ids.includes(p.id) || ids.includes(p.slug))
-      : mockProperties.slice(0, 3);
-
+export default function ComparePageClient({ compared }: ComparePageClientProps) {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
           <Link href="/" className="text-xl font-bold text-primary">
-            NyumbaHub Kenya
+            Your Home
           </Link>
           <Link href="/properties">Browse more</Link>
         </div>

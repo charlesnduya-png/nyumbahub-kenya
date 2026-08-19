@@ -10,7 +10,7 @@ interface CtaSectionProps {
 
 export function CtaSection({
   title = "Sell or rent with a professional account",
-  subtitle = "Create a professional seller/agent account, submit your listing, and go live after NyumbaHub admin approval.",
+  subtitle = "Create a free professional account, list up to 5 properties, and go live after Your Home admin approval.",
 }: CtaSectionProps) {
   return (
     <section className="py-16 sm:py-20" aria-labelledby="cta-heading">
@@ -39,21 +39,21 @@ export function CtaSection({
               <Button
                 size="lg"
                 variant="secondary"
-                className="rounded-xl bg-white text-primary hover:bg-white/90"
+                className="rounded-xl bg-white text-primary hover:bg-white/90 dark:bg-white dark:text-primary dark:hover:bg-white/90"
                 asChild
               >
                 <Link href="/register/professional">
-                  Open professional account
+                  Open free professional account
                   <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </Link>
               </Button>
               <Button
                 size="lg"
                 variant="outline"
-                className="rounded-xl border-white/40 bg-transparent text-white hover:bg-white/10 hover:text-white"
+                className="rounded-xl border-white/50 bg-white/5 text-white hover:bg-white/15 hover:text-white dark:border-white/50 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
                 asChild
               >
-                <Link href="/pricing">View pricing</Link>
+                <Link href="/dashboard/seller/properties/new">List a property</Link>
               </Button>
             </div>
           </div>

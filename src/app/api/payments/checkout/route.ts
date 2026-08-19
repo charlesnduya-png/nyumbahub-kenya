@@ -16,8 +16,6 @@ const schema = z.object({
   phoneNumber: z.string().min(9).optional(),
   propertyId: z.string().optional(),
   method: z.enum(["MPESA", "CARD"]).default("MPESA"),
-  /** Instantly mark paid for local demo when M-Pesa keys are missing */
-  confirmDemo: z.boolean().optional(),
 });
 
 export async function POST(request: Request) {
@@ -84,53 +82,22 @@ export async function POST(request: Request) {
       // demo store already has the payment
     }
 
-    // Demo instant confirm
-    if (parsed.data.confirmDemo) {
-      const completed = completePayment(payment.id);
-      try {
-        await prisma.payment.update({
-          where: { id: payment.id },
-          data: { status: "COMPLETED" },
-        });
-      } catch {
-        // ignore
-      }
-
-      return NextResponse.json({
-        success: true,
-        stub: true,
-        data: {
-          id: completed!.id,
-          reference: completed!.reference,
-          productId: product.id,
-          amount: completed!.amount,
-          status: "COMPLETED",
-          listingFlags: product.listingFlags ?? null,
-          category: product.category,
-        },
-      });
-    }
+    // Demo instant confirm removed — payments require configured M-Pesa or Stripe.
 
     if (parsed.data.method === "CARD") {
       if (!isStripeConfigured()) {
-        return NextResponse.json({
-          success: true,
-          stub: true,
-          data: {
-            id: payment.id,
-            reference: payment.reference,
-            productId: product.id,
-            amount: payment.amount,
-            status: "PENDING",
-            message:
-              "Stripe is not configured. Use Confirm demo payment or M-Pesa.",
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Card payments are not configured. Use M-Pesa or contact support.",
           },
-        });
+          { status: 503 },
+        );
       }
 
       const sessionCheckout = await createCheckoutSession({
         userId: session.user.id,
-        email: session.user.email ?? "billing@nyumbahub.co.ke",
+        email: session.user.email ?? "billing@yourhome.co.ke",
         purpose:
           product.category === "subscription"
             ? "subscription"
@@ -159,19 +126,13 @@ export async function POST(request: Request) {
 
     // M-Pesa
     if (!isMpesaConfigured()) {
-      return NextResponse.json({
-        success: true,
-        stub: true,
-        data: {
-          id: payment.id,
-          reference: payment.reference,
-          productId: product.id,
-          amount: payment.amount,
-          status: "PENDING",
-          CustomerMessage:
-            "M-Pesa not configured. Use Confirm demo payment to continue.",
+      return NextResponse.json(
+        {
+          success: false,
+          error: "M-Pesa is not configured. Contact support to complete payment.",
         },
-      });
+        { status: 503 },
+      );
     }
 
     try {

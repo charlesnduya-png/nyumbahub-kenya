@@ -131,9 +131,9 @@ export function BrandLogo({
               onDark ? "text-white" : "text-foreground",
             )}
           >
-            Nyumba
+            Your{" "}
             <span className={onDark ? "text-emerald-200" : "text-primary"}>
-              Hub
+              Home
             </span>
           </span>
           {showKenya ? (
@@ -159,14 +159,14 @@ export function BrandLogo({
 
   if (href) {
     return (
-      <Link href={href} className={classes} aria-label="NyumbaHub Kenya home">
+      <Link href={href} className={classes} aria-label="Your Home — home">
         {content}
       </Link>
     );
   }
 
   return (
-    <span className={classes} aria-label="NyumbaHub Kenya">
+    <span className={classes} aria-label="Your Home">
       {content}
     </span>
   );

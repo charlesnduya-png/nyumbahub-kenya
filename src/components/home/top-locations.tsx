@@ -2,10 +2,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { MapPin } from "lucide-react";
 
-import type { MockLocation } from "@/data/mock";
+import type { TopLocation } from "@/lib/marketing";
 
 interface TopLocationsProps {
-  locations: MockLocation[];
+  locations: TopLocation[];
   title?: string;
   subtitle?: string;
 }
@@ -15,6 +15,10 @@ export function TopLocations({
   title = "Top Locations",
   subtitle = "Explore properties in Kenya's most sought-after cities",
 }: TopLocationsProps) {
+  if (locations.length === 0) {
+    return null;
+  }
+
   return (
     <section
       className="gradient-mesh py-16 sm:py-20"

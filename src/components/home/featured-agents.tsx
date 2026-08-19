@@ -3,13 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, Star } from "lucide-react";
+import { ArrowRight, Phone, Star } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import type { MockAgent } from "@/data/mock";
+import type { FeaturedAgent } from "@/types/agent";
+import { formatKenyanPhone, telHref } from "@/lib/phone";
 
 interface FeaturedAgentsProps {
-  agents: MockAgent[];
+  agents: FeaturedAgent[];
   title?: string;
   subtitle?: string;
 }
@@ -65,10 +66,11 @@ export function FeaturedAgents({
                 ease: [0.22, 1, 0.36, 1],
               }}
               whileHover={reduceMotion ? undefined : { y: -6 }}
+              className="rounded-2xl border border-border bg-card p-5 shadow-sm transition-shadow hover:shadow-md"
             >
               <Link
                 href={`/agents/${agent.slug}`}
-                className="group block rounded-2xl border border-border bg-card p-5 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 <div className="flex items-center gap-4">
                   <motion.div
@@ -81,7 +83,10 @@ export function FeaturedAgents({
                     transition={{ type: "spring", stiffness: 320, damping: 18 }}
                   >
                     <Image
-                      src={agent.image}
+                      src={
+                        agent.image ??
+                        "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=400&q=80"
+                      }
                       alt={agent.name}
                       fill
                       sizes="64px"
@@ -124,6 +129,33 @@ export function FeaturedAgents({
                   ))}
                 </div>
               </Link>
+
+              <div className="mt-4 space-y-2 border-t border-border pt-3">
+                {agent.phone ? (
+                  <a
+                    href={telHref(agent.phone)}
+                    className="flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+                  >
+                    <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    {formatKenyanPhone(agent.phone)}
+                  </a>
+                ) : null}
+                {agent.showListings ? (
+                  <Link
+                    href={`/agents/${agent.slug}#listings`}
+                    className="block text-sm text-muted-foreground hover:text-primary hover:underline"
+                  >
+                    View their listings
+                  </Link>
+                ) : (
+                  <Link
+                    href={`/agents/${agent.slug}`}
+                    className="block text-sm text-muted-foreground hover:text-primary hover:underline"
+                  >
+                    View profile
+                  </Link>
+                )}
+              </div>
             </motion.div>
           ))}
         </div>

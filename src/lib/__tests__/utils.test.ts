@@ -14,8 +14,8 @@ describe("utils", () => {
   });
 
   it("truncates long text", () => {
-    expect(truncate("Hello NyumbaHub Kenya marketplace", 12)).toBe(
-      "Hello Nyumb…",
+    expect(truncate("Hello Your Home marketplace", 12)).toBe(
+      "Hello Your…",
     );
   });
 

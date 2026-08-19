@@ -1,4 +1,4 @@
-# NyumbaHub Kenya
+# Your Home
 
 Premium real estate marketplace for Kenya — buy, rent, sell land, commercial, and holiday homes. Built with Next.js 15, Prisma, Auth.js, and a Stripe + M-Pesa ready payments layer.
 
@@ -132,7 +132,7 @@ AUTH_TRUST_HOST=true
 AUTH_URL=https://YOUR-APP.up.railway.app
 NEXTAUTH_URL=https://YOUR-APP.up.railway.app
 NEXT_PUBLIC_APP_URL=https://YOUR-APP.up.railway.app
-NEXT_PUBLIC_APP_NAME=NyumbaHub Kenya
+NEXT_PUBLIC_APP_NAME=Your Home
 ```
 
 Optional but recommended for production uploads:
@@ -237,4 +237,4 @@ npm test
 
 ## License
 
-Private / proprietary — NyumbaHub Kenya.
+Private / proprietary — Your Home.

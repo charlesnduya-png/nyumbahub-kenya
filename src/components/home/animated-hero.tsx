@@ -97,7 +97,7 @@ export function AnimatedHero() {
 
   return (
     <section
-      className="relative flex min-h-[92vh] items-end overflow-hidden pb-10 pt-28 sm:items-center sm:pb-16 sm:pt-24"
+      className="relative flex min-h-[78dvh] items-end overflow-hidden pb-8 pt-24 sm:min-h-[85vh] sm:items-center sm:pb-16 sm:pt-24 lg:min-h-[92vh]"
       aria-labelledby="hero-heading"
     >
       {/* Animated background slides */}
@@ -190,7 +190,7 @@ export function AnimatedHero() {
             initial={{ opacity: 0, y: 28 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.1 }}
-            className="font-display text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-7xl lg:leading-[1.05]"
+            className="font-display text-3xl font-semibold tracking-tight text-white sm:text-5xl lg:text-7xl lg:leading-[1.05]"
           >
             Find your{" "}
             <span className="relative inline-block">

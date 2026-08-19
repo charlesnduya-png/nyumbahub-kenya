@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { filterMockProperties } from "@/data/mock";
+import { searchProperties } from "@/lib/properties";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/utils";
+import { resolveListingImagesForStorage, resolveListingVideosForStorage } from "@/lib/media-assets";
+import { resolveProfessionalActingContext } from "@/lib/account-team";
 import {
   createPropertySchema,
   propertySearchSchema,
@@ -21,64 +23,22 @@ export async function GET(request: Request) {
       );
     }
 
-    const filters = parsed.data;
-    const skip = (filters.page - 1) * filters.limit;
+    const result = await searchProperties(parsed.data);
 
-    try {
-      const where = {
-        status: "ACTIVE" as const,
-        ...(filters.listingType ? { listingType: filters.listingType } : {}),
-        ...(filters.propertyType ? { propertyType: filters.propertyType } : {}),
-        ...(filters.county
-          ? { county: { contains: filters.county, mode: "insensitive" as const } }
-          : {}),
-        ...(filters.town
-          ? { town: { contains: filters.town, mode: "insensitive" as const } }
-          : {}),
-        ...(filters.minPrice != null ? { price: { gte: filters.minPrice } } : {}),
-        ...(filters.maxPrice != null ? { price: { lte: filters.maxPrice } } : {}),
-        ...(filters.bedrooms != null ? { bedrooms: { gte: filters.bedrooms } } : {}),
-        ...(filters.bathrooms != null
-          ? { bathrooms: { gte: filters.bathrooms } }
-          : {}),
-        ...(filters.furnished != null ? { furnished: filters.furnished } : {}),
-        ...(filters.swimmingPool != null
-          ? { swimmingPool: filters.swimmingPool }
-          : {}),
-        ...(filters.security != null ? { security: filters.security } : {}),
-      };
-
-      const [properties, total] = await Promise.all([
-        prisma.property.findMany({
-          where,
-          skip,
-          take: filters.limit,
-          orderBy: [{ isFeatured: "desc" }, { publishedAt: "desc" }],
-          include: {
-            images: { where: { isPrimary: true }, take: 1 },
-          },
-        }),
-        prisma.property.count({ where }),
-      ]);
-
-      const totalPages = Math.ceil(total / filters.limit);
-
-      return NextResponse.json({
-        success: true,
-        data: properties,
-        total,
-        page: filters.page,
-        limit: filters.limit,
-        totalPages,
-        hasMore: filters.page < totalPages,
-      });
-    } catch {
-      const fallback = filterMockProperties(filters);
-      return NextResponse.json({ success: true, ...fallback, fallback: true });
-    }
+    return NextResponse.json({
+      success: true,
+      ...result,
+    });
   } catch {
-    const fallback = filterMockProperties({ page: 1, limit: 20 });
-    return NextResponse.json({ success: true, ...fallback, fallback: true });
+    return NextResponse.json({
+      success: true,
+      data: [],
+      total: 0,
+      page: 1,
+      limit: 20,
+      totalPages: 0,
+      hasMore: false,
+    });
   }
 }
 
@@ -93,8 +53,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const role = session.user.role;
-    if (!role || !["SELLER", "AGENT", "ADMIN"].includes(role)) {
+    const ctx = await resolveProfessionalActingContext(session.user.id);
+    if (!ctx.permissions.manageListings) {
+      return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+    }
+
+    const effectiveRole = ctx.actingOwnerRole;
+    if (!effectiveRole || !["SELLER", "AGENT", "ADMIN"].includes(effectiveRole)) {
       return NextResponse.json(
         {
           success: false,
@@ -110,159 +75,252 @@ export async function POST(request: Request) {
     const parsed = createPropertySchema.safeParse(body);
 
     if (!parsed.success) {
+      const firstIssue = parsed.error.issues[0];
       return NextResponse.json(
-        { success: false, error: "Validation failed", details: parsed.error.flatten() },
+        {
+          success: false,
+          error: firstIssue?.message ?? "Validation failed",
+          details: parsed.error.flatten(),
+        },
         { status: 400 },
       );
     }
 
     const data = parsed.data;
     const submitForReview = body.submitForReview !== false;
-    const paymentId = typeof body.paymentId === "string" ? body.paymentId : null;
     const productId =
       typeof body.productId === "string" ? body.productId : "standard";
 
-    const { getPayment } = await import("@/lib/payments-store");
+    if (submitForReview && (!data.images || data.images.length === 0)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Add at least one property photo before submitting for approval",
+          code: "IMAGES_REQUIRED",
+        },
+        { status: 400 },
+      );
+    }
+
     const { getProduct } = await import("@/lib/pricing");
-    const product = getProduct(productId);
-    const payment = paymentId ? getPayment(paymentId) : null;
+    const {
+      assertCanCreateListing,
+      getActiveListingSubscription,
+      listingFlagsForPlan,
+      listingFlagsForProduct,
+    } = await import("@/lib/listing-subscription");
+
+    const canCreate = await assertCanCreateListing({
+      userId: ctx.actingOwnerId,
+      role: effectiveRole,
+    });
+    if (!canCreate.ok) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: canCreate.error,
+          code: canCreate.code,
+          used: canCreate.used,
+          limit: canCreate.limit,
+        },
+        { status: canCreate.code === "LISTING_LIMIT_REACHED" ? 403 : 402 },
+      );
+    }
+
+    let product = getProduct(productId);
+    let flags = product?.listingFlags ?? {};
+    let activeSubscription: Awaited<
+      ReturnType<typeof getActiveListingSubscription>
+    > = null;
 
     if (submitForReview) {
-      if (!payment || payment.status !== "COMPLETED") {
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              "Pay for a listing plan before submitting for admin approval.",
-            code: "PAYMENT_REQUIRED",
-          },
-          { status: 402 },
-        );
-      }
-      if (payment.userId !== session.user.id) {
-        return NextResponse.json(
-          { success: false, error: "Payment does not belong to this account" },
-          { status: 403 },
-        );
+      activeSubscription = await getActiveListingSubscription(ctx.actingOwnerId);
+      const paymentId =
+        typeof body.paymentId === "string" ? body.paymentId : null;
+
+      if (activeSubscription) {
+        flags = {
+          ...listingFlagsForPlan(activeSubscription.plan),
+          ...(product?.listingFlags ?? {}),
+        };
+      } else if (productId && paymentId) {
+        flags = listingFlagsForProduct(productId);
+      } else {
+        product = getProduct("standard");
+        flags = {};
       }
     }
 
     const status = submitForReview ? "PENDING" : "DRAFT";
-    const flags = product?.listingFlags ?? {};
     const baseSlug = slugify(data.title);
     let slug = baseSlug;
     let suffix = 1;
 
+    while (await prisma.property.findUnique({ where: { slug } })) {
+      slug = `${baseSlug}-${suffix++}`;
+    }
+
+    const images = data.images ?? [];
+    const videos = data.videos ?? [];
+    const hasPrimary = images.some((img) => img.isPrimary);
+
+    let resolvedImages: Awaited<ReturnType<typeof resolveListingImagesForStorage>> =
+      [];
     try {
-      while (await prisma.property.findUnique({ where: { slug } })) {
-        slug = `${baseSlug}-${suffix++}`;
-      }
-
-      const images = data.images ?? [];
-      const hasPrimary = images.some((img) => img.isPrimary);
-
-      const property = await prisma.property.create({
-        data: {
-          title: data.title,
-          slug,
-          description: data.description,
-          listingType: data.listingType,
-          propertyType: data.propertyType,
-          price: data.price,
-          bedrooms: data.bedrooms,
-          bathrooms: data.bathrooms,
-          county: data.county,
-          town: data.town,
-          estate: data.estate,
-          parkingSpaces: data.parkingSpaces,
-          furnished: data.furnished,
-          swimmingPool: data.swimmingPool,
-          security: data.security,
-          floorArea: data.floorArea,
-          plotSize: data.plotSize,
-          yearBuilt: data.yearBuilt,
-          address: data.address,
-          latitude: data.latitude,
-          longitude: data.longitude,
-          ownerId: session.user.id,
-          status,
-          isFeatured: Boolean(flags.isFeatured),
-          isPremium: Boolean(flags.isPremium),
-          isSponsored: Boolean(flags.isSponsored),
-          expiresAt: new Date(
-            Date.now() + (product?.durationDays ?? 30) * 86400000,
-          ),
-          images:
-            images.length > 0
-              ? {
-                  create: images.map((img, index) => ({
-                    url: img.url,
-                    publicId: img.publicId ?? null,
-                    alt: img.alt ?? data.title,
-                    order: img.order ?? index,
-                    isPrimary: hasPrimary ? Boolean(img.isPrimary) : index === 0,
-                  })),
-                }
-              : undefined,
-        },
-        include: { images: true },
-      });
-
+      resolvedImages = images.length > 0 ? await resolveListingImagesForStorage(images) : [];
+    } catch (error) {
       return NextResponse.json(
         {
-          success: true,
-          data: property,
-          message:
-            status === "PENDING"
-              ? "Payment received. Listing submitted for admin approval."
-              : "Listing saved as draft",
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "One or more photos could not be saved. Re-upload and try again.",
+          code: "IMAGES_INVALID",
         },
-        { status: 201 },
+        { status: 400 },
       );
-    } catch {
-      const { addDemoListing } = await import("@/lib/listings-store");
-      const demo = addDemoListing({
+    }
+
+    let resolvedVideos: Awaited<ReturnType<typeof resolveListingVideosForStorage>> =
+      [];
+    try {
+      resolvedVideos =
+        videos.length > 0 ? await resolveListingVideosForStorage(videos) : [];
+    } catch (error) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "One or more videos could not be saved. Re-upload and try again.",
+          code: "VIDEOS_INVALID",
+        },
+        { status: 400 },
+      );
+    }
+
+    const rentalRoomRows =
+      data.listingType === "RENT"
+        ? (() => {
+            if (data.rentalRooms && data.rentalRooms.length > 0) {
+              return data.rentalRooms.map((room, index) => ({
+                label: room.label,
+                floor: room.floor ?? null,
+                price: room.price ?? null,
+                sortOrder: index,
+              }));
+            }
+            if (data.rentalRoomsCount && data.rentalRoomsCount > 1) {
+              return Array.from({ length: data.rentalRoomsCount }, (_, index) => ({
+                label: `Room ${index + 1}`,
+                floor: null as string | null,
+                price: null as number | null,
+                sortOrder: index,
+              }));
+            }
+            return [];
+          })()
+        : [];
+
+    const expiresAt =
+      activeSubscription?.endDate ??
+      new Date(Date.now() + (product?.durationDays ?? 30) * 86400000);
+
+    let agentId: string | null = null;
+    if (effectiveRole === "AGENT") {
+      const agent = await prisma.agent.findUnique({
+        where: { userId: ctx.actingOwnerId },
+        select: { id: true },
+      });
+      agentId = agent?.id ?? null;
+    }
+
+    const property = await prisma.property.create({
+      data: {
         title: data.title,
+        slug,
         description: data.description,
         listingType: data.listingType,
         propertyType: data.propertyType,
         price: data.price,
-        currency: "KES",
-        bedrooms: data.bedrooms,
-        bathrooms: data.bathrooms,
+        bedrooms: data.bedrooms ?? null,
+        bathrooms: data.bathrooms ?? null,
         county: data.county,
         town: data.town,
-        estate: data.estate,
-        status: status as "PENDING" | "DRAFT",
-        ownerId: session.user.id,
-        ownerName: session.user.name,
-        ownerEmail: session.user.email,
-        slug: baseSlug,
-        images: (data.images ?? []).map((img, index) => ({
-          url: img.url,
-          publicId: img.publicId,
-          alt: img.alt ?? data.title,
-          isPrimary: img.isPrimary ?? index === 0,
-          order: img.order ?? index,
-        })),
-      });
+        estate: data.estate ?? null,
+        parkingSpaces: data.parkingSpaces,
+        furnished: data.furnished,
+        swimmingPool: data.swimmingPool,
+        security: data.security,
+        floorArea: data.floorArea ?? null,
+        plotSize: data.plotSize ?? null,
+        yearBuilt: data.yearBuilt ?? null,
+        address: data.address ?? null,
+        latitude: data.latitude ?? null,
+        longitude: data.longitude ?? null,
+        ownerId: ctx.actingOwnerId,
+        agentId,
+        status,
+        isFeatured: Boolean(flags.isFeatured),
+        isPremium: Boolean(flags.isPremium),
+        isSponsored: Boolean(flags.isSponsored),
+        expiresAt,
+        images:
+          resolvedImages.length > 0
+            ? {
+                create: resolvedImages.map((img, index) => ({
+                  url: img.url,
+                  publicId: img.publicId ?? null,
+                  alt: img.alt ?? data.title,
+                  order: img.order ?? index,
+                  isPrimary: hasPrimary ? Boolean(img.isPrimary) : index === 0,
+                })),
+              }
+            : undefined,
+        videos:
+          resolvedVideos.length > 0
+            ? {
+                create: resolvedVideos.map((video) => ({
+                  url: video.url,
+                  publicId: video.publicId ?? null,
+                  title: video.title,
+                  thumbnail: video.thumbnail,
+                })),
+              }
+            : undefined,
+        rentalRooms:
+          rentalRoomRows.length > 0
+            ? {
+                create: rentalRoomRows,
+              }
+            : undefined,
+      },
+      include: { images: true, videos: true, rentalRooms: true },
+    });
 
-      return NextResponse.json(
-        {
-          success: true,
-          data: demo,
-          source: "demo",
-          message:
-            status === "PENDING"
-              ? "Payment received. Listing submitted for admin approval."
-              : "Listing saved as draft",
-        },
-        { status: 201 },
-      );
-    }
-  } catch {
     return NextResponse.json(
-      { success: false, error: "Unable to create property" },
+      {
+        success: true,
+        data: property,
+        message:
+          status === "PENDING"
+            ? "Listing submitted for admin approval."
+            : "Listing saved as draft",
+      },
+      { status: 201 },
+    );
+  } catch (error) {
+    console.error("Create property failed:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to create property",
+      },
       { status: 500 },
     );
   }

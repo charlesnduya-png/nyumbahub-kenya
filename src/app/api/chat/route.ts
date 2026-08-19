@@ -20,7 +20,7 @@ export async function POST(request: Request) {
 
     const lower = parsed.data.message.toLowerCase();
     let reply =
-      "Karibu to NyumbaHub Kenya! I can help you search for properties, understand neighbourhoods, or explain the buying process. Try asking about areas like Karen, Diani, or Nakuru.";
+      "Karibu to Your Home! I can help you search for properties, understand neighbourhoods, or explain the buying process. Try asking about areas like Karen, Diani, or Nakuru.";
 
     if (lower.includes("rent") || lower.includes("lease")) {
       reply =

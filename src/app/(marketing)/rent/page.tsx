@@ -3,13 +3,30 @@ import { KeyRound, Search, ShieldCheck } from "lucide-react";
 import { FeaturedProperties } from "@/components/home/featured-properties";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { rentalProperties } from "@/data/mock";
+import {
+  countActiveProperties,
+  getRentalPropertiesForHome,
+} from "@/lib/properties";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata = {
-  title: "Houses & Apartments for Rent in Kenya",
+export const metadata = buildPageMetadata({
+  title: "Houses & Apartments for Rent in Kenya | Nairobi, Mombasa & More",
   description:
-    "Browse verified rental houses, apartments, bedsitters, and maisonettes across Nairobi, Mombasa, Kisumu, and more on NyumbaHub Kenya.",
-};
+    "Find verified rentals across Kenya — bedsitters, apartments, maisonettes, and family homes in Westlands, Kilimani, Syokimau, Nyali, and all major towns. Search on Your Home.",
+  path: "/rent",
+  keywords: [
+    "houses for rent Nairobi",
+    "apartments for rent Kenya",
+    "bedsitter Nairobi",
+    "maisonette for rent",
+    "Westlands rentals",
+    "Kilimani apartments rent",
+    "nyumba za kukodi Nairobi",
+  ],
+});
+
+// This page must update immediately when rentals are marked RENTED.
+export const dynamic = "force-dynamic";
 
 const rentalAreas = [
   { name: "Westlands", href: "/properties?listingType=RENT&town=Westlands" },
@@ -22,10 +39,11 @@ const rentalAreas = [
   { name: "Nyali", href: "/properties?listingType=RENT&town=Nyali" },
 ];
 
-export default function RentPage() {
-  const featuredRentals = rentalProperties.filter((p) => p.isFeatured);
-  const allRentals =
-    featuredRentals.length > 0 ? rentalProperties : rentalProperties;
+export default async function RentPage() {
+  const [allRentals, rentalCount] = await Promise.all([
+    getRentalPropertiesForHome(24),
+    countActiveProperties("RENT"),
+  ]);
 
   return (
     <div className="gradient-mesh">
@@ -80,7 +98,7 @@ export default function RentPage() {
       <FeaturedProperties
         properties={allRentals}
         title="Homes for rent"
-        subtitle={`${rentalProperties.length} rental listings · prices shown per month (KES)`}
+        subtitle={`${rentalCount} rental listing${rentalCount === 1 ? "" : "s"} · prices shown per month (KES)`}
       />
 
       <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
@@ -89,8 +107,8 @@ export default function RentPage() {
             Are you a landlord?
           </h2>
           <p className="mx-auto mt-2 max-w-xl text-muted-foreground">
-            Open a professional account, pay to list your rental, and go live
-            after admin approval. Tenants inquire via WhatsApp and inbox.
+            Open a professional account, list your rental for free for now, and go
+            live after admin approval. Tenants inquire via WhatsApp and inbox.
           </p>
           <Button className="mt-6" asChild>
             <Link href="/register/professional">List a house for rent</Link>

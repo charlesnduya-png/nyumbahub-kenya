@@ -16,6 +16,8 @@ export const loginSchema = z.object({
     .min(8, "Password must be at least 8 characters"),
 });
 
+const kenyanNationalIdRegex = /^[A-Za-z0-9]{6,12}$/;
+
 export const registerSchema = z
   .object({
     name: z
@@ -45,10 +47,60 @@ export const registerSchema = z
       .regex(/[0-9]/, "Password must contain at least one number"),
     confirmPassword: z.string().min(1, "Please confirm your password"),
     role: userRoleSchema.default("BUYER"),
+    nationalId: z
+      .string()
+      .trim()
+      .regex(
+        kenyanNationalIdRegex,
+        "Enter a valid National ID / passport number (6–12 characters)",
+      )
+      .optional()
+      .or(z.literal("").transform(() => undefined)),
+    agencyName: z
+      .string()
+      .trim()
+      .min(2, "Agency name must be at least 2 characters")
+      .max(120)
+      .optional()
+      .or(z.literal("").transform(() => undefined)),
+    licenseNumber: z
+      .string()
+      .trim()
+      .min(3, "License number must be at least 3 characters")
+      .max(60)
+      .optional()
+      .or(z.literal("").transform(() => undefined)),
+    county: z
+      .string()
+      .trim()
+      .min(2)
+      .max(80)
+      .optional()
+      .or(z.literal("").transform(() => undefined)),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
+  })
+  .superRefine((data, ctx) => {
+    if (data.role === "SELLER" || data.role === "AGENT") {
+      if (!data.nationalId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "National ID is required for professional accounts",
+          path: ["nationalId"],
+        });
+      }
+    }
+    if (data.role === "AGENT") {
+      if (!data.agencyName) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Agency / company name is required for agents",
+          path: ["agencyName"],
+        });
+      }
+    }
   });
 
 export const forgotPasswordSchema = z.object({
@@ -61,6 +113,11 @@ export const forgotPasswordSchema = z.object({
 
 export const resetPasswordSchema = z
   .object({
+    email: z
+      .string()
+      .trim()
+      .min(1, "Email is required")
+      .email("Enter a valid email address"),
     token: z.string().min(1, "Reset token is required"),
     password: z
       .string()

@@ -2,12 +2,18 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { auth } from "@/lib/auth";
-import {
-  findStoredUserById,
-  setDemoUserActive,
-  setDemoUserRole,
-} from "@/lib/users-store";
 import { prisma } from "@/lib/prisma";
+import { isSiteOwnerEmail } from "@/lib/site-owner";
+
+import type { Session } from "next-auth";
+
+function isAdminSession(session: Session | null) {
+  return (
+    Boolean(session?.user?.id) &&
+    (session?.user?.role === "ADMIN" ||
+      isSiteOwnerEmail(session?.user?.email))
+  );
+}
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -16,13 +22,20 @@ interface RouteParams {
 const updateSchema = z.object({
   isActive: z.boolean().optional(),
   role: z.enum(["BUYER", "SELLER", "AGENT", "ADMIN"]).optional(),
+  nationalIdVerified: z
+    .enum(["UNVERIFIED", "PENDING", "VERIFIED", "REJECTED"])
+    .optional(),
+  verificationStatus: z
+    .enum(["UNVERIFIED", "PENDING", "VERIFIED", "REJECTED"])
+    .optional(),
+  isVerified: z.boolean().optional(),
 });
 
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
     const session = await auth();
 
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (!isAdminSession(session)) {
       return NextResponse.json(
         { success: false, error: "Admin access required" },
         { status: 403 },
@@ -31,9 +44,12 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     const { id } = await params;
 
-    if (id === session.user.id) {
+    if (id === session!.user!.id) {
       return NextResponse.json(
-        { success: false, error: "You cannot change your own admin account here" },
+        {
+          success: false,
+          error: "You cannot change your own admin account here",
+        },
         { status: 400 },
       );
     }
@@ -43,22 +59,55 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     if (!parsed.success || Object.keys(parsed.data).length === 0) {
       return NextResponse.json(
-        { success: false, error: "Provide isActive and/or role" },
+        {
+          success: false,
+          error: "Provide isActive, role, and/or verification fields",
+        },
         { status: 400 },
       );
     }
 
-    const { isActive, role } = parsed.data;
+    const {
+      isActive,
+      role,
+      nationalIdVerified,
+      verificationStatus,
+      isVerified,
+    } = parsed.data;
 
-    try {
-      const existing = await prisma.user.findUnique({ where: { id } });
-      if (!existing) throw new Error("NOT_FOUND_DB");
+    const existing = await prisma.user.findUnique({
+      where: { id },
+      include: { agentProfile: true },
+    });
+    if (!existing) {
+      return NextResponse.json(
+        { success: false, error: "User not found" },
+        { status: 404 },
+      );
+    }
 
-      const user = await prisma.user.update({
+    const nextStatus =
+      typeof isVerified === "boolean"
+        ? isVerified
+          ? "VERIFIED"
+          : "PENDING"
+        : verificationStatus;
+
+    const user = await prisma.$transaction(async (tx) => {
+      const nextUser = await tx.user.update({
         where: { id },
         data: {
           ...(typeof isActive === "boolean" ? { isActive } : {}),
           ...(role ? { role } : {}),
+          ...(nationalIdVerified ? { nationalIdVerified } : {}),
+          ...(nextStatus
+            ? {
+                verificationStatus: nextStatus,
+                ...(nextStatus === "VERIFIED"
+                  ? { nationalIdVerified: "VERIFIED" as const }
+                  : {}),
+              }
+            : {}),
         },
         select: {
           id: true,
@@ -69,48 +118,75 @@ export async function PATCH(request: Request, { params }: RouteParams) {
           isActive: true,
           createdAt: true,
           image: true,
+          nationalId: true,
+          nationalIdVerified: true,
+          verificationStatus: true,
         },
       });
 
-      return NextResponse.json({
-        success: true,
-        source: "database",
-        data: {
-          ...user,
-          name: user.name ?? "—",
-          phone: user.phone ?? "—",
-          createdAt: user.createdAt.toISOString(),
-          hasAgentProfile: user.role === "AGENT",
-        },
-      });
-    } catch {
-      if (typeof isActive === "boolean") setDemoUserActive(id, isActive);
-      if (role) setDemoUserRole(id, role);
-
-      const demo = findStoredUserById(id);
-      if (!demo) {
-        return NextResponse.json(
-          { success: false, error: "User not found" },
-          { status: 404 },
-        );
+      if (typeof isVerified === "boolean" && existing.role === "AGENT") {
+        if (existing.agentProfile) {
+          await tx.agent.update({
+            where: { id: existing.agentProfile.id },
+            data: {
+              isVerified,
+              verificationStatus: isVerified ? "VERIFIED" : "PENDING",
+            },
+          });
+        } else {
+          await tx.agent.create({
+            data: {
+              userId: existing.id,
+              agencyName: existing.name
+                ? `${existing.name}'s Agency`
+                : "Independent",
+              county: "Nairobi",
+              town: "Nairobi",
+              isVerified,
+              verificationStatus: isVerified ? "VERIFIED" : "PENDING",
+            },
+          });
+        }
       }
 
-      return NextResponse.json({
-        success: true,
-        source: "demo",
+      return nextUser;
+    });
+
+    if (nextStatus === "VERIFIED" || isVerified === true) {
+      await prisma.notification.create({
         data: {
-          id: demo.id,
-          name: demo.name,
-          email: demo.email,
-          phone: demo.phone,
-          role: demo.role,
-          isActive: demo.isActive,
-          createdAt: demo.createdAt,
-          image: demo.image ?? null,
-          hasAgentProfile: demo.role === "AGENT",
+          userId: user.id,
+          type: "SYSTEM",
+          title: existing.role === "AGENT" ? "Verified badge approved" : "Account verified",
+          body:
+            existing.role === "AGENT"
+              ? "Your agent account now shows a Verified badge on Your Home."
+              : "Your landlord account is now verified on Your Home.",
+          link: "/dashboard/pro",
+        },
+      });
+    } else if (isVerified === false || nextStatus === "PENDING") {
+      await prisma.notification.create({
+        data: {
+          userId: user.id,
+          type: "SYSTEM",
+          title: "Verification updated",
+          body: "Your verification status was updated by an admin.",
+          link: "/dashboard/pro",
         },
       });
     }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        ...user,
+        name: user.name ?? "—",
+        phone: user.phone ?? "—",
+        createdAt: user.createdAt.toISOString(),
+        hasAgentProfile: user.role === "AGENT",
+      },
+    });
   } catch {
     return NextResponse.json(
       { success: false, error: "Unable to update user" },

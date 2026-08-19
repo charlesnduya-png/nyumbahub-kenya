@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Loader2, Star } from "lucide-react";
 import { toast } from "sonner";
@@ -12,8 +13,14 @@ import { Switch } from "@/components/ui/switch";
 
 interface AdminAgent {
   id: string;
+  userId: string;
   name: string;
+  email: string;
+  phone: string;
+  nationalId: string | null;
+  nationalIdVerified: string;
   agency: string;
+  licenseNumber: string | null;
   county: string;
   rating: number;
   reviewCount: number;
@@ -21,15 +28,14 @@ interface AdminAgent {
   image?: string | null;
   isFeatured: boolean;
   isVerified: boolean;
-  slug?: string;
-  specialties?: string[];
+  verificationStatus: string;
+  createdAt: string;
 }
 
 export default function AdminAgentsPage() {
   const [agents, setAgents] = useState<AdminAgent[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [source, setSource] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -42,7 +48,6 @@ export default function AdminAgentsPage() {
         return;
       }
       setAgents(json.data ?? []);
-      setSource(json.source ?? "");
     } catch {
       toast.error("Could not load agents");
     } finally {
@@ -56,6 +61,7 @@ export default function AdminAgentsPage() {
 
   async function updateAgent(
     id: string,
+    userId: string,
     patch: { isFeatured?: boolean; isVerified?: boolean },
   ) {
     setBusyId(id);
@@ -65,7 +71,7 @@ export default function AdminAgentsPage() {
     );
 
     try {
-      const res = await fetch(`/api/admin/agents/${id}`, {
+      const res = await fetch(`/api/admin/agents/${userId || id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(patch),
@@ -88,6 +94,7 @@ export default function AdminAgentsPage() {
           patch.isVerified ? "Agent marked verified" : "Verification removed",
         );
       }
+      void load();
     } catch {
       setAgents(previous);
       toast.error("Update failed");
@@ -102,9 +109,16 @@ export default function AdminAgentsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Agents</h1>
+          <h1 className="text-2xl font-bold">Featured agents</h1>
           <p className="text-muted-foreground">
-            Verify agents and choose who appears in Homepage → Featured Agents.
+            Choose which agents appear on the homepage. To verify accounts, use{" "}
+            <Link
+              href="/dashboard/admin/verification"
+              className="font-medium text-primary hover:underline"
+            >
+              Verify accounts
+            </Link>
+            .
           </p>
         </div>
         <Button variant="outline" onClick={() => void load()} disabled={loading}>
@@ -112,17 +126,10 @@ export default function AdminAgentsPage() {
         </Button>
       </div>
 
-      {source === "demo" && (
-        <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-100">
-          Demo mode: featured toggles are stored in memory until the server
-          restarts. Connect Postgres to persist them.
-        </p>
-      )}
-
       <Card>
         <CardHeader>
           <CardTitle>
-            Registered agents · {featuredCount} featured on homepage
+            Agent accounts ({agents.length}) · {featuredCount} on homepage
           </CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
@@ -133,16 +140,23 @@ export default function AdminAgentsPage() {
             </div>
           ) : agents.length === 0 ? (
             <p className="py-8 text-sm text-muted-foreground">
-              No agents registered yet.
+              No agent-role accounts yet. Most professionals register as
+              landlords — verify them under{" "}
+              <Link
+                href="/dashboard/admin/verification"
+                className="font-medium text-primary hover:underline"
+              >
+                Verify accounts
+              </Link>
+              .
             </p>
           ) : (
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
                   <th className="pb-3 pr-4 font-medium">Agent</th>
+                  <th className="pb-3 pr-4 font-medium">Contact</th>
                   <th className="pb-3 pr-4 font-medium">Agency</th>
-                  <th className="pb-3 pr-4 font-medium">County</th>
-                  <th className="pb-3 pr-4 font-medium">Rating</th>
                   <th className="pb-3 pr-4 font-medium">Listings</th>
                   <th className="pb-3 pr-4 font-medium">Verified</th>
                   <th className="pb-3 font-medium">Homepage featured</th>
@@ -150,7 +164,7 @@ export default function AdminAgentsPage() {
               </thead>
               <tbody>
                 {agents.map((a) => (
-                  <tr key={a.id} className="border-b last:border-0">
+                  <tr key={a.id} className="border-b last:border-0 align-top">
                     <td className="py-3 pr-4">
                       <div className="flex items-center gap-3">
                         <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-muted">
@@ -166,29 +180,32 @@ export default function AdminAgentsPage() {
                         </div>
                         <div className="min-w-0">
                           <p className="font-medium">{a.name}</p>
-                          {a.isFeatured ? (
-                            <Badge variant="secondary" className="mt-0.5 text-[10px]">
-                              On homepage
-                            </Badge>
-                          ) : null}
+                          <p className="text-xs text-muted-foreground">
+                            {a.county}
+                          </p>
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 pr-4">{a.agency}</td>
-                    <td className="py-3 pr-4">{a.county}</td>
                     <td className="py-3 pr-4">
-                      <span className="inline-flex items-center gap-1">
-                        <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                        {a.rating} ({a.reviewCount})
-                      </span>
+                      <p className="text-xs">{a.email}</p>
+                      <p className="text-xs text-muted-foreground">{a.phone}</p>
                     </td>
-                    <td className="py-3 pr-4">{a.listingsCount}</td>
+                    <td className="py-3 pr-4">{a.agency}</td>
+                    <td className="py-3 pr-4">
+                      {a.listingsCount}
+                      <p className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                        {a.rating} ({a.reviewCount})
+                      </p>
+                    </td>
                     <td className="py-3 pr-4">
                       <Switch
                         checked={a.isVerified}
                         disabled={busyId === a.id}
                         onCheckedChange={(checked) =>
-                          void updateAgent(a.id, { isVerified: checked })
+                          void updateAgent(a.id, a.userId, {
+                            isVerified: checked,
+                          })
                         }
                         aria-label={`Verify ${a.name}`}
                       />
@@ -198,7 +215,9 @@ export default function AdminAgentsPage() {
                         checked={a.isFeatured}
                         disabled={busyId === a.id}
                         onCheckedChange={(checked) =>
-                          void updateAgent(a.id, { isFeatured: checked })
+                          void updateAgent(a.id, a.userId, {
+                            isFeatured: checked,
+                          })
                         }
                         aria-label={`Feature ${a.name} on homepage`}
                       />

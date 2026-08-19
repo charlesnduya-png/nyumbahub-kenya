@@ -144,7 +144,7 @@ function templatePropertyDescription(input: PropertyDescriptionInput): string {
     buildAmenitySentence(input.amenities),
     input.highlights?.length
       ? `Highlights: ${input.highlights.join("; ")}.`
-      : "Contact NyumbaHub Kenya to schedule a viewing today.",
+      : "Contact Your Home to schedule a viewing today.",
   ].join("\n\n");
 }
 

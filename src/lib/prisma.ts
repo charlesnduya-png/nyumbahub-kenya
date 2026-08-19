@@ -1,5 +1,8 @@
 import { PrismaClient } from "@prisma/client";
 
+// Map DATABASE_URL → POSTGRES_* at runtime (Vercel/Neon inject vars inconsistently).
+import "../../scripts/ensure-db-env.js";
+
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };

@@ -1,4 +1,7 @@
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
   --background: #faf9f7;
@@ -31,6 +34,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: #141414;
   --foreground: #ededed;
   --card: #1c1c1c;
@@ -47,9 +51,9 @@
   --accent-foreground: #fafafa;
   --destructive: #7f1d1d;
   --destructive-foreground: #fafafa;
-  --border: #333333;
-  --input: #333333;
-  --ring: #0b6e4f;
+  --border: #3f3f3f;
+  --input: #3f3f3f;
+  --ring: #1a9d6f;
   --cream: #1a1917;
   --charcoal: #ededed;
   --glass-bg: rgba(28, 28, 28, 0.75);
@@ -91,12 +95,21 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+.leaflet-container {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  z-index: 0;
 }
 
 /* Glassmorphism utilities */

@@ -59,7 +59,7 @@ export default function ForgotPasswordPage() {
       <CardHeader className="text-center">
         <CardTitle>Reset your password</CardTitle>
         <CardDescription>
-          Enter the email linked to your NyumbaHub account.
+          Enter the email linked to your account.
         </CardDescription>
       </CardHeader>
       {submitted ? (
