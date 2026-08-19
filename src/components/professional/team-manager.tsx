@@ -214,8 +214,8 @@ export function TeamManager() {
         <p className="text-sm text-muted-foreground">
           Invite people by email and assign one or more roles. They receive a
           link to create an account (or sign in) and join your team. Choose
-          Property manager (Boma yangu) if they should run your plots and
-          monthly rent.
+          Boma yangu (plots & vacant rooms) if they should only add plots and
+          keep rooms available for rent.
         </p>
 
         <div className="space-y-3">

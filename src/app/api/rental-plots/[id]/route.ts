@@ -10,7 +10,8 @@ import {
   assertCanCreateListing,
 } from "@/lib/listing-subscription";
 import {
-  canViewWith,
+  canManagePlots,
+  canViewPlots,
   resolveProfessionalActingContext,
 } from "@/lib/account-team";
 
@@ -36,7 +37,7 @@ async function requireOwnedPlot(
   const { ctx, actorId, actorRole } = await getPlotActor(userId, sessionRole);
   const allowed =
     sessionRole === "ADMIN" ||
-    (write ? ctx.permissions.manageListings : canViewWith(ctx, "manageListings"));
+    (write ? canManagePlots(ctx) : canViewPlots(ctx));
   if (!allowed) {
     return { error: "Forbidden" as const, status: 403 as const };
   }

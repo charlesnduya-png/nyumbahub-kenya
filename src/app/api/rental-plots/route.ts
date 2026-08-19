@@ -3,7 +3,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createRentalPlotSchema } from "@/lib/validations/rental-plot";
 import {
-  canViewWith,
+  canViewPlots,
+  canManagePlots,
   hasProfessionalWorkspaceAccess,
   resolveProfessionalActingContext,
 } from "@/lib/account-team";
@@ -33,7 +34,7 @@ export async function GET() {
     if ("error" in gate && gate.error) return gate.error;
     const ctx = gate.ctx!;
 
-    if (!canViewWith(ctx, "manageListings") && gate.session!.user.role !== "ADMIN") {
+    if (!canViewPlots(ctx) && gate.session!.user.role !== "ADMIN") {
       return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
     }
 
@@ -81,6 +82,8 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       canInviteManager: ctx.permissions.manageTeam,
+      canViewRent: ctx.permissions.manageListings,
+      canManagePlots: canManagePlots(ctx),
       data: plots.map((plot) => {
         const vacant = plot.units.filter(
           (u) => u.status === "ACTIVE" && u.listingType === "RENT",
@@ -128,7 +131,7 @@ export async function POST(request: Request) {
     const session = gate.session!;
     const ctx = gate.ctx!;
 
-    if (!ctx.permissions.manageListings && session.user.role !== "ADMIN") {
+    if (!canManagePlots(ctx) && session.user.role !== "ADMIN") {
       return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
     }
 

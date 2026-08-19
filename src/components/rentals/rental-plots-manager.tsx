@@ -84,6 +84,8 @@ export function RentalPlotsManager() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [canInviteManager, setCanInviteManager] = useState(false);
+  const [canViewRent, setCanViewRent] = useState(false);
+  const [canManagePlots, setCanManagePlots] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [unitOpen, setUnitOpen] = useState<PlotRow | null>(null);
   const [deletePlot, setDeletePlot] = useState<PlotRow | null>(null);
@@ -118,14 +120,20 @@ export function RentalPlotsManager() {
         toast.error(json.error ?? "Could not load plots");
         setPlots([]);
         setCanInviteManager(false);
+        setCanViewRent(false);
+        setCanManagePlots(false);
         return;
       }
       setPlots(json.data ?? []);
       setCanInviteManager(Boolean(json.canInviteManager));
+      setCanViewRent(Boolean(json.canViewRent));
+      setCanManagePlots(Boolean(json.canManagePlots));
     } catch {
       toast.error("Could not load plots");
       setPlots([]);
       setCanInviteManager(false);
+      setCanViewRent(false);
+      setCanManagePlots(false);
     } finally {
       setLoading(false);
     }
@@ -298,28 +306,32 @@ export function RentalPlotsManager() {
         <div>
           <h1 className="text-2xl font-bold">Boma yangu</h1>
           <p className="text-muted-foreground">
-            Manage your apartment block or compound, add a property manager, and
-            post vacant houses for rent. Rented units leave the public site
-            automatically.
+            {canInviteManager
+              ? "Add plots, post vacant rooms for rent, and invite a manager to handle only those tasks."
+              : "Add plots and keep vacant rooms listed for rent."}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" asChild>
-            <Link href="/dashboard/pro/rent">
-              <Wallet className="mr-2 h-4 w-4" />
-              Rent this month
-            </Link>
-          </Button>
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add plot
-          </Button>
+          {canViewRent ? (
+            <Button variant="outline" asChild>
+              <Link href="/dashboard/pro/rent">
+                <Wallet className="mr-2 h-4 w-4" />
+                Rent this month
+              </Link>
+            </Button>
+          ) : null}
+          {canManagePlots ? (
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add plot
+            </Button>
+          ) : null}
         </div>
       </div>
 
       {canInviteManager ? <PropertyManagerInvite /> : null}
 
-      <RentLedger compact />
+      {canViewRent ? <RentLedger compact /> : null}
 
       {loading ? (
         <div className="flex items-center gap-2 py-12 text-muted-foreground">
@@ -334,10 +346,12 @@ export function RentalPlotsManager() {
               No plots yet. Create a plot for your building or compound, then
               list vacant units for rent.
             </p>
-            <Button onClick={() => setCreateOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add your first plot
-            </Button>
+            {canManagePlots ? (
+              <Button onClick={() => setCreateOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add your first plot
+              </Button>
+            ) : null}
           </CardContent>
         </Card>
       ) : (
@@ -363,33 +377,37 @@ export function RentalPlotsManager() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      setUnitOpen(plot);
-                      setUnitForm({
-                        unitLabel: "",
-                        unitFloor: "First floor",
-                        propertyType: "APARTMENT",
-                        price: "",
-                        bedrooms: "1",
-                        bathrooms: "1",
-                        furnished: false,
-                        description: "",
-                        images: [],
-                      });
-                    }}
-                  >
-                    <Home className="mr-1 h-4 w-4" />
-                    Post vacant house
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setDeletePlot(plot)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {canManagePlots ? (
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setUnitOpen(plot);
+                        setUnitForm({
+                          unitLabel: "",
+                          unitFloor: "First floor",
+                          propertyType: "APARTMENT",
+                          price: "",
+                          bedrooms: "1",
+                          bathrooms: "1",
+                          furnished: false,
+                          description: "",
+                          images: [],
+                        });
+                      }}
+                    >
+                      <Home className="mr-1 h-4 w-4" />
+                      Post vacant house
+                    </Button>
+                  ) : null}
+                  {canManagePlots ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setDeletePlot(plot)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  ) : null}
                 </div>
               </CardHeader>
               <CardContent>
@@ -450,7 +468,7 @@ export function RentalPlotsManager() {
                               ? "VACANT"
                               : unit.status}
                           </Badge>
-                          {unit.status === "ACTIVE" ? (
+                          {canManagePlots && unit.status === "ACTIVE" ? (
                             <Button
                               size="sm"
                               variant="outline"
@@ -467,7 +485,7 @@ export function RentalPlotsManager() {
                               Mark rented
                             </Button>
                           ) : null}
-                          {unit.status === "RENTED" ? (
+                          {canManagePlots && unit.status === "RENTED" ? (
                             <Button
                               size="sm"
                               variant="outline"

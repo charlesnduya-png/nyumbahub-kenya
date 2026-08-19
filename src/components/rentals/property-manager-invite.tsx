@@ -24,7 +24,7 @@ type TeamInvite = {
 };
 
 function isPropertyManager(roles?: TeamRoleValue[] | null) {
-  return Boolean(roles?.some((role) => role === "RENTALS" || role === "FULL"));
+  return Boolean(roles?.includes("RENTALS"));
 }
 
 export function PropertyManagerInvite() {
@@ -111,9 +111,9 @@ export function PropertyManagerInvite() {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Add someone to manage this boma — plots, vacant houses, and monthly
-          rent collection. They work in your account and cannot change billing
-          or your profile.
+          Add someone to add plots and keep vacant rooms listed for rent. They
+          work in your account. They cannot open all listings, rent payments,
+          billing, or your profile.
         </p>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="min-w-0 flex-1 space-y-2">

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { resolveProfessionalActingContext } from "@/lib/account-team";
+import { canManagePlots, resolveProfessionalActingContext } from "@/lib/account-team";
 
 interface RouteParams {
   params: Promise<{ id: string; unitId: string }>;
@@ -55,7 +55,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       unit.agent?.userId === userId ||
       session.user.role === "ADMIN";
 
-    if (!isOwner || (ctx.isTeamMember && !ctx.permissions.manageListings && session.user.role !== "ADMIN")) {
+    if (!isOwner || (ctx.isTeamMember && !canManagePlots(ctx) && session.user.role !== "ADMIN")) {
       return NextResponse.json(
         { success: false, error: "Forbidden" },
         { status: 403 },

@@ -56,7 +56,7 @@ export function permissionsForTeamRole(role: TeamRole): TeamPermissions {
     case "LISTINGS":
       return { ...NO_PERMISSIONS, manageListings: true, manageRentals: true };
     case "RENTALS":
-      return { ...NO_PERMISSIONS, manageListings: true, manageRentals: true };
+      return { ...NO_PERMISSIONS, manageRentals: true };
     case "INQUIRIES":
       return { ...NO_PERMISSIONS, manageInquiries: true };
     case "VIEWINGS":
@@ -99,6 +99,14 @@ export function canViewWith(
 ): boolean {
   if (ctx.permissions[permission]) return true;
   return ctx.isTeamMember && ctx.teamMemberRoles.includes("READ");
+}
+
+export function canManagePlots(ctx: ProfessionalActingContext): boolean {
+  return ctx.permissions.manageRentals || ctx.permissions.manageListings;
+}
+
+export function canViewPlots(ctx: ProfessionalActingContext): boolean {
+  return canViewWith(ctx, "manageRentals") || canViewWith(ctx, "manageListings");
 }
 
 export function hasProfessionalWorkspaceAccess(

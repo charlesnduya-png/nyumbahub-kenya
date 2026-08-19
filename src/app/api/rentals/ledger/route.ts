@@ -29,9 +29,9 @@ async function requireLedgerAccess(write: boolean) {
   const ctx = await resolveProfessionalActingContext(session.user.id);
   const isAdmin = session.user.role === "ADMIN";
   const canWrite =
-    isAdmin || ctx.permissions.manageRentals || ctx.permissions.manageListings;
+    isAdmin || ctx.permissions.manageListings;
   const canRead =
-    canWrite || canViewWith(ctx, "manageRentals") || canViewWith(ctx, "manageListings");
+    canWrite || canViewWith(ctx, "manageListings");
 
   if (write ? !canWrite : !canRead) {
     return {
