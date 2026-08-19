@@ -9,7 +9,10 @@ import {
   Loader2,
   Plus,
   Trash2,
+  Wallet,
 } from "lucide-react";
+import { PropertyManagerInvite } from "@/components/rentals/property-manager-invite";
+import { RentLedger } from "@/components/rentals/rent-ledger";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -80,6 +83,7 @@ export function RentalPlotsManager() {
   const [plots, setPlots] = useState<PlotRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [canInviteManager, setCanInviteManager] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [unitOpen, setUnitOpen] = useState<PlotRow | null>(null);
   const [deletePlot, setDeletePlot] = useState<PlotRow | null>(null);
@@ -113,11 +117,15 @@ export function RentalPlotsManager() {
       if (!res.ok) {
         toast.error(json.error ?? "Could not load plots");
         setPlots([]);
+        setCanInviteManager(false);
         return;
       }
       setPlots(json.data ?? []);
+      setCanInviteManager(Boolean(json.canInviteManager));
     } catch {
       toast.error("Could not load plots");
+      setPlots([]);
+      setCanInviteManager(false);
     } finally {
       setLoading(false);
     }
@@ -288,17 +296,30 @@ export function RentalPlotsManager() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Plot management</h1>
+          <h1 className="text-2xl font-bold">Boma yangu</h1>
           <p className="text-muted-foreground">
-            Add your apartment block or compound, then post vacant houses for
-            rent. Rented units leave the site automatically.
+            Manage your apartment block or compound, add a property manager, and
+            post vacant houses for rent. Rented units leave the public site
+            automatically.
           </p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add plot
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/dashboard/pro/rent">
+              <Wallet className="mr-2 h-4 w-4" />
+              Rent this month
+            </Link>
+          </Button>
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add plot
+          </Button>
+        </div>
       </div>
+
+      {canInviteManager ? <PropertyManagerInvite /> : null}
+
+      <RentLedger compact />
 
       {loading ? (
         <div className="flex items-center gap-2 py-12 text-muted-foreground">

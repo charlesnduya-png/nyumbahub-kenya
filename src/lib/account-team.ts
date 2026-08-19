@@ -17,6 +17,7 @@ export type TeamPermissions = {
   manageBookings: boolean;
   manageMessages: boolean;
   manageTeam: boolean;
+  manageRentals: boolean;
 };
 
 export type ProfessionalActingContext = {
@@ -36,6 +37,7 @@ const NO_PERMISSIONS: TeamPermissions = {
   manageBookings: false,
   manageMessages: false,
   manageTeam: false,
+  manageRentals: false,
 };
 
 export function permissionsForTeamRole(role: TeamRole): TeamPermissions {
@@ -49,9 +51,12 @@ export function permissionsForTeamRole(role: TeamRole): TeamPermissions {
         manageBookings: true,
         manageMessages: true,
         manageTeam: true,
+        manageRentals: true,
       };
     case "LISTINGS":
-      return { ...NO_PERMISSIONS, manageListings: true };
+      return { ...NO_PERMISSIONS, manageListings: true, manageRentals: true };
+    case "RENTALS":
+      return { ...NO_PERMISSIONS, manageListings: true, manageRentals: true };
     case "INQUIRIES":
       return { ...NO_PERMISSIONS, manageInquiries: true };
     case "VIEWINGS":
@@ -83,6 +88,7 @@ export function permissionsForTeamRoles(
     merged.manageBookings ||= next.manageBookings;
     merged.manageMessages ||= next.manageMessages;
     merged.manageTeam ||= next.manageTeam;
+    merged.manageRentals ||= next.manageRentals;
   }
   return merged;
 }

@@ -120,6 +120,11 @@ enum RentalReservationStatus {
   RENTED
 }
 
+enum RentPaymentStatus {
+  UNPAID
+  PAID
+}
+
 enum RentalRoomStatus {
   AVAILABLE
   RENTED
@@ -215,6 +220,8 @@ model User {
   mediaAssets           MediaAsset[]
   accountTeamOwned     AccountTeam?
   accountTeamMembers   AccountTeamMember[]
+  rentPaymentsAsTenant RentalRentPayment[] @relation("RentTenant")
+  rentPaymentsMarked   RentalRentPayment[] @relation("RentMarkedBy")
 
   @@index([role])
   @@index([email])
@@ -351,6 +358,30 @@ model RentalReservation {
   @@index([status])
 }
 
+model RentalRentPayment {
+  id          String            @id @default(cuid())
+  propertyId  String
+  tenantId    String?
+  year        Int
+  month       Int
+  amountDue   Float
+  amountPaid  Float             @default(0)
+  status      RentPaymentStatus @default(UNPAID)
+  paidAt      DateTime?
+  notes       String?
+  markedById  String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  property    Property          @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  tenant      User?             @relation("RentTenant", fields: [tenantId], references: [id], onDelete: SetNull)
+  markedBy    User?             @relation("RentMarkedBy", fields: [markedById], references: [id], onDelete: SetNull)
+
+  @@unique([propertyId, year, month])
+  @@index([propertyId, year, month])
+  @@index([status])
+}
+
 model RentalRepublishRequest {
   id                 String               @id @default(cuid())
   propertyId         String
@@ -476,6 +507,7 @@ model Property {
   rentalReservations RentalReservation[]
   rentalRepublishRequests RentalRepublishRequest[]
   rentalRooms       PropertyRentalRoom[]
+  rentPayments      RentalRentPayment[]
 
   @@index([listingType, status])
   @@index([county, town])
@@ -879,6 +911,7 @@ enum TeamRole {
   OFFERS
   BOOKINGS
   MESSAGES
+  RENTALS
   READ
 }
 

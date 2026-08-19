@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import type { TeamRole } from "@prisma/client";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -198,7 +199,7 @@ async function acceptInvite(input: {
   inviteId: string;
   userId: string;
   teamId: string;
-  roles: Array<"FULL" | "LISTINGS" | "INQUIRIES" | "VIEWINGS" | "OFFERS" | "BOOKINGS" | "MESSAGES" | "READ">;
+  roles: TeamRole[];
   ownerRole: string;
 }) {
   await prisma.$transaction([

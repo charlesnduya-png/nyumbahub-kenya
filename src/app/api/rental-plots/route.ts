@@ -80,6 +80,7 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
+      canInviteManager: ctx.permissions.manageTeam,
       data: plots.map((plot) => {
         const vacant = plot.units.filter(
           (u) => u.status === "ACTIVE" && u.listingType === "RENT",

@@ -1,6 +1,7 @@
 export const TEAM_ROLE_VALUES = [
   "FULL",
   "LISTINGS",
+  "RENTALS",
   "INQUIRIES",
   "VIEWINGS",
   "OFFERS",
@@ -14,6 +15,7 @@ export type TeamRoleValue = (typeof TEAM_ROLE_VALUES)[number];
 export const TEAM_ROLE_LABEL: Record<TeamRoleValue, string> = {
   FULL: "Full access",
   LISTINGS: "Manage listings",
+  RENTALS: "Property manager (Boma yangu)",
   INQUIRIES: "Manage inquiries",
   VIEWINGS: "Manage viewings",
   OFFERS: "Manage offers",
@@ -36,6 +38,7 @@ export type TeamNavPermissions = {
   manageBookings: boolean;
   manageMessages: boolean;
   manageTeam: boolean;
+  manageRentals: boolean;
 };
 
 export type TeamNavState = {
@@ -78,7 +81,10 @@ export function canAccessNavHref(
     href === "/dashboard/pro/listings" ||
     href === "/dashboard/pro/plots"
   ) {
-    return permissions.manageListings || canRead;
+    return permissions.manageListings || permissions.manageRentals || canRead;
+  }
+  if (href === "/dashboard/pro/rent") {
+    return permissions.manageListings || permissions.manageRentals || canRead;
   }
   if (href === "/dashboard/seller/properties/new") {
     return permissions.manageListings;

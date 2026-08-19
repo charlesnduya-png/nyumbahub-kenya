@@ -213,7 +213,9 @@ export function TeamManager() {
       <CardContent className="space-y-6">
         <p className="text-sm text-muted-foreground">
           Invite people by email and assign one or more roles. They receive a
-          link to create an account (or sign in) and join your team.
+          link to create an account (or sign in) and join your team. Choose
+          Property manager (Boma yangu) if they should run your plots and
+          monthly rent.
         </p>
 
         <div className="space-y-3">
