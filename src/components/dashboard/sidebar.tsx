@@ -85,6 +85,7 @@ const adminNav: NavItem[] = [
   { label: "Site traffic", href: "/dashboard/admin/traffic", icon: Activity },
   { label: "Notifications", href: "/dashboard/notifications", icon: Bell },
   { label: "Accounts", href: "/dashboard/admin/users", icon: Users },
+  { label: "Teams", href: "/dashboard/admin/users?tab=teams", icon: Users },
   { label: "Tenants", href: "/dashboard/admin/users?tab=tenants", icon: UserRound },
   { label: "Agents", href: "/dashboard/admin/users?tab=agents", icon: UserCheck },
   { label: "Landlords", href: "/dashboard/admin/users?tab=landlords", icon: Users },

@@ -133,7 +133,7 @@ function AccountTeamCell({ team }: { team?: AdminUserTeam | null }) {
             </li>
           ))}
           {team.pendingInvites.map((invite) => (
-            <li key={invite.email} className="text-xs text-muted-foreground">
+            <li key={`${invite.email}-${invite.expiresAt}`} className="text-xs text-muted-foreground">
               <p>{invite.email} · invited</p>
               <p>{rolesText(invite.roles)}</p>
             </li>
@@ -144,13 +144,120 @@ function AccountTeamCell({ team }: { team?: AdminUserTeam | null }) {
   );
 }
 
-type AccountTab = "tenants" | "agents" | "landlords" | "admins" | "all";
+type AdminWorkspaceTeam = {
+  ownerId: string;
+  ownerName: string;
+  ownerEmail: string;
+  ownerRole: Role;
+  ownerActive: boolean;
+  memberCount: number;
+  members: AdminTeamMember[];
+  pendingInvites: AdminTeamInvite[];
+};
+
+function AdminTeamsBoard({
+  teams,
+  query,
+}: {
+  teams: AdminWorkspaceTeam[];
+  query: string;
+}) {
+  const q = query.trim().toLowerCase();
+  const visible = teams.filter((team) => {
+    if (!q) return true;
+    return (
+      team.ownerName.toLowerCase().includes(q) ||
+      team.ownerEmail.toLowerCase().includes(q) ||
+      team.members.some(
+        (m) =>
+          m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q),
+      ) ||
+      team.pendingInvites.some((invite) => invite.email.toLowerCase().includes(q))
+    );
+  });
+
+  if (visible.length === 0) {
+    return (
+      <p className="py-8 text-sm text-muted-foreground">
+        {teams.length === 0
+          ? "No teams yet. A team appears here after a landlord or agent invites someone from The team."
+          : "No teams match that search."}
+      </p>
+    );
+  }
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      {visible.map((team) => (
+        <Card key={team.ownerId}>
+          <CardHeader className="pb-3">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <CardTitle className="text-base">{team.ownerName}</CardTitle>
+                <p className="text-sm text-muted-foreground">{team.ownerEmail}</p>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <Badge variant="secondary">
+                  {ACCOUNT_TYPE_LABELS[team.ownerRole]?.label ?? team.ownerRole}
+                </Badge>
+                <Badge variant={team.ownerActive ? "default" : "destructive"}>
+                  {team.ownerActive ? "Active" : "Suspended"}
+                </Badge>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm font-medium">
+              Team · {team.memberCount}{" "}
+              {team.memberCount === 1 ? "member" : "members"}
+              {team.pendingInvites.length > 0
+                ? ` · ${team.pendingInvites.length} pending`
+                : ""}
+            </p>
+            {team.members.length === 0 && team.pendingInvites.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No members invited yet.</p>
+            ) : (
+              <ul className="space-y-2">
+                {team.members.map((member) => (
+                  <li
+                    key={member.userId}
+                    className="rounded-md border bg-muted/40 px-3 py-2"
+                  >
+                    <p className="text-sm font-medium">{member.name}</p>
+                    <p className="text-xs text-muted-foreground">{member.email}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {rolesText(member.roles)}
+                    </p>
+                  </li>
+                ))}
+                {team.pendingInvites.map((invite) => (
+                  <li
+                    key={`${invite.email}-${invite.expiresAt}`}
+                    className="rounded-md border border-dashed px-3 py-2"
+                  >
+                    <p className="text-sm">{invite.email}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Invitation pending · {rolesText(invite.roles)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+type AccountTab = "teams" | "tenants" | "agents" | "landlords" | "admins" | "all";
 
 const TAB_CONFIG: Array<{
   id: AccountTab;
-  role: Role | "ALL";
+  role: Role | "ALL" | "TEAMS";
   label: string;
 }> = [
+  { id: "teams", role: "TEAMS", label: "Teams" },
   { id: "tenants", role: "BUYER", label: "Tenants" },
   { id: "agents", role: "AGENT", label: "Agents" },
   { id: "landlords", role: "SELLER", label: "Landlords & owners" },
@@ -158,7 +265,7 @@ const TAB_CONFIG: Array<{
   { id: "all", role: "ALL", label: "All accounts" },
 ];
 
-function roleForTab(tab: AccountTab): Role | "ALL" {
+function roleForTab(tab: AccountTab): Role | "ALL" | "TEAMS" {
   return TAB_CONFIG.find((t) => t.id === tab)?.role ?? "ALL";
 }
 
@@ -332,12 +439,13 @@ function UsersTable({
 
 export default function AdminUsersPage() {
   const searchParams = useSearchParams();
-  const initialTab = (searchParams.get("tab") as AccountTab) || "tenants";
+  const initialTab = (searchParams.get("tab") as AccountTab) || "teams";
   const [activeTab, setActiveTab] = useState<AccountTab>(
-    TAB_CONFIG.some((t) => t.id === initialTab) ? initialTab : "tenants",
+    TAB_CONFIG.some((t) => t.id === initialTab) ? initialTab : "teams",
   );
 
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [teams, setTeams] = useState<AdminWorkspaceTeam[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -352,11 +460,36 @@ export default function AdminUsersPage() {
       if (!res.ok) {
         toast.error(json.error ?? "Could not load users");
         setUsers([]);
+        setTeams([]);
         return;
       }
       setUsers(json.data ?? []);
+      const payloadTeams = (json.teams ?? []) as AdminWorkspaceTeam[];
+      const payloadUsers = (json.data ?? []) as AdminUser[];
+      setTeams(
+        payloadTeams.length > 0
+          ? payloadTeams
+          : payloadUsers.flatMap((u) =>
+              u.team?.kind === "owner"
+                ? [
+                    {
+                      ownerId: u.id,
+                      ownerName: u.name,
+                      ownerEmail: u.email,
+                      ownerRole: u.role,
+                      ownerActive: u.isActive,
+                      memberCount: u.team.memberCount,
+                      members: u.team.members,
+                      pendingInvites: u.team.pendingInvites,
+                    },
+                  ]
+                : [],
+            ),
+      );
     } catch {
       toast.error("Could not load users");
+      setUsers([]);
+      setTeams([]);
     } finally {
       setLoading(false);
     }
@@ -386,7 +519,11 @@ export default function AdminUsersPage() {
       const role = roleForTab(tab);
       const q = query.trim().toLowerCase();
       return users.filter((u) => {
-        if (role !== "ALL" && u.role !== role) return false;
+        if (role === "TEAMS") {
+          if (!u.team) return false;
+        } else if (role !== "ALL" && u.role !== role) {
+          return false;
+        }
         if (!q) return true;
         const teamHit =
           u.team?.kind === "owner"
@@ -500,8 +637,9 @@ export default function AdminUsersPage() {
         <div>
           <h1 className="text-2xl font-bold">Accounts</h1>
           <p className="text-muted-foreground">
-            Manage tenants, agents, landlords, and admins. Each professional
-            account shows its team members and pending invitations.
+            Manage tenants, agents, landlords, and each professional account’s
+            team. Open the Teams tab to see the owner and everyone on that
+            account.
           </p>
         </div>
         <div className="flex gap-2">
@@ -554,9 +692,11 @@ export default function AdminUsersPage() {
             <TabsList className="mb-4 flex h-auto flex-wrap gap-1">
               {TAB_CONFIG.map((tab) => {
                 const count =
-                  tab.role === "ALL"
-                    ? counts.total
-                    : counts[tab.role as Role];
+                  tab.id === "teams"
+                    ? teams.length
+                    : tab.role === "ALL"
+                      ? counts.total
+                      : counts[tab.role as Role];
                 return (
                   <TabsTrigger key={tab.id} value={tab.id} className="gap-2">
                     {tab.label}
@@ -577,28 +717,34 @@ export default function AdminUsersPage() {
               TAB_CONFIG.map((tab) => (
                 <TabsContent key={tab.id} value={tab.id} className="mt-0">
                   <p className="mb-4 text-sm text-muted-foreground">
-                    {tab.role === "ALL"
-                      ? "Every account on the platform."
-                      : ACCOUNT_TYPE_LABELS[tab.role as Role].description}
+                    {tab.id === "teams"
+                      ? "Each landlord or agent account and the people who can work in it."
+                      : tab.role === "ALL"
+                        ? "Every account on the platform."
+                        : ACCOUNT_TYPE_LABELS[tab.role as Role].description}
                   </p>
-                  <div className="overflow-x-auto">
-                    <UsersTable
-                      users={filterUsers(tab.id)}
-                      busyId={busyId}
-                      onUpdate={updateUser}
-                      onVerify={verifyUser}
-                      showListings={
-                        tab.id === "agents" || tab.id === "landlords"
-                      }
-                      showVerify={
-                        tab.id === "agents" || tab.id === "landlords"
-                      }
-                      onViewListings={(user) => {
-                        setListingsUser(user);
-                        setListingsOpen(true);
-                      }}
-                    />
-                  </div>
+                  {tab.id === "teams" ? (
+                    <AdminTeamsBoard teams={teams} query={query} />
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <UsersTable
+                        users={filterUsers(tab.id)}
+                        busyId={busyId}
+                        onUpdate={updateUser}
+                        onVerify={verifyUser}
+                        showListings={
+                          tab.id === "agents" || tab.id === "landlords"
+                        }
+                        showVerify={
+                          tab.id === "agents" || tab.id === "landlords"
+                        }
+                        onViewListings={(user) => {
+                          setListingsUser(user);
+                          setListingsOpen(true);
+                        }}
+                      />
+                    </div>
+                  )}
                 </TabsContent>
               ))
             )}
