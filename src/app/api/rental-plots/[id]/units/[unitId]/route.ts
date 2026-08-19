@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { canManagePlots, resolveProfessionalActingContext } from "@/lib/account-team";
+import { revalidatePropertySlug } from "@/lib/properties";
 import { syncPropertyAvailabilityFromRooms } from "@/lib/rental-rooms";
 
 interface RouteParams {
@@ -108,6 +109,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         });
         return syncPropertyAvailabilityFromRooms(tx, unitId);
       });
+      revalidatePropertySlug(unit.slug);
 
       return NextResponse.json({
         success: true,
@@ -135,6 +137,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         });
         return syncPropertyAvailabilityFromRooms(tx, unitId);
       });
+      revalidatePropertySlug(unit.slug);
 
       return NextResponse.json({
         success: true,
@@ -173,6 +176,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
       return property;
     });
+    revalidatePropertySlug(unit.slug);
 
     const message =
       nextStatus === "RENTED"

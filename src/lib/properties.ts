@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { cache } from "react";
-import { unstable_cache } from "next/cache";
+import { revalidateTag, unstable_cache } from "next/cache";
 import type { z } from "zod";
 import { MAX_LISTING_IMAGES } from "@/lib/listing-media";
 import { prisma } from "@/lib/prisma";
@@ -402,6 +402,10 @@ export const getPropertyBySlug = cache(async (slug: string) => {
 
   return null;
 });
+
+export function revalidatePropertySlug(slug: string) {
+  revalidateTag(`property:${slug}`);
+}
 
 export async function getRelatedProperties(
   slug: string,

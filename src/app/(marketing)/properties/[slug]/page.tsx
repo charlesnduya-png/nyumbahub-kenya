@@ -24,6 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { auth } from "@/lib/auth";
 import { getPropertyBySlug, resolveListingHost } from "@/lib/properties";
+import { resolveProfessionalActingContext } from "@/lib/account-team";
 import {
   breadcrumbJsonLd,
   generatePropertyMetadata,
@@ -167,7 +168,16 @@ export default async function PropertyDetailPage({ params }: PageProps) {
     const session = await auth();
     const isAdmin = session?.user?.role === "ADMIN";
     const isOwner = session?.user?.id === property.ownerId;
-    if (!isAdmin && !isOwner) {
+    let isOwnerTeam = false;
+    if (session?.user?.id && !isAdmin && !isOwner) {
+      try {
+        const ctx = await resolveProfessionalActingContext(session.user.id);
+        isOwnerTeam = ctx.actingOwnerId === property.ownerId;
+      } catch {
+        isOwnerTeam = false;
+      }
+    }
+    if (!isAdmin && !isOwner && !isOwnerTeam) {
       notFound();
     }
   }

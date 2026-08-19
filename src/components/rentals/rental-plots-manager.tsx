@@ -527,9 +527,13 @@ export function RentalPlotsManager() {
                           {unit.status === "ACTIVE" ||
                           unit.status === "RENTED" ? (
                             <Button size="sm" variant="ghost" asChild>
-                              <Link href={`/properties/${unit.slug}`}>
+                              <a
+                                href={`/properties/${encodeURIComponent(unit.slug)}`}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
                                 View
-                              </Link>
+                              </a>
                             </Button>
                           ) : null}
                         </div>

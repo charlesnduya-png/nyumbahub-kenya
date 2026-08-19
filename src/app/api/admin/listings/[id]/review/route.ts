@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { revalidatePropertySlug } from "@/lib/properties";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -61,6 +62,8 @@ export async function POST(request: Request, { params }: RouteParams) {
         isVerified: action === "approve" ? true : existing.isVerified,
       },
     });
+
+    revalidatePropertySlug(existing.slug);
 
     await prisma.notification.create({
       data: {
