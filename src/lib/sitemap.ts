@@ -1,9 +1,20 @@
-import type { MetadataRoute } from "next";
 import { APP_URL } from "@/lib/seo";
 import { ALL_SEO_LANDINGS } from "@/lib/seo-locations";
 import { prisma } from "@/lib/prisma";
 
-export const revalidate = 3600;
+export type SitemapEntry = {
+  url: string;
+  lastModified: Date;
+  changeFrequency:
+    | "always"
+    | "hourly"
+    | "daily"
+    | "weekly"
+    | "monthly"
+    | "yearly"
+    | "never";
+  priority: number;
+};
 
 function loc(path = "/"): string {
   if (!path || path === "/") return `${APP_URL}/`;
@@ -27,10 +38,10 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   });
 }
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+export async function getSitemapEntries(): Promise<SitemapEntry[]> {
   const now = new Date();
 
-  const staticRoutes: MetadataRoute.Sitemap = [
+  const staticRoutes: SitemapEntry[] = [
     { url: loc("/"), lastModified: now, changeFrequency: "daily", priority: 1 },
     {
       url: loc("/properties"),
@@ -94,14 +105,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  const seoLandingRoutes: MetadataRoute.Sitemap = ALL_SEO_LANDINGS.map(
-    (landing) => ({
-      url: loc(landing.path),
-      lastModified: now,
-      changeFrequency: "daily" as const,
-      priority: landing.priority ?? 0.75,
-    }),
-  );
+  const seoLandingRoutes: SitemapEntry[] = ALL_SEO_LANDINGS.map((landing) => ({
+    url: loc(landing.path),
+    lastModified: now,
+    changeFrequency: "daily",
+    priority: landing.priority ?? 0.75,
+  }));
 
   try {
     const [properties, posts, agents] = await withTimeout(
@@ -127,28 +136,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       8000,
     );
 
-    const propertyRoutes: MetadataRoute.Sitemap = properties
+    const propertyRoutes: SitemapEntry[] = properties
       .filter((property) => /^[a-z0-9-]+$/i.test(property.slug))
       .map((property) => ({
         url: loc(`/properties/${property.slug}`),
         lastModified: property.updatedAt,
-        changeFrequency: "daily" as const,
+        changeFrequency: "daily",
         priority: property.isFeatured ? 0.9 : 0.8,
       }));
 
-    const blogRoutes: MetadataRoute.Sitemap = posts
+    const blogRoutes: SitemapEntry[] = posts
       .filter((post) => /^[a-z0-9-]+$/i.test(post.slug))
       .map((post) => ({
         url: loc(`/blog/${post.slug}`),
         lastModified: post.updatedAt,
-        changeFrequency: "weekly" as const,
+        changeFrequency: "weekly",
         priority: 0.65,
       }));
 
-    const agentRoutes: MetadataRoute.Sitemap = agents.map((agent) => ({
+    const agentRoutes: SitemapEntry[] = agents.map((agent) => ({
       url: loc(`/agents/${agent.id}`),
       lastModified: agent.updatedAt,
-      changeFrequency: "weekly" as const,
+      changeFrequency: "weekly",
       priority: 0.7,
     }));
 
@@ -163,4 +172,32 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error("sitemap generation failed", error);
     return [...staticRoutes, ...seoLandingRoutes];
   }
+}
+
+export function escapeXml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+export function renderSitemapXml(entries: SitemapEntry[]) {
+  const body = entries
+    .map(
+      (entry) => `  <url>
+    <loc>${escapeXml(entry.url)}</loc>
+    <lastmod>${entry.lastModified.toISOString()}</lastmod>
+    <changefreq>${entry.changeFrequency}</changefreq>
+    <priority>${entry.priority.toFixed(1)}</priority>
+  </url>`,
+    )
+    .join("\n");
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${body}
+</urlset>
+`;
 }
