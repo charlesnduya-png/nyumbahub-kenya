@@ -3,91 +3,91 @@ import { APP_URL } from "@/lib/seo";
 import { ALL_SEO_LANDINGS } from "@/lib/seo-locations";
 import { prisma } from "@/lib/prisma";
 
+export const revalidate = 3600;
+
+function loc(path = "/"): string {
+  if (!path || path === "/") return `${APP_URL}/`;
+  const suffix = path.startsWith("/") ? path : `/${path}`;
+  return `${APP_URL}${suffix}`;
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("sitemap query timed out")), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
   const staticRoutes: MetadataRoute.Sitemap = [
-    { url: APP_URL, lastModified: now, changeFrequency: "daily", priority: 1 },
+    { url: loc("/"), lastModified: now, changeFrequency: "daily", priority: 1 },
     {
-      url: `${APP_URL}/properties`,
+      url: loc("/properties"),
       lastModified: now,
       changeFrequency: "hourly",
       priority: 0.95,
     },
     {
-      url: `${APP_URL}/rent`,
+      url: loc("/rent"),
       lastModified: now,
       changeFrequency: "hourly",
       priority: 0.9,
     },
     {
-      url: `${APP_URL}/bnb`,
+      url: loc("/bnb"),
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.85,
     },
     {
-      url: `${APP_URL}/agents`,
+      url: loc("/agents"),
       lastModified: now,
       changeFrequency: "weekly",
       priority: 0.8,
     },
     {
-      url: `${APP_URL}/blog`,
+      url: loc("/blog"),
       lastModified: now,
       changeFrequency: "weekly",
       priority: 0.7,
     },
     {
-      url: `${APP_URL}/about`,
+      url: loc("/about"),
       lastModified: now,
       changeFrequency: "monthly",
       priority: 0.6,
     },
     {
-      url: `${APP_URL}/pricing`,
+      url: loc("/pricing"),
       lastModified: now,
       changeFrequency: "monthly",
       priority: 0.6,
     },
     {
-      url: `${APP_URL}/compare`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.4,
-    },
-    {
-      url: `${APP_URL}/register`,
-      lastModified: now,
-      changeFrequency: "yearly",
-      priority: 0.4,
-    },
-    {
-      url: `${APP_URL}/register/professional`,
-      lastModified: now,
-      changeFrequency: "yearly",
-      priority: 0.45,
-    },
-    {
-      url: `${APP_URL}/login`,
-      lastModified: now,
-      changeFrequency: "yearly",
-      priority: 0.2,
-    },
-    {
-      url: `${APP_URL}/privacy`,
+      url: loc("/privacy"),
       lastModified: now,
       changeFrequency: "yearly",
       priority: 0.3,
     },
     {
-      url: `${APP_URL}/terms`,
+      url: loc("/terms"),
       lastModified: now,
       changeFrequency: "yearly",
       priority: 0.3,
     },
     {
-      url: `${APP_URL}/cookies`,
+      url: loc("/cookies"),
       lastModified: now,
       changeFrequency: "yearly",
       priority: 0.3,
@@ -96,75 +96,71 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const seoLandingRoutes: MetadataRoute.Sitemap = ALL_SEO_LANDINGS.map(
     (landing) => ({
-      url: `${APP_URL}${landing.path}`,
+      url: loc(landing.path),
       lastModified: now,
       changeFrequency: "daily" as const,
       priority: landing.priority ?? 0.75,
     }),
   );
 
-  let propertyRoutes: MetadataRoute.Sitemap = [];
-  let blogRoutes: MetadataRoute.Sitemap = [];
-  let agentRoutes: MetadataRoute.Sitemap = [];
-
   try {
-    const properties = await prisma.property.findMany({
-      where: { status: "ACTIVE" },
-      select: { slug: true, updatedAt: true, isFeatured: true },
-      orderBy: { updatedAt: "desc" },
-      take: 2000,
-    });
+    const [properties, posts, agents] = await withTimeout(
+      Promise.all([
+        prisma.property.findMany({
+          where: { status: "ACTIVE" },
+          select: { slug: true, updatedAt: true, isFeatured: true },
+          orderBy: { updatedAt: "desc" },
+          take: 1000,
+        }),
+        prisma.blogPost.findMany({
+          where: { published: true },
+          select: { slug: true, updatedAt: true },
+        }),
+        prisma.agent.findMany({
+          where: {
+            OR: [{ isVerified: true }, { isFeatured: true }],
+          },
+          select: { id: true, updatedAt: true },
+          take: 500,
+        }),
+      ]),
+      8000,
+    );
 
-    propertyRoutes = properties.map((p) => ({
-      url: `${APP_URL}/properties/${p.slug}`,
-      lastModified: p.updatedAt,
-      changeFrequency: "daily" as const,
-      priority: p.isFeatured ? 0.9 : 0.8,
-    }));
-  } catch {
-    // no property routes when database is unavailable
-  }
+    const propertyRoutes: MetadataRoute.Sitemap = properties
+      .filter((property) => /^[a-z0-9-]+$/i.test(property.slug))
+      .map((property) => ({
+        url: loc(`/properties/${property.slug}`),
+        lastModified: property.updatedAt,
+        changeFrequency: "daily" as const,
+        priority: property.isFeatured ? 0.9 : 0.8,
+      }));
 
-  try {
-    const posts = await prisma.blogPost.findMany({
-      where: { published: true },
-      select: { slug: true, updatedAt: true },
-    });
+    const blogRoutes: MetadataRoute.Sitemap = posts
+      .filter((post) => /^[a-z0-9-]+$/i.test(post.slug))
+      .map((post) => ({
+        url: loc(`/blog/${post.slug}`),
+        lastModified: post.updatedAt,
+        changeFrequency: "weekly" as const,
+        priority: 0.65,
+      }));
 
-    blogRoutes = posts.map((p) => ({
-      url: `${APP_URL}/blog/${p.slug}`,
-      lastModified: p.updatedAt,
-      changeFrequency: "weekly" as const,
-      priority: 0.65,
-    }));
-  } catch {
-    // no blog routes when database is unavailable
-  }
-
-  try {
-    const agents = await prisma.agent.findMany({
-      where: {
-        OR: [{ isVerified: true }, { isFeatured: true }],
-      },
-      select: { id: true, updatedAt: true },
-      take: 500,
-    });
-
-    agentRoutes = agents.map((a) => ({
-      url: `${APP_URL}/agents/${a.id}`,
-      lastModified: a.updatedAt,
+    const agentRoutes: MetadataRoute.Sitemap = agents.map((agent) => ({
+      url: loc(`/agents/${agent.id}`),
+      lastModified: agent.updatedAt,
       changeFrequency: "weekly" as const,
       priority: 0.7,
     }));
-  } catch {
-    // no agent routes when database is unavailable
-  }
 
-  return [
-    ...staticRoutes,
-    ...seoLandingRoutes,
-    ...propertyRoutes,
-    ...blogRoutes,
-    ...agentRoutes,
-  ];
+    return [
+      ...staticRoutes,
+      ...seoLandingRoutes,
+      ...propertyRoutes,
+      ...blogRoutes,
+      ...agentRoutes,
+    ];
+  } catch (error) {
+    console.error("sitemap generation failed", error);
+    return [...staticRoutes, ...seoLandingRoutes];
+  }
 }

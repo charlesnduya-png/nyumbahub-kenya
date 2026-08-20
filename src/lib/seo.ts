@@ -4,11 +4,30 @@ import { formatPrice } from "@/lib/utils";
 const APP_NAME =
   process.env.NEXT_PUBLIC_APP_NAME?.trim() || "Your Home";
 
-const APP_URL = (
-  process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-  process.env.AUTH_URL?.trim() ||
-  "https://yourhome.co.ke"
-).replace(/\/$/, "");
+function resolvePublicAppUrl() {
+  const raw = (
+    process.env.NEXT_PUBLIC_APP_URL?.trim() ||
+    process.env.AUTH_URL?.trim() ||
+    "https://yourhome.co.ke"
+  ).replace(/\/$/, "");
+
+  try {
+    const parsed = new URL(raw);
+    const host = parsed.hostname.replace(/^www\./i, "").toLowerCase();
+    if (host === "yourhome.co.ke") {
+      return "https://yourhome.co.ke";
+    }
+    return `${parsed.protocol}//${parsed.host}`.replace(/\/$/, "");
+  } catch {
+    return "https://yourhome.co.ke";
+  }
+}
+
+const APP_URL = resolvePublicAppUrl();
+const GOOGLE_SITE_VERIFICATION =
+  process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim() ||
+  process.env.GOOGLE_SITE_VERIFICATION?.trim() ||
+  "";
 
 const APP_DESCRIPTION =
   "Your Home (yourhome.co.ke) — Kenya's marketplace for verified houses, apartments, land, plots, rentals, and BnB stays. Search Nairobi, Mombasa, Kisumu, Nakuru, Kiambu and all 47 counties. List free. M-Pesa ready.";
@@ -57,11 +76,20 @@ const SEO_KEYWORDS = [
   "list property free Kenya",
 ];
 
-export { APP_NAME, APP_URL, APP_DESCRIPTION, SEO_KEYWORDS };
+export {
+  APP_NAME,
+  APP_URL,
+  APP_DESCRIPTION,
+  SEO_KEYWORDS,
+  GOOGLE_SITE_VERIFICATION,
+};
 
 export function absoluteUrl(path = "/"): string {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return new URL(normalizedPath, APP_URL).toString();
+  if (normalizedPath === "/") {
+    return `${APP_URL}/`;
+  }
+  return new URL(normalizedPath, `${APP_URL}/`).toString();
 }
 
 export function truncateDescription(text: string, maxLength = 160): string {
@@ -97,7 +125,6 @@ export function buildPageMetadata(input: {
     keywords,
     alternates: {
       canonical: url,
-      languages: { "en-KE": url },
     },
     robots: input.noIndex
       ? { index: false, follow: false }
@@ -232,7 +259,7 @@ export function organizationJsonLd() {
     "@id": `${APP_URL}/#organization`,
     name: APP_NAME,
     alternateName: ["Your Home Kenya", "yourhome.co.ke", "YourHome Kenya"],
-    url: APP_URL,
+    url: absoluteUrl("/"),
     logo: absoluteUrl("/opengraph-image"),
     image: absoluteUrl("/opengraph-image"),
     description: APP_DESCRIPTION,
@@ -272,28 +299,18 @@ export function websiteJsonLd() {
     "@id": `${APP_URL}/#website`,
     name: APP_NAME,
     alternateName: "yourhome.co.ke",
-    url: APP_URL,
+    url: absoluteUrl("/"),
     description: APP_DESCRIPTION,
     inLanguage: "en-KE",
     publisher: { "@id": `${APP_URL}/#organization` },
-    potentialAction: [
-      {
-        "@type": "SearchAction",
-        target: {
-          "@type": "EntryPoint",
-          urlTemplate: `${APP_URL}/properties?town={search_term_string}`,
-        },
-        "query-input": "required name=search_term_string",
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${APP_URL}/properties?town={search_term_string}`,
       },
-      {
-        "@type": "SearchAction",
-        target: {
-          "@type": "EntryPoint",
-          urlTemplate: `${APP_URL}/properties?county={search_term_string}`,
-        },
-        "query-input": "required name=search_term_string",
-      },
-    ],
+      "query-input": "required name=search_term_string",
+    },
   };
 }
 
@@ -408,7 +425,7 @@ export function generatePropertyMetadata(
   return {
     title,
     description,
-    alternates: { canonical: url, languages: { "en-KE": url } },
+    alternates: { canonical: url },
     openGraph: {
       type: "website",
       locale: "en_KE",
@@ -482,7 +499,7 @@ export function generateBlogMetadata(post: BlogMetadataInput): Metadata {
   return {
     title,
     description,
-    alternates: { canonical: url, languages: { "en-KE": url } },
+    alternates: { canonical: url },
     openGraph: {
       type: "article",
       locale: "en_KE",

@@ -1,5 +1,10 @@
+import type { Metadata } from "next";
 import { BrandLogo } from "@/components/brand/logo";
 import { SiteVisitTracker } from "@/components/analytics/site-visit-tracker";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default function AuthLayout({
   children,

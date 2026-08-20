@@ -6,6 +6,7 @@ import {
   APP_DESCRIPTION,
   APP_NAME,
   APP_URL,
+  GOOGLE_SITE_VERIFICATION,
   SEO_KEYWORDS,
   absoluteUrl,
   organizationJsonLd,
@@ -34,7 +35,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL(APP_URL),
+  metadataBase: new URL(absoluteUrl("/")),
   title: {
     default: `${APP_NAME} — Kenya Real Estate | Houses, Rent, Land & BnB`,
     template: `%s | ${APP_NAME}`,
@@ -46,6 +47,9 @@ export const metadata: Metadata = {
   publisher: APP_NAME,
   category: "real estate",
   keywords: SEO_KEYWORDS,
+  ...(GOOGLE_SITE_VERIFICATION
+    ? { verification: { google: GOOGLE_SITE_VERIFICATION } }
+    : {}),
   robots: {
     index: true,
     follow: true,
@@ -60,7 +64,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_KE",
-    url: APP_URL,
+    url: absoluteUrl("/"),
     siteName: APP_NAME,
     title: `${APP_NAME} — Kenya Real Estate | Houses, Rent, Land & BnB`,
     description: APP_DESCRIPTION,
