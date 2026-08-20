@@ -9,13 +9,13 @@ export interface SeoLocationLanding {
 const enc = (value: string) => encodeURIComponent(value);
 
 export const SEO_COUNTY_LANDINGS: SeoLocationLanding[] = [
-  { label: "Nairobi", path: `/properties?county=${enc("Nairobi")}`, priority: 0.88 },
-  { label: "Mombasa", path: `/properties?county=${enc("Mombasa")}`, priority: 0.85 },
-  { label: "Kisumu", path: `/properties?county=${enc("Kisumu")}`, priority: 0.82 },
-  { label: "Nakuru", path: `/properties?county=${enc("Nakuru")}`, priority: 0.8 },
-  { label: "Kiambu", path: `/properties?county=${enc("Kiambu")}`, priority: 0.8 },
-  { label: "Kajiado", path: `/properties?county=${enc("Kajiado")}`, priority: 0.78 },
-  { label: "Uasin Gishu", path: `/properties?county=${enc("Uasin Gishu")}`, priority: 0.75 },
+  { label: "Nairobi", path: "/property-for-sale/nairobi", priority: 0.92 },
+  { label: "Mombasa", path: "/property-for-sale/mombasa", priority: 0.88 },
+  { label: "Kisumu", path: "/property-for-sale/kisumu", priority: 0.84 },
+  { label: "Nakuru", path: "/property-for-sale/nakuru", priority: 0.84 },
+  { label: "Kiambu", path: "/property-for-sale/kiambu", priority: 0.9 },
+  { label: "Kajiado", path: "/property-for-sale/kajiado", priority: 0.86 },
+  { label: "Uasin Gishu", path: "/property-for-sale/uasin-gishu", priority: 0.8 },
 ];
 
 export const SEO_RENT_AREA_LANDINGS: SeoLocationLanding[] = [
@@ -29,10 +29,10 @@ export const SEO_RENT_AREA_LANDINGS: SeoLocationLanding[] = [
 ];
 
 export const SEO_BUY_AREA_LANDINGS: SeoLocationLanding[] = [
-  { label: "Houses for sale Nairobi", path: `/properties?listingType=BUY&county=${enc("Nairobi")}`, priority: 0.86 },
-  { label: "Houses for sale Kiambu", path: `/properties?listingType=BUY&county=${enc("Kiambu")}`, priority: 0.82 },
-  { label: "Houses for sale Mombasa", path: `/properties?listingType=BUY&county=${enc("Mombasa")}`, priority: 0.82 },
-  { label: "Apartments for sale Nairobi", path: `/properties?listingType=BUY&propertyType=APARTMENT&county=${enc("Nairobi")}`, priority: 0.84 },
+  { label: "Houses for sale Nairobi", path: "/property-for-sale/nairobi", priority: 0.92 },
+  { label: "Houses for sale Kiambu", path: "/property-for-sale/kiambu", priority: 0.88 },
+  { label: "Houses for sale Mombasa", path: "/property-for-sale/mombasa", priority: 0.86 },
+  { label: "Houses for sale Kajiado", path: "/property-for-sale/kajiado", priority: 0.86 },
 ];
 
 export const SEO_CATEGORY_LANDINGS: SeoLocationLanding[] = [

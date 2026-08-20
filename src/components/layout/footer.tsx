@@ -10,7 +10,7 @@ import {
 } from "@/lib/seo-locations";
 
 const exploreLinks = [
-  { href: "/properties?listingType=BUY", label: "Buy Property" },
+  { href: "/property-for-sale", label: "Buy Property" },
   { href: "/rent", label: "Rent Property" },
   { href: "/bnb", label: "BnB & Holiday Homes" },
   { href: "/properties?category=land-plots", label: "Land & Plots" },

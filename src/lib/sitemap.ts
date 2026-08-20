@@ -1,5 +1,6 @@
 import { APP_URL } from "@/lib/seo";
 import { ALL_SEO_LANDINGS } from "@/lib/seo-locations";
+import { getAllPropertyForSalePlaces } from "@/lib/property-for-sale";
 import { prisma } from "@/lib/prisma";
 
 export type SitemapEntry = {
@@ -43,6 +44,12 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
 
   const staticRoutes: SitemapEntry[] = [
     { url: loc("/"), lastModified: now, changeFrequency: "daily", priority: 1 },
+    {
+      url: loc("/property-for-sale"),
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.96,
+    },
     {
       url: loc("/properties"),
       lastModified: now,
@@ -105,6 +112,15 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
     },
   ];
 
+  const salePlaceRoutes: SitemapEntry[] = getAllPropertyForSalePlaces().map(
+    (place) => ({
+      url: loc(`/property-for-sale/${place.slug}`),
+      lastModified: now,
+      changeFrequency: "daily" as const,
+      priority: place.kind === "county" ? 0.9 : 0.82,
+    }),
+  );
+
   const seoLandingRoutes: SitemapEntry[] = ALL_SEO_LANDINGS.map((landing) => ({
     url: loc(landing.path),
     lastModified: now,
@@ -163,6 +179,7 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
 
     return [
       ...staticRoutes,
+      ...salePlaceRoutes,
       ...seoLandingRoutes,
       ...propertyRoutes,
       ...blogRoutes,
@@ -170,7 +187,7 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
     ];
   } catch (error) {
     console.error("sitemap generation failed", error);
-    return [...staticRoutes, ...seoLandingRoutes];
+    return [...staticRoutes, ...salePlaceRoutes, ...seoLandingRoutes];
   }
 }
 

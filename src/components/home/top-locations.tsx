@@ -41,7 +41,7 @@ export function TopLocations({
           {locations.map((location, index) => (
             <Link
               key={location.slug}
-              href={`/properties?county=${encodeURIComponent(location.county)}`}
+              href={`/property-for-sale/${location.slug}`}
               className="group relative overflow-hidden rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <div

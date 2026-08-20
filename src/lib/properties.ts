@@ -293,6 +293,77 @@ async function getActiveProperties(options: {
   }
 }
 
+const FOR_SALE_LISTING_TYPES = ["BUY", "LAND"] as const;
+
+export async function searchForSaleByLocation(input: {
+  county?: string;
+  town?: string;
+  limit?: number;
+}) {
+  const limit = input.limit ?? 24;
+  const where = {
+    status: "ACTIVE" as const,
+    listingType: { in: [...FOR_SALE_LISTING_TYPES] },
+    ...(input.county
+      ? { county: { equals: input.county, mode: "insensitive" as const } }
+      : {}),
+    ...(input.town
+      ? { town: { contains: input.town, mode: "insensitive" as const } }
+      : {}),
+  };
+
+  try {
+    const [properties, total, stats] = await Promise.all([
+      prisma.property.findMany({
+        where,
+        take: limit,
+        orderBy: [{ isFeatured: "desc" }, { publishedAt: "desc" }],
+        include: imageInclude,
+      }),
+      prisma.property.count({ where }),
+      prisma.property.aggregate({
+        where,
+        _min: { price: true },
+        _max: { price: true },
+      }),
+    ]);
+
+    return {
+      data: properties.map(toPropertyCard),
+      total,
+      minPrice: stats._min.price,
+      maxPrice: stats._max.price,
+    };
+  } catch {
+    return {
+      data: [] as PropertyCard[],
+      total: 0,
+      minPrice: null as number | null,
+      maxPrice: null as number | null,
+    };
+  }
+}
+
+export async function getForSaleCountsByCounty() {
+  try {
+    const rows = await prisma.property.groupBy({
+      by: ["county"],
+      where: {
+        status: "ACTIVE",
+        listingType: { in: [...FOR_SALE_LISTING_TYPES] },
+      },
+      _count: { _all: true },
+    });
+    const counts: Record<string, number> = {};
+    for (const row of rows) {
+      counts[row.county.trim().toLowerCase()] = row._count._all;
+    }
+    return counts;
+  } catch {
+    return {} as Record<string, number>;
+  }
+}
+
 export async function countActiveProperties(listingType?: ListingType) {
   try {
     return await prisma.property.count({
@@ -409,6 +480,7 @@ export function revalidatePropertySlug(slug: string) {
   revalidatePath("/rent");
   revalidatePath("/bnb");
   revalidatePath("/properties");
+  revalidatePath("/property-for-sale");
   revalidatePath(`/properties/${slug}`);
 }
 

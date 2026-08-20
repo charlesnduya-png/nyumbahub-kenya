@@ -33,7 +33,7 @@ const navLinks: {
   label: string;
   icon?: LucideIcon;
 }[] = [
-  { href: "/properties?listingType=BUY", label: "Buy" },
+  { href: "/property-for-sale", label: "Buy" },
   { href: "/rent", label: "Rent" },
   { href: "/bnb", label: "BnB", icon: Palmtree },
   { href: "/properties?category=land-plots", label: "Land" },
@@ -70,9 +70,11 @@ export function Header() {
             {navLinks.map((link) => {
               const Icon = link.icon;
               const isBnb = link.href === "/bnb";
+              const isBuy = link.href === "/property-for-sale";
               const active =
                 pathname === link.href ||
-                (isBnb && pathname.startsWith("/bnb"));
+                (isBnb && pathname.startsWith("/bnb")) ||
+                (isBuy && pathname.startsWith("/property-for-sale"));
 
               return (
                 <Link
