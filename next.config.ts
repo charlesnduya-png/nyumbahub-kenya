@@ -25,6 +25,28 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        source: "/sitemap-africa.xml",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=3600, s-maxage=3600",
+          },
+        ],
+      },
+      {
+        source: "/:file(sitemap|sitemap-index).xsl",
+        headers: [
+          {
+            key: "Content-Type",
+            value: "text/xsl; charset=utf-8",
+          },
+          {
+            key: "Cache-Control",
+            value: "public, max-age=86400, s-maxage=86400",
+          },
+        ],
+      },
+      {
         source: "/robots.txt",
         headers: [
           {
