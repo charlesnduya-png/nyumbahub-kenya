@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { resolveListingImagesForStorage, resolveListingVideosForStorage } from "@/lib/media-assets";
 import { resolveProfessionalActingContext } from "@/lib/account-team";
+import { flagsFromListingFeatures } from "@/lib/listing-features";
+import { syncPropertyListingFeatures } from "@/lib/listing-features-db";
 import { updatePropertySchema } from "@/lib/validations/property";
 
 interface RouteParams {
@@ -95,12 +97,24 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       parking: _parking,
       rentalRooms,
       rentalRoomsCount,
+      features,
       ...rest
     } = parsed.data;
     void _propertyId;
     void _parking;
 
-    const updateData = rest;
+    const featureFlags =
+      features !== undefined ? flagsFromListingFeatures(features) : null;
+    const updateData = {
+      ...rest,
+      ...(featureFlags
+        ? {
+            furnished: featureFlags.furnished,
+            swimmingPool: featureFlags.swimmingPool,
+            security: featureFlags.security,
+          }
+        : {}),
+    };
     const isAdmin = session.user.role === "ADMIN";
     const ctx = await resolveProfessionalActingContext(session.user.id);
 
@@ -236,6 +250,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         }
       }
 
+      if (features !== undefined) {
+        await syncPropertyListingFeatures(tx, id, features);
+      }
+
       return tx.property.update({
         where: { id },
         data: {
@@ -248,6 +266,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
           images: { orderBy: { order: "asc" } },
           videos: true,
           rentalRooms: { orderBy: { sortOrder: "asc" } },
+          amenities: { include: { amenity: true } },
         },
       });
     });

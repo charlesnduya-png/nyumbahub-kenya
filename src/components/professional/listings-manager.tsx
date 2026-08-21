@@ -53,6 +53,8 @@ import { MAX_LISTING_VIDEOS } from "@/lib/listing-media";
 import { formatPrice } from "@/lib/utils";
 import { CurrencySelect } from "@/components/properties/currency-select";
 import { CountrySelect } from "@/components/properties/country-select";
+import { ListingFeaturesPicker } from "@/components/property/listing-features-picker";
+import { listingFeatureSlugsFromAmenities } from "@/lib/listing-features";
 
 export type ManagedListing = {
   id: string;
@@ -75,11 +77,14 @@ export type ManagedListing = {
   views: number;
   images?: UploadedImage[];
   videos?: UploadedVideo[];
+  features?: string[];
+  parkingSpaces?: number | null;
 };
 
 type EditDraft = Partial<ManagedListing> & {
   images: UploadedImage[];
   videos: UploadedVideo[];
+  features: string[];
 };
 
 function mapApiListing(p: {
@@ -155,7 +160,11 @@ export function ListingsManager() {
   const [editing, setEditing] = useState<ManagedListing | null>(null);
   const [deleting, setDeleting] = useState<ManagedListing | null>(null);
   const [busy, setBusy] = useState(false);
-  const [draft, setDraft] = useState<EditDraft>({ images: [], videos: [] });
+  const [draft, setDraft] = useState<EditDraft>({
+    images: [],
+    videos: [],
+    features: [],
+  });
 
   useEffect(() => {
     async function load() {
@@ -192,6 +201,7 @@ export function ListingsManager() {
       ...listing,
       images: listing.images ?? [],
       videos: listing.videos ?? [],
+      features: listing.features ?? [],
     });
 
     void (async () => {
@@ -227,6 +237,16 @@ export function ListingsManager() {
             }));
             setDraft((d) => ({ ...d, videos: fullVideos }));
           }
+          const features = listingFeatureSlugsFromAmenities(
+            json.data.amenities as Array<{
+              amenity?: { name?: string | null; icon?: string | null };
+            }>,
+          );
+          setDraft((d) => ({
+            ...d,
+            features,
+            parkingSpaces: json.data.parkingSpaces ?? d.parkingSpaces,
+          }));
         }
       } catch {
         // keep media from listing summary
@@ -271,6 +291,8 @@ export function ListingsManager() {
           title: video.title,
           thumbnail: video.thumbnail,
         })),
+        features: draft.features ?? [],
+        parkingSpaces: draft.parkingSpaces != null ? Number(draft.parkingSpaces) : undefined,
       };
 
       const desc = (draft.description ?? "").trim();
@@ -688,6 +710,27 @@ export function ListingsManager() {
                     longitude: place.longitude,
                     town: place.town || d.town,
                     county: place.county || d.county,
+                  }))
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Features</Label>
+              <ListingFeaturesPicker
+                value={draft.features ?? []}
+                onChange={(features) => setDraft((d) => ({ ...d, features }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-parking-spaces">Parking spaces</Label>
+              <Input
+                id="edit-parking-spaces"
+                type="number"
+                value={draft.parkingSpaces ?? ""}
+                onChange={(e) =>
+                  setDraft((d) => ({
+                    ...d,
+                    parkingSpaces: Number(e.target.value),
                   }))
                 }
               />

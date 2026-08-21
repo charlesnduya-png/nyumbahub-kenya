@@ -29,7 +29,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import {
   KENYA_COUNTIES,
@@ -39,6 +38,7 @@ import {
 import { LocationMapPicker } from "@/components/maps/location-map-picker";
 import { CurrencySelect } from "@/components/properties/currency-select";
 import { CountrySelect } from "@/components/properties/country-select";
+import { ListingFeaturesPicker } from "@/components/property/listing-features-picker";
 import {
   LISTING_PRODUCTS,
   formatProductPrice,
@@ -57,6 +57,7 @@ import {
   createPropertySchema,
   type CreatePropertyInput,
 } from "@/lib/validations/property";
+import { listingFeatureBySlug } from "@/lib/listing-features";
 import { cn } from "@/lib/utils";
 
 export default function NewPropertyPage() {
@@ -98,6 +99,7 @@ export default function NewPropertyPage() {
       swimmingPool: false,
       security: true,
       parking: true,
+      features: ["security-24-7"],
       images: [],
       videos: [],
       currency: DEFAULT_LISTING_CURRENCY,
@@ -166,11 +168,21 @@ export default function NewPropertyPage() {
           estate: values.estate,
           price: values.price,
           amenities: {
-            parking: values.parking,
-            swimmingPool: values.swimmingPool,
-            furnished: values.furnished,
-            security: values.security,
+            parking:
+              values.parking ||
+              (values.features ?? []).some((slug) =>
+                ["garage", "covered-parking", "ample-parking", "visitor-parking"].includes(
+                  slug,
+                ),
+              ),
+            swimmingPool: (values.features ?? []).includes("swimming-pool"),
+            furnished: (values.features ?? []).includes("furnished"),
+            security: (values.features ?? []).includes("security-24-7"),
           },
+          highlights: (values.features ?? [])
+            .map((slug) => listingFeatureBySlug(slug)?.name)
+            .filter((name): name is string => Boolean(name))
+            .slice(0, 12),
         }),
       });
       const json = await res.json();
@@ -745,20 +757,10 @@ export default function NewPropertyPage() {
             <CardTitle>Features</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {[
-              { key: "furnished" as const, label: "Furnished" },
-              { key: "swimmingPool" as const, label: "Swimming pool" },
-              { key: "security" as const, label: "24/7 Security" },
-              { key: "parking" as const, label: "Parking available" },
-            ].map(({ key, label }) => (
-              <div key={key} className="flex items-center justify-between">
-                <Label>{label}</Label>
-                <Switch
-                  checked={Boolean(values[key])}
-                  onCheckedChange={(checked) => setValue(key, checked)}
-                />
-              </div>
-            ))}
+            <ListingFeaturesPicker
+              value={values.features ?? []}
+              onChange={(features) => setValue("features", features)}
+            />
             <div className="space-y-2">
               <Label htmlFor="parkingSpaces">Parking spaces</Label>
               <Input

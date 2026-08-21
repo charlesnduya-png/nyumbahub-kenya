@@ -444,8 +444,8 @@ const propertyDetailInclude = {
   images: { orderBy: { order: "asc" as const }, take: 1 },
   videos: true,
   amenities: {
-    take: 10,
-    include: { amenity: { select: { name: true } } },
+    take: 80,
+    include: { amenity: { select: { name: true, icon: true, category: true } } },
   },
   nearbyPlaces: {
     take: 6,

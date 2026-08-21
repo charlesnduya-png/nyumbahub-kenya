@@ -3,6 +3,7 @@ import { z } from "zod";
 import { MAX_LISTING_IMAGES, MAX_LISTING_VIDEOS } from "@/lib/listing-media";
 import { listingCurrencySchema } from "@/lib/currencies";
 import { africanCountrySchema } from "@/lib/african-countries";
+import { LISTING_FEATURE_SLUGS } from "@/lib/listing-features";
 
 export const listingTypeSchema = z.enum([
   "BUY",
@@ -110,6 +111,11 @@ const propertyBaseSchema = z.object({
   swimmingPool: z.boolean().default(false),
   furnished: z.boolean().default(false),
   security: z.boolean().default(false),
+  features: z
+    .array(z.enum(LISTING_FEATURE_SLUGS))
+    .max(60)
+    .optional()
+    .default([]),
   floorArea: optionalPositive,
   plotSize: optionalPositive,
   yearBuilt: optionalYear,

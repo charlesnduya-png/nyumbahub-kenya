@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/utils";
 import { resolveListingImagesForStorage, resolveListingVideosForStorage } from "@/lib/media-assets";
 import { resolveProfessionalActingContext } from "@/lib/account-team";
+import { flagsFromListingFeatures } from "@/lib/listing-features";
+import { syncPropertyListingFeatures } from "@/lib/listing-features-db";
 import {
   createPropertySchema,
   propertySearchSchema,
@@ -237,6 +239,8 @@ export async function POST(request: Request) {
       agentId = agent?.id ?? null;
     }
 
+    const featureFlags = flagsFromListingFeatures(data.features ?? []);
+
     const property = await prisma.property.create({
       data: {
         title: data.title,
@@ -253,9 +257,15 @@ export async function POST(request: Request) {
         town: data.town,
         estate: data.estate ?? null,
         parkingSpaces: data.parkingSpaces,
-        furnished: data.furnished,
-        swimmingPool: data.swimmingPool,
-        security: data.security,
+        furnished: Array.isArray(data.features)
+          ? featureFlags.furnished
+          : data.furnished,
+        swimmingPool: Array.isArray(data.features)
+          ? featureFlags.swimmingPool
+          : data.swimmingPool,
+        security: Array.isArray(data.features)
+          ? featureFlags.security
+          : data.security,
         floorArea: data.floorArea ?? null,
         plotSize: data.plotSize ?? null,
         yearBuilt: data.yearBuilt ?? null,
@@ -301,6 +311,8 @@ export async function POST(request: Request) {
       },
       include: { images: true, videos: true, rentalRooms: true },
     });
+
+    await syncPropertyListingFeatures(prisma, property.id, data.features);
 
     return NextResponse.json(
       {

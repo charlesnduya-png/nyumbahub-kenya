@@ -6,17 +6,14 @@ import {
   Bath,
   Bed,
   Calendar,
-  Check,
   MapPin,
-  ParkingCircle,
   Share2,
-  Shield,
-  Waves,
 } from "lucide-react";
 import { ListingAgentSection } from "@/components/properties/listing-agent-section";
 import { PropertyDetailGallery } from "@/components/properties/property-detail-gallery";
 import { RelatedPropertiesSection } from "@/components/properties/related-properties-section";
 import { SignInToUnlock } from "@/components/properties/sign-in-to-unlock";
+import { ListingFeaturesDisplay } from "@/components/property/listing-features-display";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -436,36 +433,13 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                 </TabsContent>
                 <TabsContent value="amenities" className="mt-4">
                   <Card>
-                    <CardContent className="grid gap-3 p-6 sm:grid-cols-2">
-                      {property.furnished && (
-                        <span className="flex items-center gap-2">
-                          <Check className="h-4 w-4 text-primary" /> Furnished
-                        </span>
-                      )}
-                      {property.swimmingPool && (
-                        <span className="flex items-center gap-2">
-                          <Waves className="h-4 w-4 text-primary" /> Swimming pool
-                        </span>
-                      )}
-                      {property.security && (
-                        <span className="flex items-center gap-2">
-                          <Shield className="h-4 w-4 text-primary" /> 24/7 Security
-                        </span>
-                      )}
-                      {property.parkingSpaces > 0 && (
-                        <span className="flex items-center gap-2">
-                          <ParkingCircle className="h-4 w-4 text-primary" />{" "}
-                          {property.parkingSpaces} parking space
-                          {property.parkingSpaces > 1 ? "s" : ""}
-                        </span>
-                      )}
-                      {"amenities" in property &&
-                        property.amenities?.map((pa: { amenity: { name: string } }) => (
-                          <span key={pa.amenity.name} className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-primary" />
-                            {pa.amenity.name}
-                          </span>
-                        ))}
+                    <CardContent className="p-6">
+                      <ListingFeaturesDisplay
+                        amenities={
+                          "amenities" in property ? property.amenities : []
+                        }
+                        parkingSpaces={property.parkingSpaces}
+                      />
                     </CardContent>
                   </Card>
                 </TabsContent>
