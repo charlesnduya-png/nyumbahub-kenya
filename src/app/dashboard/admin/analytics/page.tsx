@@ -19,6 +19,7 @@ export default async function AdminAnalyticsPage() {
     newLeads30d,
     revenue30dAgg,
     listingsByCountyAgg,
+    listingsByCountryAgg,
     paymentsForCharts,
     revenueSummary,
     growthSummary,
@@ -34,6 +35,11 @@ export default async function AdminAnalyticsPage() {
     }),
     prisma.property.groupBy({
       by: ["county"],
+      where: { status: "ACTIVE" },
+      _count: { _all: true },
+    }),
+    prisma.property.groupBy({
+      by: ["country"],
       where: { status: "ACTIVE" },
       _count: { _all: true },
     }),
@@ -70,6 +76,22 @@ export default async function AdminAnalyticsPage() {
           const otherPct = 100 - items.reduce((acc, x) => acc + x.pct, 0);
           return otherPct > 0 ? [...items, { county: "Other", pct: otherPct }] : items;
         })()
+      : [];
+
+  const totalCountry = listingsByCountryAgg.reduce(
+    (acc, r) => acc + r._count._all,
+    0,
+  );
+  const listingsCountryItems =
+    totalCountry > 0
+      ? listingsByCountryAgg
+          .sort((a, b) => b._count._all - a._count._all)
+          .slice(0, 8)
+          .map((r) => ({
+            country: r.country || "Kenya",
+            count: r._count._all,
+            pct: Math.round((r._count._all / totalCountry) * 100),
+          }))
       : [];
 
   // User registration trend: last 4 months
@@ -173,6 +195,27 @@ export default async function AdminAnalyticsPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader><CardTitle>Listings by country</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            {listingsCountryItems.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No active listings yet.</p>
+            ) : (
+              listingsCountryItems.map((item) => (
+                <div key={item.country} className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>{item.country}</span>
+                    <span className="text-muted-foreground">
+                      {item.count} · {item.pct}%
+                    </span>
+                  </div>
+                  <Progress value={item.pct} />
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader><CardTitle>Listings by county</CardTitle></CardHeader>
           <CardContent className="space-y-4">

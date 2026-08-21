@@ -37,6 +37,7 @@ export async function GET() {
         currency: p.currency,
         listingType: p.listingType,
         propertyType: p.propertyType,
+        country: p.country,
         county: p.county,
         town: p.town,
         status: p.status,

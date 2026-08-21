@@ -24,6 +24,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatPrice } from "@/lib/utils";
+import { DEFAULT_LISTING_COUNTRY } from "@/lib/african-countries";
+import { buildCountryListingsReport } from "@/lib/admin-country-report";
+import { CountryListingsReportPanel } from "@/components/admin/country-listings-report";
 
 const STATUSES = [
   "DRAFT",
@@ -45,6 +48,7 @@ interface AdminProperty {
   price: number;
   currency: string;
   listingType: string;
+  country?: string | null;
   county: string;
   town: string;
   status: PropertyStatus;
@@ -61,6 +65,7 @@ export function AdminPropertiesManager() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<AdminProperty | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [countryFilter, setCountryFilter] = useState<string>("ALL");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -84,10 +89,24 @@ export function AdminPropertiesManager() {
     void load();
   }, [load]);
 
+  const countryReport = useMemo(
+    () => buildCountryListingsReport(properties),
+    [properties],
+  );
+
+  const countryOptions = useMemo(
+    () => countryReport.byCountry.map((row) => row.country),
+    [countryReport],
+  );
+
   const filtered = useMemo(() => {
-    if (statusFilter === "ALL") return properties;
-    return properties.filter((p) => p.status === statusFilter);
-  }, [properties, statusFilter]);
+    return properties.filter((p) => {
+      if (statusFilter !== "ALL" && p.status !== statusFilter) return false;
+      const country = p.country?.trim() || DEFAULT_LISTING_COUNTRY;
+      if (countryFilter !== "ALL" && country !== countryFilter) return false;
+      return true;
+    });
+  }, [properties, statusFilter, countryFilter]);
 
   const counts = useMemo(
     () => ({
@@ -154,7 +173,8 @@ export function AdminPropertiesManager() {
         <div>
           <h1 className="text-2xl font-bold">Properties</h1>
           <p className="text-muted-foreground">
-            View, change status, or remove any listing on Your Home.
+            Track listings across African countries, then change status or remove
+            any property on Your Home.
           </p>
         </div>
         <Button variant="outline" onClick={() => void load()} disabled={loading}>
@@ -179,7 +199,22 @@ export function AdminPropertiesManager() {
             ))}
           </SelectContent>
         </Select>
+        <Select value={countryFilter} onValueChange={setCountryFilter}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Filter by country" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All countries</SelectItem>
+            {countryOptions.map((country) => (
+              <SelectItem key={country} value={country}>
+                {country}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
+
+      {!loading ? <CountryListingsReportPanel report={countryReport} /> : null}
 
       <Card>
         <CardHeader>
@@ -217,9 +252,13 @@ export function AdminPropertiesManager() {
                     <td className="max-w-[200px] truncate py-3 pr-4 font-medium">
                       {p.title}
                     </td>
-                    <td className="py-3 pr-4">{formatPrice(p.price)}</td>
+                    <td className="py-3 pr-4">
+                      {formatPrice(p.price, { currency: p.currency })}
+                    </td>
                     <td className="py-3 pr-4 text-muted-foreground">
-                      {p.town}, {p.county}
+                      {[p.town, p.county, p.country || DEFAULT_LISTING_COUNTRY]
+                        .filter(Boolean)
+                        .join(", ")}
                     </td>
                     <td className="max-w-[160px] truncate py-3 pr-4 text-muted-foreground">
                       {p.owner.name ?? p.owner.email}
