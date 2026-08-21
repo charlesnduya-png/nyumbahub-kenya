@@ -8,9 +8,32 @@ function run(cmd) {
   return execSync(cmd, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 }
 
+function sleep(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+const MAX_LOCK_RETRIES = 4;
+
 try {
-  run("npx prisma migrate deploy");
-  console.log("Migrations applied successfully.");
+  let lastError = "";
+  for (let attempt = 1; attempt <= MAX_LOCK_RETRIES; attempt += 1) {
+    try {
+      run("npx prisma migrate deploy");
+      console.log("Migrations applied successfully.");
+      process.exit(0);
+    } catch (err) {
+      lastError = `${err.stdout ?? ""}${err.stderr ?? ""}${err.message ?? ""}`;
+      const locked =
+        lastError.includes("P1002") || lastError.includes("advisory lock");
+      if (!locked || attempt === MAX_LOCK_RETRIES) {
+        throw err;
+      }
+      console.warn(
+        `migrate deploy timed out on advisory lock (attempt ${attempt}/${MAX_LOCK_RETRIES}) — retrying…`,
+      );
+      sleep(8000);
+    }
+  }
 } catch (err) {
   const output = `${err.stdout ?? ""}${err.stderr ?? ""}${err.message ?? ""}`;
 
