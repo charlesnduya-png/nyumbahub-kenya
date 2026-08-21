@@ -115,6 +115,7 @@ export async function GET() {
           id: plot.id,
           name: plot.name,
           description: plot.description,
+          country: plot.country,
           county: plot.county,
           town: plot.town,
           estate: plot.estate,
@@ -199,6 +200,7 @@ export async function POST(request: Request) {
       data: {
         name: parsed.data.name,
         description: parsed.data.description ?? null,
+        country: parsed.data.country,
         county: parsed.data.county,
         town: parsed.data.town,
         estate: parsed.data.estate ?? null,

@@ -156,6 +156,7 @@ export function toPropertyCard(property: PropertyWithImages): PropertyCard {
     status: property.status as PropertyStatus,
     bedrooms: property.bedrooms,
     bathrooms: property.bathrooms,
+    country: property.country,
     county: property.county,
     town: property.town,
     estate: property.estate,
@@ -182,6 +183,9 @@ function buildWhere(filters: Partial<SearchFilters> = {}) {
     status: "ACTIVE" as const,
     ...(filters.county
       ? { county: { contains: filters.county, mode: "insensitive" as const } }
+      : {}),
+    ...(filters.country
+      ? { country: { equals: filters.country, mode: "insensitive" as const } }
       : {}),
     ...(filters.town
       ? { town: { contains: filters.town, mode: "insensitive" as const } }

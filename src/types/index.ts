@@ -76,6 +76,7 @@ export interface PropertyCard {
   status: PropertyStatus;
   bedrooms?: number | null;
   bathrooms?: number | null;
+  country?: string | null;
   county: string;
   town: string;
   estate?: string | null;

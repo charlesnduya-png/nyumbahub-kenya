@@ -38,6 +38,7 @@ import {
 } from "@/lib/kenya";
 import { LocationMapPicker } from "@/components/maps/location-map-picker";
 import { CurrencySelect } from "@/components/properties/currency-select";
+import { CountrySelect } from "@/components/properties/country-select";
 import {
   LISTING_PRODUCTS,
   formatProductPrice,
@@ -47,6 +48,11 @@ import { FREE_TIER_MAX_LISTINGS, LISTINGS_ARE_FREE } from "@/lib/listing-flags";
 import { slimListingImagesForSubmit, slimListingVideosForSubmit } from "@/lib/media-assets";
 import { MAX_LISTING_IMAGES, MAX_LISTING_VIDEOS } from "@/lib/listing-media";
 import { DEFAULT_LISTING_CURRENCY } from "@/lib/currencies";
+import {
+  DEFAULT_LISTING_COUNTRY,
+  isKenyaCountry,
+  iso2ForCountry,
+} from "@/lib/african-countries";
 import {
   createPropertySchema,
   type CreatePropertyInput,
@@ -85,6 +91,7 @@ export default function NewPropertyPage() {
       listingType: "BUY",
       propertyType: "APARTMENT",
       county: "Nairobi",
+      country: DEFAULT_LISTING_COUNTRY,
       town: "Kilimani",
       parkingSpaces: 1,
       furnished: false,
@@ -610,24 +617,64 @@ export default function NewPropertyPage() {
             <CardTitle>Location</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="country">Country</Label>
+              <CountrySelect
+                id="country"
+                value={values.country}
+                onValueChange={(v) => {
+                  setValue("country", v as CreatePropertyInput["country"], {
+                    shouldValidate: true,
+                  });
+                  if (v === "Kenya") {
+                    const current = values.county;
+                    if (
+                      !KENYA_COUNTIES.includes(
+                        current as (typeof KENYA_COUNTIES)[number],
+                      )
+                    ) {
+                      setValue("county", "Nairobi");
+                    }
+                  } else {
+                    setValue("county", "");
+                    setValue("town", "");
+                  }
+                }}
+              />
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>County</Label>
-                <Select
-                  value={values.county}
-                  onValueChange={(v) => setValue("county", v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {KENYA_COUNTIES.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {c}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>
+                  {isKenyaCountry(values.country) ? "County" : "Region / state"}
+                </Label>
+                {isKenyaCountry(values.country) ? (
+                  <Select
+                    value={values.county}
+                    onValueChange={(v) => setValue("county", v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {KENYA_COUNTIES.map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {c}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    id="county"
+                    placeholder="e.g. Lagos, Gauteng, Greater Accra"
+                    {...register("county")}
+                  />
+                )}
+                {errors.county && (
+                  <p className="text-sm text-destructive">
+                    {errors.county.message}
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="town">Town / Area</Label>
@@ -645,6 +692,7 @@ export default function NewPropertyPage() {
                 longitude={values.longitude}
                 county={values.county}
                 town={values.town}
+                countryIso={iso2ForCountry(values.country)}
                 onChange={({ latitude, longitude }) => {
                   setValue("latitude", latitude, { shouldDirty: true });
                   setValue("longitude", longitude, { shouldDirty: true });

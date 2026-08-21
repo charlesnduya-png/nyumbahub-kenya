@@ -427,6 +427,7 @@ model RentalPlot {
   id          String   @id @default(cuid())
   name        String
   description String?  @db.Text
+  country     String   @default("Kenya")
   county      String
   town        String
   estate      String?
@@ -445,6 +446,7 @@ model RentalPlot {
   @@index([ownerId])
   @@index([agentId])
   @@index([county, town])
+  @@index([country])
 }
 
 model Property {
@@ -467,6 +469,7 @@ model Property {
   furnished         Boolean        @default(false)
   swimmingPool      Boolean        @default(false)
   security          Boolean        @default(false)
+  country           String         @default("Kenya")
   county            String
   town              String
   estate            String?
@@ -511,6 +514,7 @@ model Property {
 
   @@index([listingType, status])
   @@index([county, town])
+  @@index([country])
   @@index([price])
   @@index([isFeatured])
   @@index([ownerId])

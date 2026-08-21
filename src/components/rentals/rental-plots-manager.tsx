@@ -39,12 +39,17 @@ import {
 } from "@/components/ui/select";
 import { KENYA_COUNTIES } from "@/lib/kenya";
 import { DEFAULT_LISTING_CURRENCY } from "@/lib/currencies";
+import {
+  DEFAULT_LISTING_COUNTRY,
+  isKenyaCountry,
+} from "@/lib/african-countries";
 import { formatPrice } from "@/lib/utils";
 import {
   ImageUploader,
   type UploadedImage,
 } from "@/components/property/image-uploader";
 import { CurrencySelect } from "@/components/properties/currency-select";
+import { CountrySelect } from "@/components/properties/country-select";
 import { UNIT_FLOOR_OPTIONS } from "@/lib/validations/rental-plot";
 import { Switch } from "@/components/ui/switch";
 
@@ -72,6 +77,7 @@ type PlotRow = {
   id: string;
   name: string;
   description: string | null;
+  country?: string | null;
   county: string;
   town: string;
   estate: string | null;
@@ -113,6 +119,7 @@ export function RentalPlotsManager() {
 
   const [plotForm, setPlotForm] = useState({
     name: "",
+    country: DEFAULT_LISTING_COUNTRY as string,
     county: "Nairobi",
     town: "",
     estate: "",
@@ -155,8 +162,8 @@ export function RentalPlotsManager() {
   }, [load]);
 
   async function createPlot() {
-    if (!plotForm.name.trim() || !plotForm.town.trim()) {
-      toast.error("Plot name and town are required");
+    if (!plotForm.name.trim() || !plotForm.town.trim() || !plotForm.county.trim()) {
+      toast.error("Plot name, country region, and town are required");
       return;
     }
     setBusy(true);
@@ -166,6 +173,7 @@ export function RentalPlotsManager() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: plotForm.name.trim(),
+          country: plotForm.country,
           county: plotForm.county,
           town: plotForm.town.trim(),
           estate: plotForm.estate.trim() || null,
@@ -182,6 +190,7 @@ export function RentalPlotsManager() {
       setCreateOpen(false);
       setPlotForm({
         name: "",
+        country: DEFAULT_LISTING_COUNTRY,
         county: "Nairobi",
         town: "",
         estate: "",
@@ -629,9 +638,25 @@ export function RentalPlotsManager() {
                 }
               />
             </div>
+            <div className="space-y-2">
+              <Label>Country</Label>
+              <CountrySelect
+                value={plotForm.country}
+                onValueChange={(country) =>
+                  setPlotForm((f) => ({
+                    ...f,
+                    country,
+                    county: country === "Kenya" ? "Nairobi" : "",
+                  }))
+                }
+              />
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>County</Label>
+                <Label>
+                  {isKenyaCountry(plotForm.country) ? "County" : "Region / state"}
+                </Label>
+                {isKenyaCountry(plotForm.country) ? (
                 <Select
                   value={plotForm.county}
                   onValueChange={(v) =>
@@ -649,6 +674,15 @@ export function RentalPlotsManager() {
                     ))}
                   </SelectContent>
                 </Select>
+                ) : (
+                  <Input
+                    placeholder="e.g. Lagos"
+                    value={plotForm.county}
+                    onChange={(e) =>
+                      setPlotForm((f) => ({ ...f, county: e.target.value }))
+                    }
+                  />
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Town</Label>

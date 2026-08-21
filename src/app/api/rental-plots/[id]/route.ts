@@ -274,6 +274,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         bathrooms: parsed.data.bathrooms ?? null,
         furnished: parsed.data.furnished ?? false,
         parkingSpaces: parsed.data.parkingSpaces ?? 0,
+        country: plot.country,
         county: plot.county,
         town: plot.town,
         estate: plot.estate,

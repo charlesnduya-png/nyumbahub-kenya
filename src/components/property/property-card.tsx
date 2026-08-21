@@ -26,7 +26,7 @@ export function PropertyCardComponent({
 }: PropertyCardProps) {
   const [favorited, setFavorited] = React.useState(false);
   const imageUrl = property.primaryImage?.url ?? property.images?.[0]?.url ?? null;
-  const location = [property.estate, property.town, property.county]
+  const location = [property.estate, property.town, property.county, property.country]
     .filter(Boolean)
     .join(", ");
 

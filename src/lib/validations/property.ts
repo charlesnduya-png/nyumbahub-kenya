@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { MAX_LISTING_IMAGES, MAX_LISTING_VIDEOS } from "@/lib/listing-media";
 import { listingCurrencySchema } from "@/lib/currencies";
+import { africanCountrySchema } from "@/lib/african-countries";
 
 export const listingTypeSchema = z.enum([
   "BUY",
@@ -92,8 +93,9 @@ const propertyBaseSchema = z.object({
   county: z
     .string()
     .trim()
-    .min(2, "County is required")
+    .min(2, "County or region is required")
     .max(100, "County name is too long"),
+  country: africanCountrySchema,
   town: z
     .string()
     .trim()
@@ -211,6 +213,7 @@ export const propertySearchSchema = z.object({
   propertyType: propertyTypeSchema.optional(),
   category: z.enum(["land-plots", "commercial"]).optional(),
   county: z.string().trim().optional(),
+  country: z.string().trim().optional(),
   town: z.string().trim().optional(),
   agentId: z.string().trim().min(1).optional(),
   minPrice: z.coerce.number().nonnegative().optional(),

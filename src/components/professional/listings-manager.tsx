@@ -44,10 +44,15 @@ import {
 } from "@/components/property/property-video-uploader";
 import { getListingTypeLabel } from "@/lib/kenya";
 import { DEFAULT_LISTING_CURRENCY } from "@/lib/currencies";
+import {
+  DEFAULT_LISTING_COUNTRY,
+  iso2ForCountry,
+} from "@/lib/african-countries";
 import { slimListingImagesForSubmit, slimListingVideosForSubmit } from "@/lib/media-assets";
 import { MAX_LISTING_VIDEOS } from "@/lib/listing-media";
 import { formatPrice } from "@/lib/utils";
 import { CurrencySelect } from "@/components/properties/currency-select";
+import { CountrySelect } from "@/components/properties/country-select";
 
 export type ManagedListing = {
   id: string;
@@ -58,6 +63,7 @@ export type ManagedListing = {
   description?: string;
   price: number;
   currency: string;
+  country?: string | null;
   town: string;
   county: string;
   estate?: string | null;
@@ -85,6 +91,7 @@ function mapApiListing(p: {
   description?: string;
   price: number;
   currency: string;
+  country?: string | null;
   town: string;
   county: string;
   estate?: string | null;
@@ -117,6 +124,7 @@ function mapApiListing(p: {
     description: p.description ?? "",
     price: p.price,
     currency: p.currency,
+    country: p.country ?? DEFAULT_LISTING_COUNTRY,
     town: p.town,
     county: p.county,
     estate: p.estate,
@@ -238,6 +246,7 @@ export function ListingsManager() {
         title: draft.title,
         price: Number(draft.price),
         currency: draft.currency || DEFAULT_LISTING_CURRENCY,
+        country: draft.country || DEFAULT_LISTING_COUNTRY,
         county: draft.county,
         town: draft.town,
         estate: draft.estate,
@@ -310,6 +319,7 @@ export function ListingsManager() {
                 description: draft.description ?? p.description,
                 price: Number(draft.price),
                 currency: draft.currency || p.currency,
+                country: draft.country || p.country,
                 county: String(draft.county ?? p.county),
                 town: String(draft.town ?? p.town),
                 estate: draft.estate ?? p.estate,
@@ -577,9 +587,19 @@ export function ListingsManager() {
                 />
               </div>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-country">Country</Label>
+              <CountrySelect
+                id="edit-country"
+                value={draft.country ?? DEFAULT_LISTING_COUNTRY}
+                onValueChange={(country) =>
+                  setDraft((d) => ({ ...d, country }))
+                }
+              />
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>County</Label>
+                <Label>County / region</Label>
                 <Input
                   value={draft.county ?? ""}
                   onChange={(e) =>
@@ -657,6 +677,7 @@ export function ListingsManager() {
                 longitude={draft.longitude ?? null}
                 county={draft.county}
                 town={draft.town}
+                countryIso={iso2ForCountry(draft.country)}
                 onChange={({ latitude, longitude }) =>
                   setDraft((d) => ({ ...d, latitude, longitude }))
                 }

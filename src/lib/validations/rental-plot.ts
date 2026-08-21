@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { MAX_LISTING_IMAGES } from "@/lib/listing-media";
 import { listingCurrencySchema } from "@/lib/currencies";
+import { africanCountrySchema } from "@/lib/african-countries";
 
 const plotUnitImageSchema = z.object({
   url: z.string().min(1, "Image URL is required"),
@@ -26,6 +27,7 @@ export const createRentalPlotSchema = z.object({
   name: z.string().trim().min(3).max(120),
   description: z.string().trim().max(2000).optional().nullable(),
   county: z.string().trim().min(2).max(80),
+  country: africanCountrySchema,
   town: z.string().trim().min(2).max(80),
   estate: z.string().trim().max(120).optional().nullable(),
   address: z.string().trim().max(300).optional().nullable(),

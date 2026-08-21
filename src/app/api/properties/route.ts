@@ -248,6 +248,7 @@ export async function POST(request: Request) {
         currency: data.currency,
         bedrooms: data.bedrooms ?? null,
         bathrooms: data.bathrooms ?? null,
+        country: data.country,
         county: data.county,
         town: data.town,
         estate: data.estate ?? null,

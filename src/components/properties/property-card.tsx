@@ -102,7 +102,7 @@ export function PropertyCardItem({ property }: PropertyCardItemProps) {
           ) : null}
           <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
             <MapPin className="h-3.5 w-3.5 shrink-0" />
-            {[property.estate, property.town, property.county]
+            {[property.estate, property.town, property.county, property.country]
               .filter(Boolean)
               .join(", ")}
           </p>

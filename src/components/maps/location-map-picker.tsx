@@ -36,6 +36,8 @@ interface LocationMapPickerProps {
   longitude?: number | null;
   county?: string | null;
   town?: string | null;
+  /** ISO 3166-1 alpha-2, lowercase (e.g. ke, ng, za). */
+  countryIso?: string | null;
   onChange: (coords: MapCoordinates) => void;
   /** Optional: fill town/county from a search result */
   onPlaceSelect?: (place: {
@@ -47,12 +49,15 @@ interface LocationMapPickerProps {
   }) => void;
 }
 
-async function searchKenyaPlaces(query: string): Promise<LocationSearchResult[]> {
+async function searchPlaces(
+  query: string,
+  countryIso = "ke",
+): Promise<LocationSearchResult[]> {
   const url = new URL("https://nominatim.openstreetmap.org/search");
   url.searchParams.set("q", query);
   url.searchParams.set("format", "json");
   url.searchParams.set("addressdetails", "1");
-  url.searchParams.set("countrycodes", "ke");
+  url.searchParams.set("countrycodes", countryIso);
   url.searchParams.set("limit", "6");
 
   const res = await fetch(url.toString(), {
@@ -104,6 +109,7 @@ export function LocationMapPicker({
   longitude,
   county,
   town,
+  countryIso = "ke",
   onChange,
   onPlaceSelect,
 }: LocationMapPickerProps) {
@@ -139,7 +145,7 @@ export function LocationMapPicker({
     debounceRef.current = window.setTimeout(() => {
       void (async () => {
         try {
-          const found = await searchKenyaPlaces(trimmed);
+          const found = await searchPlaces(trimmed, countryIso);
           setResults(found);
           setOpenResults(true);
         } catch {
@@ -153,7 +159,7 @@ export function LocationMapPicker({
     return () => {
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
-  }, [query]);
+  }, [query, countryIso]);
 
   function centerOnCounty() {
     const { lat, lng } = centerForCounty(county);
@@ -190,7 +196,11 @@ export function LocationMapPicker({
             onFocus={() => {
               if (results.length > 0) setOpenResults(true);
             }}
-            placeholder="Search location e.g. Kilimani, Nairobi or Syokimau"
+            placeholder={
+              countryIso === "ke"
+                ? "Search location e.g. Kilimani, Nairobi or Syokimau"
+                : "Search town, suburb, or area"
+            }
             className="h-11 pl-9 pr-9"
             aria-label="Search property location"
           />

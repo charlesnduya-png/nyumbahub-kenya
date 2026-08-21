@@ -108,6 +108,7 @@ function getPropertyDescription(property: {
   description?: string;
   town: string;
   county: string;
+  country?: string | null;
   estate?: string | null;
   listingType: string;
   propertyType: string;
@@ -117,7 +118,7 @@ function getPropertyDescription(property: {
     return property.description;
   }
 
-  const location = [property.estate, property.town, property.county]
+  const location = [property.estate, property.town, property.county, property.country]
     .filter(Boolean)
     .join(", ");
 
@@ -287,7 +288,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
               <p className="mt-2 flex items-start gap-1 text-sm text-muted-foreground sm:text-base">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
                 <span>
-                  {[property.estate, property.town, property.county]
+                  {[property.estate, property.town, property.county, property.country]
                     .filter(Boolean)
                     .join(", ")}
                 </span>
