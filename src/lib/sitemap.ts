@@ -313,6 +313,6 @@ ${body}
 }
 
 export const SITEMAP_XML_HEADERS = {
-  "Content-Type": "application/xml; charset=utf-8",
+  "Content-Type": "text/xml; charset=utf-8",
   "Cache-Control": "public, max-age=3600, s-maxage=3600",
 };

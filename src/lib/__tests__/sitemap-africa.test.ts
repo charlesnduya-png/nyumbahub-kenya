@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { AFRICA_COUNTRY_MARKETS, AFRICA_CITY_MARKETS } from "@/lib/africa-markets";
-import { getAfricaSitemapEntries } from "@/lib/sitemap";
+import { getAfricaSitemapEntries, renderSitemapXml } from "@/lib/sitemap";
 import { getPropertyForSalePlace } from "@/lib/property-for-sale";
 
 describe("Africa sitemap for Google Search Console", () => {
@@ -57,5 +57,12 @@ describe("Africa sitemap for Google Search Console", () => {
         true,
       );
     }
+  });
+
+  it("renders a urlset Google Search Console accepts", () => {
+    const xml = renderSitemapXml(getAfricaSitemapEntries());
+    expect(xml).toContain("<urlset");
+    expect(xml).not.toContain("<sitemapindex");
+    expect(xml).toContain("https://yourhome.co.ke/property-for-sale/lagos");
   });
 });
