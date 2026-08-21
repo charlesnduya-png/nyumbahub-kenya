@@ -1,6 +1,7 @@
 "use client";
 
 import { MessageCircle, Phone } from "lucide-react";
+import { useSession } from "next-auth/react";
 
 import { ContactSellerForm } from "@/components/properties/contact-seller-form";
 import { ScheduleViewingForm } from "@/components/properties/schedule-viewing-form";
@@ -40,6 +41,8 @@ export function RentalListingActions({
   rooms = [],
   sticky = false,
 }: RentalListingActionsProps) {
+  const { status } = useSession();
+  const signedIn = status === "authenticated";
   const { runWithAccess, paywall } = useTenantContactGate(
     "chat, reserve, or call landlords",
   );
@@ -77,7 +80,7 @@ export function RentalListingActions({
           propertyTitle={propertyTitle}
         />
       ) : null}
-      {whatsappPhone ? (
+      {signedIn && whatsappPhone ? (
         <Button
           variant="outline"
           className="w-full"
@@ -96,7 +99,7 @@ export function RentalListingActions({
           WhatsApp
         </Button>
       ) : null}
-      {callPhone ? (
+      {signedIn && callPhone ? (
         <Button
           variant="outline"
           className="w-full"

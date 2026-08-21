@@ -16,6 +16,7 @@ import {
 import { ListingAgentSection } from "@/components/properties/listing-agent-section";
 import { PropertyDetailGallery } from "@/components/properties/property-detail-gallery";
 import { RelatedPropertiesSection } from "@/components/properties/related-properties-section";
+import { SignInToUnlock } from "@/components/properties/sign-in-to-unlock";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -96,7 +97,7 @@ const PropertyLocationMap = dynamic(
   { loading: () => <Skeleton className="aspect-video w-full rounded-lg" /> },
 );
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -183,6 +184,8 @@ export default async function PropertyDetailPage({ params }: PageProps) {
       notFound();
     }
   }
+  const signedIn = Boolean(session?.user);
+  const callbackPath = `/properties/${property.slug}`;
   const images = property.images ?? [];
   const propertyVideos =
     "videos" in property && Array.isArray(property.videos)
@@ -202,8 +205,9 @@ export default async function PropertyDetailPage({ params }: PageProps) {
   const roomsAvailable = rentalRooms.filter((r) => r.status === "AVAILABLE")
     .length;
 
-  const rawContactPhone =
-    property.agent?.user?.phone || property.owner?.phone || null;
+  const rawContactPhone = signedIn
+    ? property.agent?.user?.phone || property.owner?.phone || null
+    : null;
   const hostUserId =
     property.agent?.user?.id ?? property.owner?.id ?? undefined;
   const whatsappPhone = rawContactPhone
@@ -395,6 +399,27 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                     Map
                   </TabsTrigger>
                 </TabsList>
+                {!signedIn ? (
+                  <div className="mt-4">
+                    <SignInToUnlock
+                      title="Sign in to see this listing"
+                      description="Description, amenities, nearby places, and the map are visible after you sign in."
+                      callbackPath={callbackPath}
+                    >
+                      <div className="space-y-3 p-6">
+                        <p className="text-muted-foreground">
+                          Full write-up, amenities, nearby places, and the map
+                          unlock after you sign in.
+                        </p>
+                        <p className="text-muted-foreground">
+                          Parking · Security · Nearby schools and shops
+                        </p>
+                        <div className="h-40 rounded-lg bg-muted" />
+                      </div>
+                    </SignInToUnlock>
+                  </div>
+                ) : (
+                  <>
                 <TabsContent value="description" className="mt-4">
                   <Card>
                     <CardContent className="prose max-w-none p-6">
@@ -485,10 +510,14 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                     <CardContent className="p-4 sm:p-6">
                       <PropertyLocationMap
                         latitude={
-                          "latitude" in property ? property.latitude : null
+                          signedIn && "latitude" in property
+                            ? property.latitude
+                            : null
                         }
                         longitude={
-                          "longitude" in property ? property.longitude : null
+                          signedIn && "longitude" in property
+                            ? property.longitude
+                            : null
                         }
                         county={property.county}
                         town={property.town}
@@ -498,6 +527,8 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                     </CardContent>
                   </Card>
                 </TabsContent>
+                  </>
+                )}
               </Tabs>
 
               <div className="flex flex-wrap gap-6 rounded-lg border p-4">
@@ -532,7 +563,13 @@ export default async function PropertyDetailPage({ params }: PageProps) {
             </div>
 
             <aside className="space-y-4 lg:sticky lg:top-20">
-              {listingHost ? <ListingAgentSection host={listingHost} /> : null}
+              {listingHost ? (
+                <ListingAgentSection
+                  host={listingHost}
+                  canViewProfile={signedIn}
+                  profileCallbackPath={callbackPath}
+                />
+              ) : null}
               <Card>
                 <CardHeader>
                   <CardTitle>
@@ -544,6 +581,15 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
+                  {!signedIn ? (
+                    <SignInToUnlock
+                      title="Sign in to contact the lister"
+                      description="Message, book a viewing, WhatsApp, and call are available after you sign in."
+                      callbackPath={callbackPath}
+                      minHeightClassName="min-h-[160px]"
+                    />
+                  ) : (
+                    <>
                   {property.listingType === "HOLIDAY" ? (
                     <BookStayForm
                       propertyId={property.id}
@@ -608,6 +654,8 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                       </Link>
                     </p>
                   ) : null}
+                    </>
+                  )}
                   <Separator />
                   <p className="text-sm text-muted-foreground">
                     {property.views.toLocaleString()} views · Listed{" "}
@@ -622,6 +670,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
         </main>
       </div>
       {property.listingType === "RENT" ? (
+        signedIn ? (
         <RentalListingActions
           propertyId={property.id}
           propertySlug={property.slug}
@@ -635,6 +684,17 @@ export default async function PropertyDetailPage({ params }: PageProps) {
           rooms={rentalRooms}
           sticky
         />
+        ) : (
+          <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:hidden">
+            <Button asChild className="w-full">
+              <Link
+                href={`/login?callbackUrl=${encodeURIComponent(callbackPath)}`}
+              >
+                Sign in to message, WhatsApp, or call
+              </Link>
+            </Button>
+          </div>
+        )
       ) : null}
     </>
   );

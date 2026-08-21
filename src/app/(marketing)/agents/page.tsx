@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Star, MapPin, BadgeCheck, Phone } from "lucide-react";
 import { formatKenyanPhone, telHref } from "@/lib/phone";
+import { auth } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -57,7 +58,12 @@ async function getAgents() {
 }
 
 export default async function AgentsPage() {
-  const agents = await getAgents();
+  const [agents, session] = await Promise.all([getAgents(), auth()]);
+  const signedIn = Boolean(session?.user);
+  const directory = agents.map((agent) => ({
+    ...agent,
+    phone: signedIn ? agent.phone : null,
+  }));
 
   return (
     <div className="min-h-dvh bg-background">
@@ -83,7 +89,7 @@ export default async function AgentsPage() {
           </Card>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {agents.map((agent) => (
+            {directory.map((agent) => (
               <Card key={agent.id} className="overflow-hidden transition-shadow hover:shadow-md">
                 <CardContent className="p-6">
                   <div className="flex items-start gap-4">
@@ -130,7 +136,7 @@ export default async function AgentsPage() {
                     <MapPin className="h-3.5 w-3.5" />
                     {agent.town}, {agent.county}
                   </p>
-                  {agent.phone ? (
+                  {signedIn && agent.phone ? (
                     <a
                       href={telHref(agent.phone)}
                       className="mt-3 flex items-center gap-2 text-sm font-medium text-primary hover:underline"

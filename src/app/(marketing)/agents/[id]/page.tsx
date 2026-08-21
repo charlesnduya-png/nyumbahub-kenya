@@ -17,7 +17,10 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildPageMetadata, generateAgentMetadata } from "@/lib/seo";
 import { ReportAgentDialog } from "@/components/agents/report-agent-dialog";
+import { SignInToUnlock } from "@/components/properties/sign-in-to-unlock";
 import type { PropertyCard } from "@/types";
+
+export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -152,7 +155,8 @@ export default async function AgentDetailPage({ params }: PageProps) {
   if (!agent) notFound();
 
   const name = agent.user?.name ?? "Agent";
-  const phone = agent.user?.phone ?? null;
+  const signedIn = Boolean(session?.user);
+  const phone = signedIn ? agent.user?.phone ?? null : null;
   const wa = phone ? toWhatsAppNumber(phone) : null;
   const showListings = agent.isFeatured || agent.isVerified;
   const listingCards = showListings ? agent.listings.map(listingToCard) : [];
@@ -203,7 +207,7 @@ export default async function AgentDetailPage({ params }: PageProps) {
                     {agent.town}, {agent.county}
                   </span>
                 </div>
-                {phone ? (
+                {signedIn && phone ? (
                   <a
                     href={telHref(phone)}
                     className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
@@ -270,6 +274,15 @@ export default async function AgentDetailPage({ params }: PageProps) {
             <Card className="lg:sticky lg:top-20">
               <CardHeader><CardTitle>Contact agent</CardTitle></CardHeader>
               <CardContent className="space-y-3">
+                {!signedIn ? (
+                  <SignInToUnlock
+                    title="Sign in to view this profile"
+                    description="WhatsApp and call details are available after you sign in."
+                    callbackPath={`/agents/${agent.id}`}
+                    minHeightClassName="min-h-[140px]"
+                  />
+                ) : (
+                  <>
                 {phone ? (
                   <Button variant="outline" className="w-full justify-start" asChild>
                     <a href={telHref(phone)}>
@@ -292,6 +305,8 @@ export default async function AgentDetailPage({ params }: PageProps) {
                     </a>
                   </Button>
                 ) : null}
+                  </>
+                )}
                 <AgentSocialLinks
                   website={agent.website}
                   facebookUrl={agent.facebookUrl}

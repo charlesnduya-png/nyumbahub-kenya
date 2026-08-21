@@ -3,11 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, Phone, Star } from "lucide-react";
+import { ArrowRight, Star } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { FeaturedAgent } from "@/types/agent";
-import { formatKenyanPhone, telHref } from "@/lib/phone";
 
 interface FeaturedAgentsProps {
   agents: FeaturedAgent[];
@@ -131,15 +130,6 @@ export function FeaturedAgents({
               </Link>
 
               <div className="mt-4 space-y-2 border-t border-border pt-3">
-                {agent.phone ? (
-                  <a
-                    href={telHref(agent.phone)}
-                    className="flex items-center gap-2 text-sm font-medium text-primary hover:underline"
-                  >
-                    <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                    {formatKenyanPhone(agent.phone)}
-                  </a>
-                ) : null}
                 {agent.showListings ? (
                   <Link
                     href={`/agents/${agent.slug}#listings`}

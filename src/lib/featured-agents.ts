@@ -11,7 +11,7 @@ export async function getFeaturedAgentsForHome(
     const agents = await prisma.agent.findMany({
       where: { isFeatured: true },
       include: {
-        user: { select: { name: true, image: true, phone: true } },
+        user: { select: { name: true, image: true } },
         _count: { select: { listings: { where: { status: "ACTIVE" } } } },
       },
       orderBy: [{ rating: "desc" }, { reviewCount: "desc" }],
@@ -31,7 +31,6 @@ export async function getFeaturedAgentsForHome(
       specialties: a.specialty
         ? a.specialty.split(",").map((s) => s.trim()).filter(Boolean)
         : ["Residential"],
-      phone: a.user.phone ?? undefined,
       showListings: true,
     }));
   } catch {

@@ -1,6 +1,7 @@
 "use client";
 
 import { MessageCircle, Phone } from "lucide-react";
+import { useSession } from "next-auth/react";
 
 import { useTenantContactGate } from "@/components/tenant/tenant-access-paywall";
 import { Button } from "@/components/ui/button";
@@ -22,10 +23,12 @@ export function GatedContactLinks({
   className = "w-full",
   variant = "outline",
 }: GatedContactLinksProps) {
+  const { status } = useSession();
   const { runWithAccess, paywall } = useTenantContactGate(
     "chat or call landlords",
   );
 
+  if (status !== "authenticated") return null;
   if (!whatsappPhone && !callPhone) return null;
 
   return (

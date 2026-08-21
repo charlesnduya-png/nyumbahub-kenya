@@ -169,17 +169,22 @@ export function useTenantContactGate(actionLabel?: string) {
 
   const runWithAccess = useCallback(
     (action: () => void) => {
+      if (access.authStatus === "loading") {
+        toast.message("Checking your account…");
+        return;
+      }
+      if (access.authStatus === "unauthenticated") {
+        const path =
+          typeof window !== "undefined" ? window.location.pathname : "/login";
+        window.location.href = `/login?callbackUrl=${encodeURIComponent(path)}`;
+        return;
+      }
       if (!TENANT_ACCESS_REQUIRED) {
         action();
         return;
       }
       if (access.loading) {
         toast.message("Checking viewing pass…");
-        return;
-      }
-      if (access.authStatus === "unauthenticated") {
-        setPendingAction(() => action);
-        setPaywallOpen(true);
         return;
       }
       if (!access.canContact) {
