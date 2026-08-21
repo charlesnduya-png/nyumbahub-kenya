@@ -30,7 +30,6 @@ interface RentalListingActionsProps {
 
 export function RentalListingActions({
   propertyId,
-  propertySlug,
   propertyTitle,
   price,
   currency,

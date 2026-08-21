@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import dynamic from "next/dynamic";
+import nextDynamic from "next/dynamic";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -35,13 +35,13 @@ import { toWhatsAppNumber, telHref } from "@/lib/phone";
 import { formatPrice } from "@/lib/utils";
 import { getListingTypeLabel, getPropertyTypeLabel } from "@/lib/kenya";
 
-const BookStayForm = dynamic(
+const BookStayForm = nextDynamic(
   () =>
     import("@/components/properties/book-stay-form").then((m) => m.BookStayForm),
   { loading: () => <Skeleton className="h-40 w-full rounded-lg" /> },
 );
 
-const RentalListingActions = dynamic(
+const RentalListingActions = nextDynamic(
   () =>
     import("@/components/properties/rental-listing-actions").then(
       (m) => m.RentalListingActions,
@@ -49,7 +49,7 @@ const RentalListingActions = dynamic(
   { loading: () => <Skeleton className="h-32 w-full rounded-lg" /> },
 );
 
-const ContactSellerForm = dynamic(
+const ContactSellerForm = nextDynamic(
   () =>
     import("@/components/properties/contact-seller-form").then(
       (m) => m.ContactSellerForm,
@@ -57,7 +57,7 @@ const ContactSellerForm = dynamic(
   { loading: () => <Skeleton className="h-10 w-full rounded-lg" /> },
 );
 
-const PropertyOfferForm = dynamic(
+const PropertyOfferForm = nextDynamic(
   () =>
     import("@/components/properties/property-offer-form").then(
       (m) => m.PropertyOfferForm,
@@ -65,7 +65,7 @@ const PropertyOfferForm = dynamic(
   { loading: () => <Skeleton className="h-36 w-full rounded-lg" /> },
 );
 
-const GatedContactLinks = dynamic(
+const GatedContactLinks = nextDynamic(
   () =>
     import("@/components/properties/gated-contact-links").then(
       (m) => m.GatedContactLinks,
@@ -73,7 +73,7 @@ const GatedContactLinks = dynamic(
   { loading: () => <Skeleton className="h-10 w-full rounded-lg" /> },
 );
 
-const MortgageCalculator = dynamic(
+const MortgageCalculator = nextDynamic(
   () =>
     import("@/components/properties/mortgage-calculator").then(
       (m) => m.MortgageCalculator,
@@ -81,7 +81,7 @@ const MortgageCalculator = dynamic(
   { loading: () => <Skeleton className="h-48 w-full rounded-lg" /> },
 );
 
-const ScheduleViewingForm = dynamic(
+const ScheduleViewingForm = nextDynamic(
   () =>
     import("@/components/properties/schedule-viewing-form").then(
       (m) => m.ScheduleViewingForm,
@@ -89,7 +89,7 @@ const ScheduleViewingForm = dynamic(
   { loading: () => <Skeleton className="h-10 w-full rounded-lg" /> },
 );
 
-const PropertyLocationMap = dynamic(
+const PropertyLocationMap = nextDynamic(
   () =>
     import("@/components/maps/property-location-map").then(
       (m) => m.PropertyLocationMap,
