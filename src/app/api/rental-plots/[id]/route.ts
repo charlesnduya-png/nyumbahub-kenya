@@ -269,6 +269,7 @@ export async function POST(request: Request, { params }: RouteParams) {
         listingType: "RENT",
         propertyType: parsed.data.propertyType,
         price: parsed.data.price,
+        currency: parsed.data.currency,
         bedrooms: parsed.data.bedrooms ?? null,
         bathrooms: parsed.data.bathrooms ?? null,
         furnished: parsed.data.furnished ?? false,

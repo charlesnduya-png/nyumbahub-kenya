@@ -7,6 +7,11 @@ describe("utils", () => {
     expect(formatPrice(95000)).toMatch(/95/);
   });
 
+  it("formats other listing currencies", () => {
+    expect(formatPrice(250000, { currency: "USD" })).toMatch(/250/);
+    expect(formatPrice(120000, { currency: "GBP" })).toMatch(/120/);
+  });
+
   it("slugifies titles", () => {
     expect(slugify("Modern 3BR Apartment in Kilimani!")).toBe(
       "modern-3br-apartment-in-kilimani",

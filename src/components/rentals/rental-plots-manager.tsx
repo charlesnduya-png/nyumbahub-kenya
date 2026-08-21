@@ -38,11 +38,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { KENYA_COUNTIES } from "@/lib/kenya";
+import { DEFAULT_LISTING_CURRENCY } from "@/lib/currencies";
 import { formatPrice } from "@/lib/utils";
 import {
   ImageUploader,
   type UploadedImage,
 } from "@/components/property/image-uploader";
+import { CurrencySelect } from "@/components/properties/currency-select";
 import { UNIT_FLOOR_OPTIONS } from "@/lib/validations/rental-plot";
 import { Switch } from "@/components/ui/switch";
 
@@ -88,6 +90,7 @@ const EMPTY_UNIT_FORM = {
   unitFloor: "First floor",
   propertyType: "APARTMENT",
   price: "",
+  currency: DEFAULT_LISTING_CURRENCY,
   bedrooms: "1",
   bathrooms: "1",
   housesAvailable: "1",
@@ -223,6 +226,7 @@ export function RentalPlotsManager() {
         unitFloor: unitForm.unitFloor.trim(),
         propertyType: unitForm.propertyType,
         price: Number(unitForm.price),
+        currency: unitForm.currency || DEFAULT_LISTING_CURRENCY,
         bedrooms: Number(unitForm.bedrooms) || 0,
         bathrooms: Number(unitForm.bathrooms) || 0,
         furnished: unitForm.furnished,
@@ -283,6 +287,7 @@ export function RentalPlotsManager() {
         unitFloor?: string | null;
         propertyType?: string;
         price?: number;
+        currency?: string;
         bedrooms?: number | null;
         bathrooms?: number | null;
         furnished?: boolean;
@@ -302,6 +307,7 @@ export function RentalPlotsManager() {
         unitFloor: data.unitFloor || unit.unitFloor || "First floor",
         propertyType: data.propertyType || unit.propertyType || "APARTMENT",
         price: String(data.price ?? unit.price ?? ""),
+        currency: data.currency || unit.currency || DEFAULT_LISTING_CURRENCY,
         bedrooms: String(data.bedrooms ?? unit.bedrooms ?? 1),
         bathrooms: String(data.bathrooms ?? unit.bathrooms ?? 1),
         housesAvailable: String(data.housesTotal ?? unit.housesTotal ?? 1),
@@ -772,7 +778,7 @@ export function RentalPlotsManager() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Monthly rent (KES)</Label>
+                <Label>Monthly rent</Label>
                 <Input
                   type="number"
                   value={unitForm.price}
@@ -781,6 +787,15 @@ export function RentalPlotsManager() {
                   }
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Currency</Label>
+              <CurrencySelect
+                value={unitForm.currency}
+                onValueChange={(currency) =>
+                  setUnitForm((f) => ({ ...f, currency }))
+                }
+              />
             </div>
             <div className="space-y-2">
               <Label>

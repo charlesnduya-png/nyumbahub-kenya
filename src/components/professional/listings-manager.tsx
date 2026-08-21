@@ -43,9 +43,11 @@ import {
   type UploadedVideo,
 } from "@/components/property/property-video-uploader";
 import { getListingTypeLabel } from "@/lib/kenya";
+import { DEFAULT_LISTING_CURRENCY } from "@/lib/currencies";
 import { slimListingImagesForSubmit, slimListingVideosForSubmit } from "@/lib/media-assets";
 import { MAX_LISTING_VIDEOS } from "@/lib/listing-media";
 import { formatPrice } from "@/lib/utils";
+import { CurrencySelect } from "@/components/properties/currency-select";
 
 export type ManagedListing = {
   id: string;
@@ -235,6 +237,7 @@ export function ListingsManager() {
         id: editing.id,
         title: draft.title,
         price: Number(draft.price),
+        currency: draft.currency || DEFAULT_LISTING_CURRENCY,
         county: draft.county,
         town: draft.town,
         estate: draft.estate,
@@ -306,6 +309,7 @@ export function ListingsManager() {
                 title: String(draft.title),
                 description: draft.description ?? p.description,
                 price: Number(draft.price),
+                currency: draft.currency || p.currency,
                 county: String(draft.county ?? p.county),
                 town: String(draft.town ?? p.town),
                 estate: draft.estate ?? p.estate,
@@ -550,16 +554,28 @@ export function ListingsManager() {
                 }
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-price">Price (KES)</Label>
-              <Input
-                id="edit-price"
-                type="number"
-                value={draft.price ?? ""}
-                onChange={(e) =>
-                  setDraft((d) => ({ ...d, price: Number(e.target.value) }))
-                }
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="edit-price">Price</Label>
+                <Input
+                  id="edit-price"
+                  type="number"
+                  value={draft.price ?? ""}
+                  onChange={(e) =>
+                    setDraft((d) => ({ ...d, price: Number(e.target.value) }))
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-currency">Currency</Label>
+                <CurrencySelect
+                  id="edit-currency"
+                  value={draft.currency ?? DEFAULT_LISTING_CURRENCY}
+                  onValueChange={(currency) =>
+                    setDraft((d) => ({ ...d, currency }))
+                  }
+                />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">

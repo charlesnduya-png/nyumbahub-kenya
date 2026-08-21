@@ -245,6 +245,7 @@ export async function POST(request: Request) {
         listingType: data.listingType,
         propertyType: data.propertyType,
         price: data.price,
+        currency: data.currency,
         bedrooms: data.bedrooms ?? null,
         bathrooms: data.bathrooms ?? null,
         county: data.county,

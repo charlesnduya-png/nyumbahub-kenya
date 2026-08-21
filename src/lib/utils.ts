@@ -7,7 +7,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Format a price in Kenyan Shillings (KES).
+ * Format a listing price in the chosen currency (KES by default).
  */
 export function formatPrice(
   amount: number,
@@ -27,13 +27,17 @@ export function formatPrice(
     return `${currency} —`;
   }
 
-  return new Intl.NumberFormat("en-KE", {
-    style: "currency",
-    currency,
-    notation: compact ? "compact" : "standard",
-    minimumFractionDigits,
-    maximumFractionDigits: minimumFractionDigits,
-  }).format(amount);
+  try {
+    return new Intl.NumberFormat("en-KE", {
+      style: "currency",
+      currency,
+      notation: compact ? "compact" : "standard",
+      minimumFractionDigits,
+      maximumFractionDigits: minimumFractionDigits,
+    }).format(amount);
+  } catch {
+    return `${currency} ${amount.toLocaleString("en-KE")}`;
+  }
 }
 
 /**

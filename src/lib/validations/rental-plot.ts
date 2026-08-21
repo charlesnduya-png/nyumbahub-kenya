@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { MAX_LISTING_IMAGES } from "@/lib/listing-media";
+import { listingCurrencySchema } from "@/lib/currencies";
 
 const plotUnitImageSchema = z.object({
   url: z.string().min(1, "Image URL is required"),
@@ -57,6 +58,7 @@ export const createPlotUnitSchema = z.object({
     ])
     .default("APARTMENT"),
   price: z.coerce.number().positive(),
+  currency: listingCurrencySchema,
   bedrooms: z.coerce.number().int().min(0).max(50).optional().nullable(),
   bathrooms: z.coerce.number().int().min(0).max(50).optional().nullable(),
   furnished: z.boolean().optional().default(false),

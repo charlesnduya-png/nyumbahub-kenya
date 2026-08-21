@@ -37,6 +37,7 @@ import {
   PROPERTY_CATEGORIES,
 } from "@/lib/kenya";
 import { LocationMapPicker } from "@/components/maps/location-map-picker";
+import { CurrencySelect } from "@/components/properties/currency-select";
 import {
   LISTING_PRODUCTS,
   formatProductPrice,
@@ -45,6 +46,7 @@ import {
 import { FREE_TIER_MAX_LISTINGS, LISTINGS_ARE_FREE } from "@/lib/listing-flags";
 import { slimListingImagesForSubmit, slimListingVideosForSubmit } from "@/lib/media-assets";
 import { MAX_LISTING_IMAGES, MAX_LISTING_VIDEOS } from "@/lib/listing-media";
+import { DEFAULT_LISTING_CURRENCY } from "@/lib/currencies";
 import {
   createPropertySchema,
   type CreatePropertyInput,
@@ -91,6 +93,7 @@ export default function NewPropertyPage() {
       parking: true,
       images: [],
       videos: [],
+      currency: DEFAULT_LISTING_CURRENCY,
       latitude: null,
       longitude: null,
       rentalRoomsCount: null,
@@ -537,12 +540,31 @@ export default function NewPropertyPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="price">Price (KES)</Label>
-              <Input id="price" type="number" {...register("price")} />
-              {errors.price && (
-                <p className="text-sm text-destructive">{errors.price.message}</p>
-              )}
+            <div className="grid gap-4 sm:grid-cols-[1fr_200px]">
+              <div className="space-y-2">
+                <Label htmlFor="price">Price</Label>
+                <Input id="price" type="number" {...register("price")} />
+                {errors.price && (
+                  <p className="text-sm text-destructive">{errors.price.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="currency">Currency</Label>
+                <CurrencySelect
+                  id="currency"
+                  value={values.currency}
+                  onValueChange={(v) =>
+                    setValue("currency", v as CreatePropertyInput["currency"], {
+                      shouldValidate: true,
+                    })
+                  }
+                />
+                {errors.currency && (
+                  <p className="text-sm text-destructive">
+                    {errors.currency.message}
+                  </p>
+                )}
+              </div>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">

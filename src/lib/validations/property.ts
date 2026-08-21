@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { MAX_LISTING_IMAGES, MAX_LISTING_VIDEOS } from "@/lib/listing-media";
+import { listingCurrencySchema } from "@/lib/currencies";
 
 export const listingTypeSchema = z.enum([
   "BUY",
@@ -85,6 +86,7 @@ const propertyBaseSchema = z.object({
     .number()
     .positive("Price must be greater than zero")
     .max(10_000_000_000, "Price is too high"),
+  currency: listingCurrencySchema,
   bedrooms: optionalInt,
   bathrooms: optionalInt,
   county: z
