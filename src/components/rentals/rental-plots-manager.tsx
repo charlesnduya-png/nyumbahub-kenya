@@ -90,7 +90,7 @@ const EMPTY_UNIT_FORM = {
   unitFloor: "First floor",
   propertyType: "APARTMENT",
   price: "",
-  currency: DEFAULT_LISTING_CURRENCY,
+  currency: DEFAULT_LISTING_CURRENCY as string,
   bedrooms: "1",
   bathrooms: "1",
   housesAvailable: "1",
