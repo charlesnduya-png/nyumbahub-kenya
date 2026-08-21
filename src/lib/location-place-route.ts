@@ -12,7 +12,6 @@ import {
 } from "@/lib/location-seo";
 import { searchListingsByLocation } from "@/lib/properties";
 import {
-  getAllPropertyForSalePlaces,
   getPropertyForSalePlace,
   placeSearchFilters,
 } from "@/lib/property-for-sale";
@@ -22,10 +21,6 @@ import {
   faqPageJsonLd,
   itemListJsonLd,
 } from "@/lib/seo";
-
-export function locationPlaceStaticParams() {
-  return getAllPropertyForSalePlaces().map((place) => ({ place: place.slug }));
-}
 
 export async function locationPlaceMetadata(
   slug: string,

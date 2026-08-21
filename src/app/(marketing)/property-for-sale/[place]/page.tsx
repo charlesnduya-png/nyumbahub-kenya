@@ -5,15 +5,10 @@ import { LocationMarketPage } from "@/components/seo/property-for-sale-location"
 import {
   locationPlaceMetadata,
   locationPlacePageData,
-  locationPlaceStaticParams,
 } from "@/lib/location-place-route";
 
 interface PageProps {
   params: Promise<{ place: string }>;
-}
-
-export function generateStaticParams() {
-  return locationPlaceStaticParams();
 }
 
 export async function generateMetadata({
