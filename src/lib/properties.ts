@@ -299,7 +299,9 @@ async function getActiveProperties(options: {
 
 const FOR_SALE_LISTING_TYPES = ["BUY", "LAND"] as const;
 
-export async function searchForSaleByLocation(input: {
+export async function searchListingsByLocation(input: {
+  listingTypes: readonly ListingType[];
+  country?: string;
   county?: string;
   town?: string;
   limit?: number;
@@ -307,7 +309,10 @@ export async function searchForSaleByLocation(input: {
   const limit = input.limit ?? 24;
   const where = {
     status: "ACTIVE" as const,
-    listingType: { in: [...FOR_SALE_LISTING_TYPES] },
+    listingType: { in: [...input.listingTypes] },
+    ...(input.country
+      ? { country: { equals: input.country, mode: "insensitive" as const } }
+      : {}),
     ...(input.county
       ? { county: { equals: input.county, mode: "insensitive" as const } }
       : {}),
@@ -348,6 +353,21 @@ export async function searchForSaleByLocation(input: {
   }
 }
 
+export async function searchForSaleByLocation(input: {
+  country?: string;
+  county?: string;
+  town?: string;
+  limit?: number;
+}) {
+  return searchListingsByLocation({
+    listingTypes: FOR_SALE_LISTING_TYPES,
+    country: input.country,
+    county: input.county,
+    town: input.town,
+    limit: input.limit,
+  });
+}
+
 export async function getForSaleCountsByCounty() {
   try {
     const rows = await prisma.property.groupBy({
@@ -361,6 +381,29 @@ export async function getForSaleCountsByCounty() {
     const counts: Record<string, number> = {};
     for (const row of rows) {
       counts[row.county.trim().toLowerCase()] = row._count._all;
+    }
+    return counts;
+  } catch {
+    return {} as Record<string, number>;
+  }
+}
+
+export async function getListingCountsByCountry(
+  listingTypes: readonly ListingType[] = FOR_SALE_LISTING_TYPES,
+) {
+  try {
+    const rows = await prisma.property.groupBy({
+      by: ["country"],
+      where: {
+        status: "ACTIVE",
+        listingType: { in: [...listingTypes] },
+      },
+      _count: { _all: true },
+    });
+    const counts: Record<string, number> = {};
+    for (const row of rows) {
+      const name = row.country?.trim().toLowerCase();
+      if (name) counts[name] = row._count._all;
     }
     return counts;
   } catch {

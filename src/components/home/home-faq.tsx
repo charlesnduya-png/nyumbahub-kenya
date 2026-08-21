@@ -20,7 +20,7 @@ export function HomeFaq() {
           Frequently asked questions
         </h2>
         <p className="mt-3 text-center text-muted-foreground">
-          Common questions about buying, renting, and listing property in Kenya.
+          Common questions about buying, renting, and listing property in Africa.
         </p>
         <Accordion type="single" collapsible className="mt-8 w-full">
           {HOME_FAQ_ITEMS.map((item, index) => (

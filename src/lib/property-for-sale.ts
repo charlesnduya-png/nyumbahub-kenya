@@ -1,13 +1,27 @@
+import {
+  AFRICA_CITY_MARKETS,
+  AFRICA_COUNTRY_MARKETS,
+  AFRICA_REGIONS,
+  cityGuide,
+  cityHighlights,
+  cityIntro,
+  countryGuide,
+  countryHighlights,
+  countryIntro,
+  nearbyCitySlugs,
+  nearbyCountrySlugs,
+} from "@/lib/africa-markets";
 import { KENYA_COUNTIES, getCountyTowns, type KenyaCounty } from "@/lib/kenya";
 import { slugify } from "@/lib/utils";
 
-export type SalePlaceKind = "county" | "town";
+export type SalePlaceKind = "county" | "town" | "country" | "city";
 
 export type PropertyForSalePlace = {
   slug: string;
   name: string;
   kind: SalePlaceKind;
   county: KenyaCounty | string;
+  country: string;
   region: string;
   towns: string[];
   nearbySlugs: string[];
@@ -928,6 +942,7 @@ function buildCountyPlace(name: KenyaCounty): PropertyForSalePlace {
     name,
     kind: "county",
     county: name,
+    country: "Kenya",
     region: copy.region,
     towns,
     nearbySlugs: copy.nearby,
@@ -945,6 +960,7 @@ function buildTownPlace(
     name: town.name,
     kind: "town",
     county: town.county,
+    country: "Kenya",
     region: COUNTY_COPY[town.county].region,
     towns: [],
     nearbySlugs: town.nearby,
@@ -959,9 +975,65 @@ const COUNTY_PLACES: PropertyForSalePlace[] =
 
 const TOWN_PLACES: PropertyForSalePlace[] = TOWN_COPY.map(buildTownPlace);
 
+const KENYA_PLACES = [...COUNTY_PLACES, ...TOWN_PLACES];
+const KENYA_SLUGS = new Set(KENYA_PLACES.map((place) => place.slug));
+
+function buildAfricaCountryPlace(
+  country: (typeof AFRICA_COUNTRY_MARKETS)[number],
+): PropertyForSalePlace {
+  return {
+    slug: country.slug,
+    name: country.name,
+    kind: "country",
+    county: country.name,
+    country: country.name,
+    region: country.region,
+    towns: country.cities.map((city) => city.name),
+    nearbySlugs: nearbyCountrySlugs(country),
+    intro: countryIntro(country),
+    buyingGuide: countryGuide(country),
+    highlights: countryHighlights(country),
+  };
+}
+
+function buildAfricaCityPlace(
+  city: (typeof AFRICA_CITY_MARKETS)[number],
+): PropertyForSalePlace {
+  return {
+    slug: city.slug,
+    name: city.name,
+    kind: "city",
+    county: city.name,
+    country: city.country,
+    region: city.region,
+    towns: [],
+    nearbySlugs: nearbyCitySlugs(city),
+    intro: cityIntro(city),
+    buyingGuide: cityGuide(city),
+    highlights: cityHighlights(city),
+  };
+}
+
+/** Skip Kenya country hub (the /property-for-sale index already covers it). */
+const AFRICA_COUNTRY_PLACES: PropertyForSalePlace[] = AFRICA_COUNTRY_MARKETS.filter(
+  (country) => country.name !== "Kenya" && !KENYA_SLUGS.has(country.slug),
+).map(buildAfricaCountryPlace);
+
+const AFRICA_CITY_PLACES: PropertyForSalePlace[] = AFRICA_CITY_MARKETS.filter(
+  (city) => !KENYA_SLUGS.has(city.slug),
+).map(buildAfricaCityPlace);
+
+const AFRICA_PLACES = [...AFRICA_COUNTRY_PLACES, ...AFRICA_CITY_PLACES];
+
 const PLACES_BY_SLUG = new Map<string, PropertyForSalePlace>(
-  [...COUNTY_PLACES, ...TOWN_PLACES].map((place) => [place.slug, place]),
+  [...KENYA_PLACES, ...AFRICA_PLACES].map((place) => [place.slug, place]),
 );
+
+for (const place of PLACES_BY_SLUG.values()) {
+  place.nearbySlugs = place.nearbySlugs.filter((slug) =>
+    PLACES_BY_SLUG.has(slug),
+  );
+}
 
 export const PROPERTY_FOR_SALE_REGIONS = [
   "Nairobi",
@@ -975,7 +1047,22 @@ export const PROPERTY_FOR_SALE_REGIONS = [
 ] as const;
 
 export function getAllPropertyForSalePlaces(): PropertyForSalePlace[] {
-  return [...COUNTY_PLACES, ...TOWN_PLACES];
+  return [...KENYA_PLACES, ...AFRICA_PLACES];
+}
+
+export function getAfricaPropertyPlaces(): PropertyForSalePlace[] {
+  return AFRICA_PLACES;
+}
+
+export function getAfricaCountryPlaces(): PropertyForSalePlace[] {
+  return AFRICA_COUNTRY_PLACES;
+}
+
+export function getAfricaPlacesByRegion() {
+  return AFRICA_REGIONS.map((region) => ({
+    region,
+    places: AFRICA_COUNTRY_PLACES.filter((place) => place.region === region),
+  })).filter((group) => group.places.length > 0);
 }
 
 export function getPropertyForSaleCounties(): PropertyForSalePlace[] {
@@ -1005,27 +1092,41 @@ export function propertyForSalePath(slug: string) {
   return `/property-for-sale/${slug}`;
 }
 
+export function placeLocationLabel(place: PropertyForSalePlace) {
+  if (place.kind === "town") return `${place.name}, ${place.county}, Kenya`;
+  if (place.kind === "county") return `${place.name} County, Kenya`;
+  if (place.kind === "city") return `${place.name}, ${place.country}`;
+  return place.name;
+}
+
+export function placeSearchFilters(place: PropertyForSalePlace) {
+  if (place.kind === "country") {
+    return { country: place.country };
+  }
+  if (place.kind === "city") {
+    return { country: place.country, town: place.name };
+  }
+  if (place.kind === "town") {
+    return { town: place.name, county: String(place.county) };
+  }
+  return { county: String(place.county) };
+}
+
 export function salePlaceTitle(place: PropertyForSalePlace) {
-  return `Property for Sale in ${place.name}, Kenya`;
+  return `Property for Sale in ${placeLocationLabel(place)}`;
 }
 
 export function salePlaceDescription(place: PropertyForSalePlace) {
-  const area =
-    place.kind === "town"
-      ? `${place.name}, ${place.county} County`
-      : `${place.name} County`;
-  return `Find verified houses, apartments, and land for sale in ${area}. Compare prices in KES, view photos, and contact sellers on Your Home (yourhome.co.ke).`;
+  const area = placeLocationLabel(place);
+  return `Find verified houses, apartments, and land for sale in ${area}. Compare prices, view photos, and contact sellers on Your Home (yourhome.co.ke) — Africa real estate, BnB, and rentals.`;
 }
 
 export function salePlaceFaqs(place: PropertyForSalePlace) {
-  const where =
-    place.kind === "town"
-      ? `${place.name} in ${place.county} County`
-      : `${place.name} County`;
+  const where = placeLocationLabel(place);
   return [
     {
       question: `Are there houses for sale in ${place.name}?`,
-      answer: `Yes. Your Home lists verified houses, apartments, and land for sale in ${where}. New listings go live after admin review, with photos and KES prices.`,
+      answer: `Yes. Your Home lists verified houses, apartments, and land for sale in ${where}. New listings go live after admin review, with photos and local prices.`,
     },
     {
       question: `How do I buy property in ${place.name}?`,
@@ -1043,9 +1144,11 @@ export function salePlaceKeywords(place: PropertyForSalePlace): string[] {
     `property for sale ${place.name}`,
     `houses for sale ${place.name}`,
     `land for sale ${place.name}`,
-    `${place.name} real estate Kenya`,
-    `plots for sale ${place.county}`,
-    "property for sale Kenya",
+    `${place.name} real estate`,
+    `${place.name} ${place.country} property`,
+    `plots for sale ${place.name}`,
+    `best real estate ${place.country}`,
+    "Africa real estate",
     "yourhome.co.ke",
   ];
 }

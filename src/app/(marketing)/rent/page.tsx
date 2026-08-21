@@ -10,18 +10,17 @@ import {
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata = buildPageMetadata({
-  title: "Houses & Apartments for Rent in Kenya | Nairobi, Mombasa & More",
+  title: "Houses & Apartments for Rent in Africa | Nairobi, Lagos, Accra",
   description:
-    "Find verified rentals across Kenya — bedsitters, apartments, maisonettes, and family homes in Westlands, Kilimani, Syokimau, Nyali, and all major towns. Search on Your Home.",
+    "Find verified rentals across Africa — bedsitters, apartments, maisonettes, and family homes in Nairobi, Lagos, Accra, Kampala, Johannesburg, and every major city. Search on Your Home.",
   path: "/rent",
   keywords: [
     "houses for rent Nairobi",
-    "apartments for rent Kenya",
-    "bedsitter Nairobi",
-    "maisonette for rent",
-    "Westlands rentals",
-    "Kilimani apartments rent",
-    "nyumba za kukodi Nairobi",
+    "apartments for rent Lagos",
+    "Accra rentals",
+    "Kampala apartments",
+    "houses for rent Africa",
+    "best rentals Africa",
   ],
 });
 
@@ -29,14 +28,14 @@ export const metadata = buildPageMetadata({
 export const dynamic = "force-dynamic";
 
 const rentalAreas = [
-  { name: "Westlands", href: "/properties?listingType=RENT&town=Westlands" },
-  { name: "Kilimani", href: "/properties?listingType=RENT&town=Kilimani" },
-  { name: "Syokimau", href: "/properties?listingType=RENT&town=Syokimau" },
-  { name: "Lavington", href: "/properties?listingType=RENT&town=Lavington" },
-  { name: "South B", href: "/properties?listingType=RENT&town=South+B" },
-  { name: "Roysambu", href: "/properties?listingType=RENT&town=Roysambu" },
-  { name: "Kisumu", href: "/properties?listingType=RENT&county=Kisumu" },
-  { name: "Nyali", href: "/properties?listingType=RENT&town=Nyali" },
+  { name: "Westlands", href: "/rent/westlands" },
+  { name: "Kilimani", href: "/rent/kilimani" },
+  { name: "Lagos", href: "/rent/lagos" },
+  { name: "Accra", href: "/rent/accra" },
+  { name: "Kampala", href: "/rent/kampala" },
+  { name: "Johannesburg", href: "/rent/johannesburg" },
+  { name: "Kigali", href: "/rent/kigali" },
+  { name: "Dar es Salaam", href: "/rent/dar-es-salaam" },
 ];
 
 export default async function RentPage() {
@@ -54,11 +53,12 @@ export default async function RentPage() {
             For rent
           </Badge>
           <h1 className="font-display max-w-3xl text-4xl font-semibold tracking-tight sm:text-5xl">
-            Rental houses & apartments in Kenya
+            Rental houses & apartments across Africa
           </h1>
           <p className="mt-4 max-w-2xl text-lg text-muted-foreground">
             Find bedsitter, 1–4 bedroom apartments, maisonettes, and family
-            houses. Tenants browse free — contact landlords and agents directly.
+            houses in Nairobi, Lagos, Accra, Kampala, and cities across Africa.
+            Tenants browse free — contact landlords and agents directly.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button size="lg" asChild>

@@ -45,6 +45,12 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
   const staticRoutes: SitemapEntry[] = [
     { url: loc("/"), lastModified: now, changeFrequency: "daily", priority: 1 },
     {
+      url: loc("/africa"),
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.97,
+    },
+    {
       url: loc("/property-for-sale"),
       lastModified: now,
       changeFrequency: "daily",
@@ -112,13 +118,27 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
     },
   ];
 
-  const salePlaceRoutes: SitemapEntry[] = getAllPropertyForSalePlaces().map(
-    (place) => ({
-      url: loc(`/property-for-sale/${place.slug}`),
-      lastModified: now,
-      changeFrequency: "daily" as const,
-      priority: place.kind === "county" ? 0.9 : 0.82,
-    }),
+  const salePlaceRoutes: SitemapEntry[] = getAllPropertyForSalePlaces().flatMap(
+    (place) => [
+      {
+        url: loc(`/property-for-sale/${place.slug}`),
+        lastModified: now,
+        changeFrequency: "daily" as const,
+        priority: place.kind === "county" || place.kind === "country" ? 0.9 : 0.82,
+      },
+      {
+        url: loc(`/rent/${place.slug}`),
+        lastModified: now,
+        changeFrequency: "daily" as const,
+        priority: 0.8,
+      },
+      {
+        url: loc(`/bnb/${place.slug}`),
+        lastModified: now,
+        changeFrequency: "daily" as const,
+        priority: 0.78,
+      },
+    ],
   );
 
   const seoLandingRoutes: SitemapEntry[] = ALL_SEO_LANDINGS.map((landing) => ({
@@ -177,18 +197,31 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
       priority: 0.7,
     }));
 
-    return [
+    return uniqueEntries([
       ...staticRoutes,
       ...salePlaceRoutes,
       ...seoLandingRoutes,
       ...propertyRoutes,
       ...blogRoutes,
       ...agentRoutes,
-    ];
+    ]);
   } catch (error) {
     console.error("sitemap generation failed", error);
-    return [...staticRoutes, ...salePlaceRoutes, ...seoLandingRoutes];
+    return uniqueEntries([
+      ...staticRoutes,
+      ...salePlaceRoutes,
+      ...seoLandingRoutes,
+    ]);
   }
+}
+
+function uniqueEntries(entries: SitemapEntry[]) {
+  const seen = new Set<string>();
+  return entries.filter((entry) => {
+    if (seen.has(entry.url)) return false;
+    seen.add(entry.url);
+    return true;
+  });
 }
 
 export function escapeXml(value: string) {

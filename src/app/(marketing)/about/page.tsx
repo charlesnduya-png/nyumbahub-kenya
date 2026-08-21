@@ -6,14 +6,14 @@ import { Button } from "@/components/ui/button";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "About Your Home — Kenya Real Estate Marketplace",
+  title: "About Your Home — Africa Real Estate Marketplace",
   description:
-    "Your Home (yourhome.co.ke) is Kenya's marketplace for verified homes, land, plots, rentals, and BnB stays. We connect buyers, tenants, sellers, and agents across all 47 counties.",
+    "Your Home (yourhome.co.ke) is Africa's marketplace for verified homes, land, plots, rentals, and BnB stays. We connect buyers, tenants, sellers, and agents across Kenya and all 54 African countries.",
   path: "/about",
   keywords: [
     "Your Home Kenya",
-    "Kenya real estate platform",
-    "verified property listings Kenya",
+    "Africa real estate platform",
+    "verified property listings Africa",
     "yourhome.co.ke",
   ],
 });
@@ -28,9 +28,9 @@ export default function AboutPage() {
             About Your Home
           </h1>
           <p className="mt-4 text-lg text-muted-foreground">
-            We built Your Home so Kenyans can buy, rent, list, and book stays
-            with clearer listings, verified professionals, and payments that
-            work locally.
+            We built Your Home so people across Africa can buy, rent, list, and
+            book stays with clearer listings, verified professionals, and
+            payments that work locally — starting in Kenya.
           </p>
         </div>
       </section>
@@ -39,7 +39,7 @@ export default function AboutPage() {
         <div>
           <h2 className="font-display text-2xl font-semibold">What we do</h2>
           <p className="mt-3 leading-relaxed text-muted-foreground">
-            Your Home is a Kenya-focused real estate marketplace for homes,
+            Your Home is an Africa-focused real estate marketplace for homes,
             land, commercial space, monthly rentals, and BnB stays. Buyers and
             tenants browse for free. Sellers and agents list through paid plans,
             then go live after admin review.
@@ -49,7 +49,7 @@ export default function AboutPage() {
         <div>
           <h2 className="font-display text-2xl font-semibold">How it works</h2>
           <ul className="mt-3 list-disc space-y-2 pl-5 text-muted-foreground">
-            <li>Search verified listings across counties and neighbourhoods</li>
+            <li>Search verified listings across African countries and cities</li>
             <li>Connect with sellers and agents through the platform inbox</li>
             <li>Professionals pay with M-Pesa to publish or promote listings</li>
             <li>Our admin team reviews listings before they appear publicly</li>
@@ -60,7 +60,7 @@ export default function AboutPage() {
           <h2 className="font-display text-2xl font-semibold">Our promise</h2>
           <p className="mt-3 leading-relaxed text-muted-foreground">
             Clear pricing, local payment options, and moderated inventory — so
-            finding a home in Kenya feels safer and simpler.
+            finding a home in Africa feels safer and simpler.
           </p>
         </div>
 

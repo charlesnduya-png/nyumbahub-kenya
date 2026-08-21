@@ -10,28 +10,30 @@ import {
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata = buildPageMetadata({
-  title: "BnB & Holiday Homes in Kenya | Diani, Watamu, Nairobi Stays",
+  title: "BnB & Holiday Homes in Africa | Cape Town, Zanzibar, Diani, Lagos",
   description:
-    "Book BnB stays, Airbnb-style apartments, beach villas, and safari cottages across Kenya. Diani, Watamu, Malindi, Naivasha, and city short stays on Your Home.",
+    "Book BnB stays, Airbnb-style apartments, beach villas, and safari cottages across Africa. Cape Town, Zanzibar, Diani, Marrakech, Lagos, and city short stays on Your Home.",
   path: "/bnb",
   keywords: [
-    "BnB Kenya",
-    "Airbnb Kenya",
-    "holiday homes Diani",
-    "short stay Nairobi",
-    "beach villa Kenya",
-    "Watamu accommodation",
+    "BnB Africa",
+    "Airbnb Africa",
+    "holiday homes Cape Town",
+    "Zanzibar BnB",
+    "Diani holiday home",
+    "Marrakech riad",
+    "Lagos short stay",
   ],
 });
 
 const destinations = [
-  { name: "Diani", href: "/properties?listingType=HOLIDAY&town=Diani" },
-  { name: "Watamu", href: "/properties?listingType=HOLIDAY&town=Watamu" },
-  { name: "Malindi", href: "/properties?listingType=HOLIDAY&town=Malindi" },
-  { name: "Naivasha", href: "/properties?listingType=HOLIDAY&town=Naivasha" },
-  { name: "Kilimani", href: "/properties?listingType=HOLIDAY&town=Kilimani" },
-  { name: "Maasai Mara", href: "/properties?listingType=HOLIDAY&town=Maasai+Mara" },
-  { name: "Nyali", href: "/properties?listingType=HOLIDAY&town=Nyali" },
+  { name: "Diani", href: "/bnb/diani" },
+  { name: "Zanzibar", href: "/bnb/zanzibar" },
+  { name: "Cape Town", href: "/bnb/cape-town" },
+  { name: "Marrakech", href: "/bnb/marrakech" },
+  { name: "Lagos", href: "/bnb/lagos" },
+  { name: "Kigali", href: "/bnb/kigali" },
+  { name: "Hurghada", href: "/bnb/hurghada" },
+  { name: "Naivasha", href: "/bnb/naivasha" },
 ];
 
 export default async function BnbPage() {
@@ -49,7 +51,7 @@ export default async function BnbPage() {
             BnB · Short stays
           </Badge>
           <h1 className="font-display max-w-3xl text-4xl font-semibold tracking-tight sm:text-5xl">
-            BnB & holiday homes across Kenya
+            BnB & holiday homes across Africa
           </h1>
           <p className="mt-4 max-w-2xl text-lg text-muted-foreground">
             Beach villas, city Airbnb apartments, lake cottages, and safari

@@ -20,18 +20,18 @@ import {
 import { buildPageMetadata, homeFaqJsonLd } from "@/lib/seo";
 
 export const metadata = buildPageMetadata({
-  title: "Kenya Real Estate — Houses for Sale, Rent, Land & BnB",
+  title: "Africa Real Estate — Houses for Sale, Rent, Land & BnB",
   description:
-    "Your Home (yourhome.co.ke) — search verified houses, apartments, land, plots, and rentals in Nairobi, Mombasa, Kisumu, Nakuru, and all Kenya. Free listings for sellers and agents.",
+    "Your Home (yourhome.co.ke) — search verified houses, apartments, land, plots, rentals, and BnB stays in Kenya, Nigeria, Ghana, South Africa, and all 54 African countries. Free listings for sellers and agents.",
   path: "/",
   keywords: [
-    "Kenya real estate website",
-    "property search Kenya",
+    "Africa real estate website",
+    "property search Africa",
     "houses for sale Nairobi",
-    "houses for rent Kenya",
-    "land for sale Kenya",
-    "BnB Kenya",
-    "list property free Kenya",
+    "houses for sale Lagos",
+    "houses for rent Accra",
+    "BnB Cape Town",
+    "list property free Africa",
   ],
 });
 
@@ -73,7 +73,7 @@ export default async function HomePage() {
         <FeaturedProperties
           properties={rentalProperties}
           title="Houses & apartments for rent"
-          subtitle="Monthly rentals across Nairobi, Kisumu, Mombasa and beyond"
+          subtitle="Monthly rentals across Nairobi, Lagos, Accra, Kampala and beyond"
           viewAllHref="/rent"
           viewAllLabel="Browse all rentals"
         />

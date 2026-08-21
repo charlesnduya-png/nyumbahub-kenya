@@ -20,14 +20,14 @@ export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const { place } = await params;
-  return locationPlaceMetadata(place, "sale");
+  return locationPlaceMetadata(place, "bnb");
 }
 
 export const revalidate = 3600;
 
-export default async function PropertyForSalePlacePage({ params }: PageProps) {
+export default async function BnbPlacePage({ params }: PageProps) {
   const { place: slug } = await params;
-  const data = await locationPlacePageData(slug, "sale");
+  const data = await locationPlacePageData(slug, "bnb");
   if (!data) notFound();
 
   return (
@@ -38,7 +38,7 @@ export default async function PropertyForSalePlacePage({ params }: PageProps) {
       />
       <LocationMarketPage
         place={data.place}
-        intent="sale"
+        intent="bnb"
         listings={data.result.data}
         total={data.result.total}
         minPrice={data.result.minPrice}

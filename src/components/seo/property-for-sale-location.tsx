@@ -11,41 +11,93 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  intentFaqs,
+  intentHeading,
+  intentHubPath,
+  intentPlacePath,
+  propertiesSearchHref,
+  type LocationMarketIntent,
+} from "@/lib/location-seo";
+import {
   getNearbyPlaces,
   getPropertyForSalePlace,
-  propertyForSalePath,
-  salePlaceFaqs,
+  placeLocationLabel,
   type PropertyForSalePlace,
 } from "@/lib/property-for-sale";
 import { formatPrice } from "@/lib/utils";
 import type { PropertyCard } from "@/types";
 
-export function PropertyForSaleLocationPage({
+const INTENT_LABEL: Record<LocationMarketIntent, string> = {
+  sale: "For sale",
+  rent: "For rent",
+  bnb: "BnB · Short stays",
+};
+
+const LISTINGS_COPY: Record<
+  LocationMarketIntent,
+  { title: string; subtitle: string; empty: string; searchAll: string }
+> = {
+  sale: {
+    title: "Houses & land for sale",
+    subtitle:
+      "Verified listings with photos and local prices. Contact the seller or agent from the listing page.",
+    empty: "No live sale listings here right now.",
+    searchAll: "Search all for sale",
+  },
+  rent: {
+    title: "Homes for rent",
+    subtitle:
+      "Monthly rentals with photos. Message the landlord or agent from the listing.",
+    empty: "No live rentals here right now.",
+    searchAll: "Search all rentals",
+  },
+  bnb: {
+    title: "BnB & holiday stays",
+    subtitle:
+      "Short stays priced per night. Book dates and the host confirms from their dashboard.",
+    empty: "No live BnB stays here right now.",
+    searchAll: "Search all BnBs",
+  },
+};
+
+export function LocationMarketPage({
   place,
+  intent = "sale",
   listings,
   total,
   minPrice,
   maxPrice,
 }: {
   place: PropertyForSalePlace;
+  intent?: LocationMarketIntent;
   listings: PropertyCard[];
   total: number;
   minPrice: number | null;
   maxPrice: number | null;
 }) {
-  const faqs = salePlaceFaqs(place);
+  const faqs = intentFaqs(intent, place);
   const nearby = getNearbyPlaces(place);
-  const locationLabel =
-    place.kind === "town" ? `${place.name}, ${place.county}` : place.name;
-  const rentHref =
-    place.kind === "town"
-      ? `/properties?listingType=RENT&town=${encodeURIComponent(place.name)}`
-      : `/properties?listingType=RENT&county=${encodeURIComponent(place.county)}`;
-  const landHref = `/properties?category=land-plots&county=${encodeURIComponent(place.county)}`;
+  const locationLabel = placeLocationLabel(place);
+  const copy = LISTINGS_COPY[intent];
+  const searchHref = propertiesSearchHref(intent, place);
+  const hubPath = intentHubPath(intent);
+  const regionBadge =
+    place.kind === "country"
+      ? place.region
+      : place.kind === "city"
+        ? `${place.country} · ${place.region}`
+        : `${place.region} · ${place.kind === "town" ? place.county : "County"}`;
   const priceRange =
     minPrice != null && maxPrice != null && total > 0
       ? `${formatPrice(minPrice)} – ${formatPrice(maxPrice)}`
       : null;
+  const otherIntents = (
+    [
+      ["sale", "Buy"],
+      ["rent", "Rent"],
+      ["bnb", "BnB"],
+    ] as const
+  ).filter(([key]) => key !== intent);
 
   return (
     <div className="gradient-mesh">
@@ -61,8 +113,8 @@ export function PropertyForSaleLocationPage({
           </li>
           <li aria-hidden="true">/</li>
           <li>
-            <Link href="/property-for-sale" className="hover:text-primary">
-              Property for sale
+            <Link href={hubPath} className="hover:text-primary">
+              {INTENT_LABEL[intent]}
             </Link>
           </li>
           <li aria-hidden="true">/</li>
@@ -74,10 +126,10 @@ export function PropertyForSaleLocationPage({
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
           <Badge className="mb-4 gap-1">
             <MapPin className="h-3.5 w-3.5" />
-            {place.region} · {place.kind === "town" ? place.county : "County"}
+            {regionBadge}
           </Badge>
-          <h1 className="font-display max-w-3xl text-4xl font-semibold tracking-tight sm:text-5xl">
-            Property for sale in {place.name}
+          <h1 className="font-display max-w-4xl text-4xl font-semibold tracking-tight sm:text-5xl">
+            {intentHeading(intent, place)}
           </h1>
           <p className="mt-4 max-w-3xl text-lg text-muted-foreground">
             {place.intro}
@@ -92,12 +144,16 @@ export function PropertyForSaleLocationPage({
             <Button size="lg" asChild>
               <Link href="#listings">
                 <Search className="mr-2 h-4 w-4" />
-                View homes & land
+                View listings
               </Link>
             </Button>
-            <Button size="lg" variant="outline" asChild>
-              <Link href={rentHref}>Rentals in {place.name}</Link>
-            </Button>
+            {otherIntents.map(([key, label]) => (
+              <Button key={key} size="lg" variant="outline" asChild>
+                <Link href={intentPlacePath(key, place.slug)}>
+                  {label} in {place.name}
+                </Link>
+              </Button>
+            ))}
             <Button size="lg" variant="secondary" asChild>
               <Link href="/register/professional">List a property</Link>
             </Button>
@@ -107,7 +163,7 @@ export function PropertyForSaleLocationPage({
 
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <h2 className="font-display text-2xl font-semibold">
-          Why buyers look at {locationLabel}
+          Why people search {locationLabel}
         </h2>
         <ul className="mt-6 grid gap-4 sm:grid-cols-3">
           {place.highlights.map((item) => (
@@ -129,17 +185,14 @@ export function PropertyForSaleLocationPage({
         <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
           <div>
             <h2 className="font-display text-3xl font-semibold tracking-tight">
-              Houses & land for sale in {place.name}
+              {copy.title} in {place.name}
             </h2>
             <p className="mt-2 max-w-2xl text-muted-foreground">
-              Verified listings with photos and KES prices. Contact the seller
-              or agent from the listing page.
+              {copy.subtitle}
             </p>
           </div>
           <Button variant="outline" asChild>
-            <Link
-              href={`/properties?listingType=BUY&county=${encodeURIComponent(place.county)}`}
-            >
+            <Link href={searchHref}>
               Open full search
               <ArrowRight className="ml-1 h-4 w-4" />
             </Link>
@@ -148,19 +201,17 @@ export function PropertyForSaleLocationPage({
 
         {listings.length === 0 ? (
           <div className="mt-8 rounded-3xl border bg-card/80 p-8 text-center">
-            <p className="font-medium">
-              No live sale listings in {place.name} right now.
-            </p>
+            <p className="font-medium">{copy.empty}</p>
             <p className="mt-2 text-sm text-muted-foreground">
-              Check nearby counties or browse all Kenya property for sale. New
-              homes go live after admin approval.
+              Check nearby places or browse all African listings. New homes go
+              live after admin approval.
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Button asChild>
-                <Link href="/property-for-sale">All counties</Link>
+                <Link href={hubPath}>{copy.searchAll}</Link>
               </Button>
               <Button variant="outline" asChild>
-                <Link href="/properties?listingType=BUY">Search Kenya</Link>
+                <Link href="/africa">All African countries</Link>
               </Button>
             </div>
           </div>
@@ -179,23 +230,36 @@ export function PropertyForSaleLocationPage({
 
       <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <h2 className="font-display text-2xl font-semibold">
-          Buying property in {place.name}
+          {intent === "bnb"
+            ? `Staying in ${place.name}`
+            : intent === "rent"
+              ? `Renting in ${place.name}`
+              : `Buying property in ${place.name}`}
         </h2>
         <p className="mt-4 max-w-3xl text-muted-foreground leading-relaxed">
           {place.buyingGuide}
         </p>
         <p className="mt-4 max-w-3xl text-muted-foreground leading-relaxed">
-          Your Home is Kenya&apos;s marketplace for verified homes and land.
-          We do not replace your advocate, surveyor, or a physical inspection.
-          Use the listing to compare price, photos, and location, then complete
-          due diligence before you pay.
+          Your Home is Africa&apos;s marketplace for verified homes, land,
+          rentals, and BnB stays — with Kenya as our home market. We do not
+          replace your advocate, surveyor, or a physical inspection. Compare
+          price, photos, and location, then complete due diligence before you
+          pay.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Button variant="outline" asChild>
-            <Link href={landHref}>Land & plots in {place.county}</Link>
+            <Link
+              href={
+                place.kind === "country" || place.kind === "city"
+                  ? `/properties?category=land-plots&country=${encodeURIComponent(place.country)}`
+                  : `/properties?category=land-plots&county=${encodeURIComponent(String(place.county))}`
+              }
+            >
+              Land & plots
+            </Link>
           </Button>
           <Button variant="outline" asChild>
-            <Link href="/blog">Buying guides</Link>
+            <Link href="/blog">Guides</Link>
           </Button>
         </div>
       </section>
@@ -219,8 +283,8 @@ export function PropertyForSaleLocationPage({
                   <Link
                     href={
                       townPlace
-                        ? propertyForSalePath(townPlace.slug)
-                        : `/properties?listingType=BUY&town=${encodeURIComponent(town)}`
+                        ? intentPlacePath(intent, townPlace.slug)
+                        : `/properties?town=${encodeURIComponent(town)}`
                     }
                   >
                     {town}
@@ -235,12 +299,12 @@ export function PropertyForSaleLocationPage({
       {nearby.length > 0 ? (
         <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
           <h2 className="font-display text-xl font-semibold">
-            Nearby places for sale
+            Nearby {intent === "bnb" ? "stays" : "places"}
           </h2>
           <div className="mt-4 flex flex-wrap gap-2">
             {nearby.map((item) => (
               <Button key={item.slug} variant="secondary" size="sm" asChild>
-                <Link href={propertyForSalePath(item.slug)}>
+                <Link href={intentPlacePath(intent, item.slug)}>
                   {item.name}
                 </Link>
               </Button>
@@ -252,7 +316,7 @@ export function PropertyForSaleLocationPage({
       <section className="border-t bg-card/50 py-16">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
           <h2 className="font-display text-center text-3xl font-semibold tracking-tight">
-            {place.name} property questions
+            {place.name} {INTENT_LABEL[intent].toLowerCase()} questions
           </h2>
           <Accordion type="single" collapsible className="mt-8 w-full">
             {faqs.map((item, index) => (
@@ -270,4 +334,10 @@ export function PropertyForSaleLocationPage({
       </section>
     </div>
   );
+}
+
+export function PropertyForSaleLocationPage(
+  props: Omit<Parameters<typeof LocationMarketPage>[0], "intent">,
+) {
+  return <LocationMarketPage {...props} intent="sale" />;
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { iso2ForCountry } from "@/lib/african-countries";
 import { formatPrice } from "@/lib/utils";
 
 const APP_NAME =
@@ -30,12 +31,18 @@ const GOOGLE_SITE_VERIFICATION =
   "";
 
 const APP_DESCRIPTION =
-  "Your Home (yourhome.co.ke) — Kenya's marketplace for verified houses, apartments, land, plots, rentals, and BnB stays. Search Nairobi, Mombasa, Kisumu, Nakuru, Kiambu and all 47 counties. List free. M-Pesa ready.";
+  "Your Home (yourhome.co.ke) — Africa's marketplace for verified houses, apartments, land, plots, rentals, and BnB stays. Search Kenya, Nigeria, Ghana, South Africa, Tanzania, Uganda, Egypt, Morocco, Rwanda, and all 54 African countries. List free. M-Pesa ready.";
 
-/** Core + long-tail Kenya real estate keywords for metadata. */
+/** Core + long-tail Africa real estate keywords for metadata. */
 const SEO_KEYWORDS = [
   "Your Home Kenya",
   "yourhome.co.ke",
+  "Africa real estate",
+  "best real estate Africa",
+  "property for sale Africa",
+  "houses for rent Africa",
+  "BnB Africa",
+  "Airbnb Africa",
   "Kenya real estate",
   "property Kenya",
   "nyumba za kuuza Kenya",
@@ -43,37 +50,25 @@ const SEO_KEYWORDS = [
   "houses for sale Kenya",
   "houses for rent Nairobi",
   "apartments for rent Kenya",
-  "bedsitter Nairobi",
-  "single room rent Nairobi",
+  "Lagos property for sale",
+  "Accra apartments for rent",
+  "Cape Town BnB",
+  "Johannesburg houses for sale",
+  "Kampala rentals",
+  "Dar es Salaam property",
+  "Kigali real estate",
+  "Cairo apartments",
+  "Casablanca property",
+  "Abidjan houses",
+  "Addis Ababa real estate",
   "land for sale Kenya",
   "plots for sale Nairobi",
-  "land for sale Kiambu",
-  "plots for sale Kenya",
-  "commercial property Kenya",
-  "office space Nairobi",
-  "warehouses for rent Kenya",
-  "BnB Kenya",
-  "Airbnb Kenya",
-  "holiday homes Kenya",
-  "property for sale Nairobi",
-  "property for sale Mombasa",
-  "property for sale Kisumu",
+  "commercial property Africa",
+  "holiday homes Africa",
   "real estate agents Kenya",
-  "estate agents Nairobi",
-  "verified property listings Kenya",
-  "Kilimani apartments",
-  "Westlands rentals",
-  "Karen houses for sale",
-  "Syokimau houses",
-  "Runda property",
-  "Lavington apartments",
-  "Nyali beach property",
-  "Diani land for sale",
-  "Nakuru houses for sale",
-  "Eldoret rentals",
-  "affordable housing Kenya",
-  "M-Pesa property listing",
+  "verified property listings Africa",
   "list property free Kenya",
+  "M-Pesa property listing",
 ];
 
 export {
@@ -142,6 +137,17 @@ export function buildPageMetadata(input: {
     openGraph: {
       type: "website",
       locale: "en_KE",
+      alternateLocale: [
+        "en_NG",
+        "en_GH",
+        "en_ZA",
+        "en_UG",
+        "en_TZ",
+        "en_RW",
+        "en_EG",
+        "fr_CI",
+        "fr_SN",
+      ],
       url,
       siteName: APP_NAME,
       title: fullTitle,
@@ -173,16 +179,18 @@ export function buildPropertiesSearchMetadata(
   const town = str("town");
   const agentId = str("agentId");
 
-  const location = [town, county].filter(Boolean).join(", ");
-  const locationSuffix = location ? ` in ${location}` : " in Kenya";
+  const country = str("country");
+  const location = [town, county, country].filter(Boolean).join(", ");
+  const locationSuffix = location ? ` in ${location}` : " across Africa";
 
-  let title = "Properties for Sale & Rent in Kenya";
+  let title = "Properties for Sale & Rent in Africa";
   let description =
-    "Search verified houses, apartments, land, commercial space, and holiday homes across Kenya. Filter by county, price, and bedrooms on Your Home.";
+    "Search verified houses, apartments, land, commercial space, and holiday homes across Africa — Kenya, Nigeria, Ghana, South Africa, and all 54 countries. Filter by city, price, and bedrooms on Your Home.";
   const keywords: string[] = [
-    "property Kenya",
-    "real estate Kenya",
-    "verified listings Kenya",
+    "property Africa",
+    "real estate Africa",
+    "verified listings Africa",
+    "Kenya real estate",
   ];
   const pathParts = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
@@ -200,7 +208,7 @@ export function buildPropertiesSearchMetadata(
       "Browse active homes and land listed by this verified agent on Your Home Kenya.";
   } else if (category === "land-plots") {
     title = `Land & Plots for Sale${locationSuffix}`;
-    description = `Find verified vacant land, plots, and farms${locationSuffix}. Compare prices in KES and contact sellers on Your Home — Kenya's property marketplace.`;
+    description = `Find verified vacant land, plots, and farms${locationSuffix}. Compare prices and contact sellers on Your Home — Africa's property marketplace.`;
     keywords.push(
       "land for sale Kenya",
       "plots for sale Nairobi",
@@ -209,7 +217,7 @@ export function buildPropertiesSearchMetadata(
     );
   } else if (category === "commercial") {
     title = `Commercial Property${locationSuffix}`;
-    description = `Offices, shops, and warehouses for sale and rent${locationSuffix}. Verified commercial listings on Your Home Kenya.`;
+    description = `Offices, shops, and warehouses for sale and rent${locationSuffix}. Verified commercial listings on Your Home.`;
     keywords.push(
       "commercial property Kenya",
       "office space Nairobi",
@@ -225,28 +233,35 @@ export function buildPropertiesSearchMetadata(
     );
   } else if (listingType === "BUY") {
     title = `Houses & Property for Sale${locationSuffix}`;
-    description = `Homes, apartments, and townhouses for sale${locationSuffix}. Verified sellers and agents on Your Home Kenya.`;
+    description = `Homes, apartments, and townhouses for sale${locationSuffix}. Verified sellers and agents on Your Home.`;
     keywords.push("houses for sale Kenya", "property for sale Nairobi");
   } else if (listingType === "HOLIDAY") {
     title = `BnB & Holiday Stays${locationSuffix}`;
-    description = `Short-stay apartments, beach villas, and city Airbnbs${locationSuffix}. Book on Your Home Kenya.`;
+    description = `Short-stay apartments, beach villas, and city Airbnbs${locationSuffix}. Book on Your Home.`;
     keywords.push("BnB Kenya", "Airbnb Kenya", "holiday homes Kenya");
   } else if (propertyType === "APARTMENT") {
     title = `Apartments${locationSuffix}`;
-    description = `Flats and apartments for sale and rent${locationSuffix} on Your Home — Kenya real estate you can trust.`;
+    description = `Flats and apartments for sale and rent${locationSuffix} on Your Home — Africa real estate you can trust.`;
     keywords.push("apartments Kenya", "flats Nairobi");
   } else if (propertyType === "HOUSE" || propertyType === "VILLA") {
     title = `Houses & Villas${locationSuffix}`;
     description = `Standalone houses, bungalows, and villas${locationSuffix}. Browse verified listings on Your Home.`;
     keywords.push("houses Kenya", "villas for sale Kenya");
   } else if (county) {
-    title = `Property in ${county}, Kenya`;
-    description = `Homes, land, and rentals in ${county} county. Search verified listings on Your Home Kenya.`;
+    title = `Property in ${county}${country ? `, ${country}` : ""}`;
+    description = `Homes, land, and rentals in ${county}${country ? `, ${country}` : ""}. Search verified listings on Your Home.`;
     keywords.push(`${county} property`, `${county} real estate`);
+  } else if (country) {
+    title = `Property in ${country}`;
+    description = `Homes, land, rentals, and BnB stays in ${country}. Search verified listings on Your Home.`;
+    keywords.push(`${country} property`, `${country} real estate`, `${country} BnB`);
   }
 
   if (town) {
-    keywords.push(`${town} property`, `${town} houses`, `${town} rentals`);
+    keywords.push(`${town} property`, `${town} houses`, `${town} rentals`, `${town} BnB`);
+  }
+  if (country) {
+    keywords.push(`${country} houses for sale`, `${country} apartments for rent`);
   }
 
   return buildPageMetadata({ title, description, path, keywords });
@@ -264,10 +279,10 @@ export function organizationJsonLd() {
     image: absoluteUrl("/opengraph-image"),
     description: APP_DESCRIPTION,
     foundingDate: "2026",
-    areaServed: {
-      "@type": "Country",
-      name: "Kenya",
-    },
+    areaServed: [
+      { "@type": "Continent", name: "Africa" },
+      { "@type": "Country", name: "Kenya" },
+    ],
     address: {
       "@type": "PostalAddress",
       addressCountry: "KE",
@@ -277,16 +292,18 @@ export function organizationJsonLd() {
     contactPoint: {
       "@type": "ContactPoint",
       contactType: "customer support",
-      availableLanguage: ["English", "Swahili"],
+      availableLanguage: ["English", "Swahili", "French"],
       email: "charlesnduya84@gmail.com",
-      areaServed: "KE",
+      areaServed: ["AF", "KE"],
     },
     knowsAbout: [
+      "Africa real estate",
       "Kenya real estate",
       "property sales",
       "rentals",
       "land and plots",
       "BnB stays",
+      "Airbnb-style holiday homes",
       "commercial property",
     ],
   };
@@ -301,7 +318,7 @@ export function websiteJsonLd() {
     alternateName: "yourhome.co.ke",
     url: absoluteUrl("/"),
     description: APP_DESCRIPTION,
-    inLanguage: "en-KE",
+    inLanguage: ["en-KE", "en"],
     publisher: { "@id": `${APP_URL}/#organization` },
     potentialAction: {
       "@type": "SearchAction",
@@ -331,24 +348,24 @@ export function homeFaqJsonLd() {
 
 export const HOME_FAQ_ITEMS = [
   {
-    question: "Where can I find houses for sale in Kenya?",
+    question: "Where can I find houses for sale in Africa?",
     answer:
-      "Browse verified houses, apartments, and land for sale across all 47 counties on Your Home (yourhome.co.ke). Search by Nairobi, Mombasa, Kisumu, Nakuru, Kiambu, and more.",
+      "Browse verified houses, apartments, and land for sale across all 54 African countries on Your Home (yourhome.co.ke). Search Kenya, Nigeria, Ghana, South Africa, Tanzania, Uganda, Egypt, Morocco, Rwanda, and more.",
   },
   {
-    question: "How do I rent an apartment in Nairobi?",
+    question: "How do I rent an apartment in Nairobi, Lagos, or Accra?",
     answer:
-      "Use Your Home to search rentals in Westlands, Kilimani, Lavington, Syokimau, and other Nairobi neighbourhoods. Filter by price and bedrooms, then contact verified landlords.",
+      "Use Your Home to search monthly rentals in major African cities. Filter by price and bedrooms, then contact verified landlords and agents.",
   },
   {
-    question: "Can I list my property for free in Kenya?",
+    question: "Does Your Home list BnB and Airbnb stays?",
     answer:
-      "Yes. Landlords, agents, and sellers can register on Your Home and list properties. Listings are reviewed for quality before going live.",
+      "Yes. Book short-stay apartments, beach villas, and holiday homes across Africa — from Diani and Zanzibar to Cape Town, Marrakech, and Lagos.",
   },
   {
-    question: "Does Your Home have land and plots for sale?",
+    question: "Can I list my property for free?",
     answer:
-      "Yes. Search land and plots across Kenya including Kiambu, Kajiado, Nakuru, and coastal counties. Filter by category Land & Plots on yourhome.co.ke.",
+      "Yes. Landlords, agents, and sellers can register on Your Home and list properties in any African country. Listings are reviewed for quality before going live.",
   },
 ] as const;
 
@@ -410,6 +427,7 @@ export interface PropertyMetadataInput {
   currency?: string;
   county: string;
   town: string;
+  country?: string | null;
   estate?: string | null;
   listingType: string;
   propertyType: string;
@@ -432,7 +450,8 @@ export interface BlogMetadataInput {
 export function generatePropertyMetadata(
   property: PropertyMetadataInput,
 ): Metadata {
-  const location = [property.estate, property.town, property.county]
+  const countryName = property.country?.trim() || "Kenya";
+  const location = [property.estate, property.town, property.county, countryName]
     .filter(Boolean)
     .join(", ");
   const priceLabel = formatPrice(property.price, {
@@ -449,10 +468,10 @@ export function generatePropertyMetadata(
             ? "commercial"
             : "for sale";
   const typeLabel = property.propertyType.replace(/_/g, " ").toLowerCase();
-  const title = `${property.title} — ${typeLabel} ${listingLabel} in ${property.town}, Kenya`;
+  const title = `${property.title} — ${typeLabel} ${listingLabel} in ${property.town}, ${countryName}`;
   const description = truncateDescription(
     property.description ||
-      `${typeLabel} ${listingLabel} in ${location}. ${priceLabel}. Verified listing on Your Home Kenya (yourhome.co.ke).`,
+      `${typeLabel} ${listingLabel} in ${location}. ${priceLabel}. Verified listing on Your Home (yourhome.co.ke).`,
   );
   const url = absoluteUrl(`/properties/${property.slug}`);
   const image = property.imageUrl ?? absoluteUrl("/opengraph-image");
@@ -481,10 +500,11 @@ export function generatePropertyMetadata(
       `${property.town} ${typeLabel}`,
       `${property.town} property ${listingLabel}`,
       `${property.county} real estate`,
-      `${property.county} ${typeLabel}`,
+      `${countryName} real estate`,
+      `${property.town} ${countryName}`,
       property.listingType,
       property.propertyType,
-      "Kenya property",
+      "Africa property",
       "yourhome.co.ke",
       APP_NAME,
     ],
@@ -502,9 +522,9 @@ export function generateAgentMetadata(input: {
   const location = [input.town, input.county].filter(Boolean).join(", ");
   const title = location
     ? `${input.name} — Real Estate Agent in ${location}`
-    : `${input.name} — Real Estate Agent Kenya`;
+    : `${input.name} — Real Estate Agent Africa`;
   const description = truncateDescription(
-    `${input.name}${input.agencyName ? ` at ${input.agencyName}` : ""} — verified estate agent on Your Home Kenya. Browse active property listings${location ? ` in ${location}` : " across Kenya"}.`,
+    `${input.name}${input.agencyName ? ` at ${input.agencyName}` : ""} — verified estate agent on Your Home. Browse active property listings${location ? ` in ${location}` : " across Africa"}.`,
   );
 
   return buildPageMetadata({
@@ -515,6 +535,7 @@ export function generateAgentMetadata(input: {
     keywords: [
       `${input.name} agent`,
       "real estate agent Kenya",
+      "real estate agent Africa",
       input.county ? `${input.county} estate agent` : "Nairobi estate agent",
       "property agent Kenya",
       "yourhome.co.ke agents",
@@ -526,7 +547,7 @@ export function generateBlogMetadata(post: BlogMetadataInput): Metadata {
   const title = post.title;
   const description = truncateDescription(
     post.excerpt ??
-      `Kenya property guide: ${post.title}. Market tips, buying, renting, and investing on ${APP_NAME}.`,
+      `Africa property guide: ${post.title}. Market tips, buying, renting, and investing on ${APP_NAME}.`,
   );
   const url = absoluteUrl(`/blog/${post.slug}`);
   const image = post.coverImage ?? absoluteUrl("/opengraph-image");
@@ -557,10 +578,10 @@ export function generateBlogMetadata(post: BlogMetadataInput): Metadata {
     },
     keywords: [
       post.category,
-      "Kenya property blog",
-      "real estate tips Kenya",
-      "housing market Kenya",
-      "buy property Kenya",
+      "Africa property blog",
+      "real estate tips Africa",
+      "housing market Africa",
+      "buy property Africa",
       "yourhome.co.ke",
       APP_NAME,
     ],
@@ -575,7 +596,8 @@ export interface PropertyJsonLdInput extends PropertyMetadataInput {
 }
 
 export function propertyJsonLd(property: PropertyJsonLdInput): object {
-  const location = [property.estate, property.town, property.county]
+  const countryName = property.country?.trim() || "Kenya";
+  const location = [property.estate, property.town, property.county, countryName]
     .filter(Boolean)
     .join(", ");
   const url = absoluteUrl(`/properties/${property.slug}`);
@@ -609,7 +631,7 @@ export function propertyJsonLd(property: PropertyJsonLdInput): object {
       "@type": "PostalAddress",
       addressLocality: property.town,
       addressRegion: property.county,
-      addressCountry: "KE",
+      addressCountry: iso2ForCountry(countryName).toUpperCase(),
       ...(property.estate ? { streetAddress: property.estate } : {}),
     },
     image: images,

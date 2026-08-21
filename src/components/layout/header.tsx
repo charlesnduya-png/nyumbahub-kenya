@@ -36,6 +36,7 @@ const navLinks: {
   { href: "/property-for-sale", label: "Buy" },
   { href: "/rent", label: "Rent" },
   { href: "/bnb", label: "BnB", icon: Palmtree },
+  { href: "/africa", label: "Africa" },
   { href: "/properties?category=land-plots", label: "Land" },
   { href: "/properties?listingType=COMMERCIAL", label: "Commercial" },
   { href: "/agents", label: "Agents" },

@@ -10,15 +10,15 @@ import { prisma } from "@/lib/prisma";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata = buildPageMetadata({
-  title: "Licensed Real Estate Agents in Kenya",
+  title: "Licensed Real Estate Agents in Africa",
   description:
-    "Find verified estate agents across Nairobi, Mombasa, Nakuru and Kenya. Call directly or browse their active property listings on Your Home.",
+    "Find verified estate agents across Nairobi, Lagos, Accra, Cape Town, and Africa. Call directly or browse their active property listings on Your Home.",
   path: "/agents",
   keywords: [
     "real estate agents Kenya",
-    "EARB agents Nairobi",
-    "property agents Kenya",
-    "estate agents Mombasa",
+    "real estate agents Africa",
+    "property agents Nairobi",
+    "estate agents Lagos",
   ],
 });
 

@@ -182,7 +182,7 @@ export function AnimatedHero() {
             className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-sm font-medium text-white backdrop-blur-md"
           >
             <ShieldCheck className="h-4 w-4 text-emerald-300" aria-hidden />
-            Verified homes across Kenya
+            Verified homes across Africa
           </motion.div>
 
           <motion.h1
@@ -204,7 +204,7 @@ export function AnimatedHero() {
                 transition={{ delay: 0.8, duration: 0.7, ease: "easeOut" }}
               />
             </span>{" "}
-            in Kenya
+            in Africa
           </motion.h1>
 
           <motion.p
@@ -213,8 +213,8 @@ export function AnimatedHero() {
             transition={{ duration: 0.6, delay: 0.25 }}
             className="mx-auto mt-5 max-w-xl text-base text-white/85 sm:text-lg"
           >
-            Browse animated, verified listings from Nairobi to the coast —
-            buy, rent, or invest with confidence.
+            Browse verified listings from Nairobi to Lagos, Accra, Cape Town,
+            and every African country — buy, rent, or book a BnB.
           </motion.p>
 
           {/* Live slide caption */}

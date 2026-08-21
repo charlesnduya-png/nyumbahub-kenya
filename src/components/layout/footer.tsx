@@ -2,6 +2,10 @@ import Link from "next/link";
 import { Globe, MessageCircle, Share2, Users } from "lucide-react";
 
 import { BrandLogo } from "@/components/brand/logo";
+import {
+  AFRICA_COUNTRY_MARKETS_BY_SLUG,
+  featuredAfricaCountrySlugs,
+} from "@/lib/africa-markets";
 import { APP_NAME } from "@/lib/seo";
 import {
   SEO_BUY_AREA_LANDINGS,
@@ -13,16 +17,26 @@ const exploreLinks = [
   { href: "/property-for-sale", label: "Buy Property" },
   { href: "/rent", label: "Rent Property" },
   { href: "/bnb", label: "BnB & Holiday Homes" },
+  { href: "/africa", label: "All African countries" },
   { href: "/properties?category=land-plots", label: "Land & Plots" },
-  { href: "/properties?category=commercial", label: "Commercial" },
   { href: "/agents", label: "Find an Agent" },
 ];
 
 const popularSearchLinks = [
-  ...SEO_COUNTY_LANDINGS.slice(0, 4),
-  ...SEO_RENT_AREA_LANDINGS.slice(0, 3),
+  ...SEO_COUNTY_LANDINGS.slice(0, 3),
+  ...SEO_RENT_AREA_LANDINGS.slice(0, 2),
   ...SEO_BUY_AREA_LANDINGS.slice(0, 2),
 ].map(({ label, path }) => ({ href: path, label }));
+
+const africaFooterLinks = featuredAfricaCountrySlugs()
+  .slice(0, 8)
+  .map((slug) => {
+    const country = AFRICA_COUNTRY_MARKETS_BY_SLUG.get(slug);
+    return country
+      ? { href: `/property-for-sale/${country.slug}`, label: country.name }
+      : null;
+  })
+  .filter((item): item is { href: string; label: string } => Boolean(item));
 
 const sellerLinks = [
   { href: "/register/professional", label: "List Your Property" },
@@ -58,10 +72,9 @@ export function Footer() {
           <div className="lg:col-span-1">
             <BrandLogo showKenya size="lg" />
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              Your Home is Kenya&apos;s marketplace for verified homes, land,
-              rentals, and BnB stays. We connect buyers, tenants, and hosts with
-              trusted sellers and agents — with M-Pesa payments and admin-reviewed
-              listings.
+              Your Home is Africa&apos;s marketplace for verified homes, land,
+              rentals, and BnB stays — starting in Kenya. We connect buyers,
+              tenants, and hosts with trusted sellers and agents.
             </p>
             <div className="mt-4 flex gap-3">
               {socialLinks.map(({ href, label, icon: Icon }) => (
@@ -99,7 +112,7 @@ export function Footer() {
 
           <div>
             <h3 className="text-sm font-semibold uppercase tracking-wider text-foreground">
-              Popular in Kenya
+              Popular places
             </h3>
             <ul className="mt-4 space-y-2">
               {popularSearchLinks.map((link) => (
@@ -112,6 +125,32 @@ export function Footer() {
                   </Link>
                 </li>
               ))}
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-foreground">
+              Across Africa
+            </h3>
+            <ul className="mt-4 space-y-2">
+              {africaFooterLinks.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+              <li>
+                <Link
+                  href="/africa"
+                  className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                >
+                  All 54 countries
+                </Link>
+              </li>
             </ul>
           </div>
 

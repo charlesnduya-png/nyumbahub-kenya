@@ -37,7 +37,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(absoluteUrl("/")),
   title: {
-    default: `${APP_NAME} — Kenya Real Estate | Houses, Rent, Land & BnB`,
+    default: `${APP_NAME} — Africa Real Estate | Houses, Rent, Land & BnB`,
     template: `%s | ${APP_NAME}`,
   },
   description: APP_DESCRIPTION,
@@ -66,20 +66,20 @@ export const metadata: Metadata = {
     locale: "en_KE",
     url: absoluteUrl("/"),
     siteName: APP_NAME,
-    title: `${APP_NAME} — Kenya Real Estate | Houses, Rent, Land & BnB`,
+    title: `${APP_NAME} — Africa Real Estate | Houses, Rent, Land & BnB`,
     description: APP_DESCRIPTION,
     images: [
       {
         url: absoluteUrl("/opengraph-image"),
         width: 1200,
         height: 630,
-        alt: `${APP_NAME} — Kenya real estate`,
+        alt: `${APP_NAME} — Africa real estate, rentals & BnB`,
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: `${APP_NAME} — Kenya Real Estate | Houses, Rent, Land & BnB`,
+    title: `${APP_NAME} — Africa Real Estate | Houses, Rent, Land & BnB`,
     description: APP_DESCRIPTION,
     images: [absoluteUrl("/opengraph-image")],
   },
@@ -87,8 +87,8 @@ export const metadata: Metadata = {
     icon: "/favicon.ico",
   },
   other: {
-    "geo.region": "KE",
-    "geo.placename": "Kenya",
+    "geo.region": "AF",
+    "geo.placename": "Africa",
   },
 };
 

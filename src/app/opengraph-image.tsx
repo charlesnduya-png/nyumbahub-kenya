@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "Your Home — Houses for Sale & Rent in Kenya";
+export const alt = "Your Home — Houses for Sale, Rent & BnB across Africa";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -56,11 +56,11 @@ export default function OpenGraphImage() {
               maxWidth: 900,
             }}
           >
-            Find your perfect home in Kenya
+            Find your perfect home in Africa
           </div>
           <div style={{ fontSize: 28, opacity: 0.9, maxWidth: 820 }}>
             Verified houses, apartments, land, rentals & BnB stays —
-            Nairobi to the coast
+            Kenya to Lagos, Accra, Cape Town & beyond
           </div>
         </div>
         <div style={{ fontSize: 24, opacity: 0.85 }}>yourhome.co.ke</div>
