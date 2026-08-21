@@ -145,7 +145,7 @@ export function LocationMapPicker({
     debounceRef.current = window.setTimeout(() => {
       void (async () => {
         try {
-          const found = await searchPlaces(trimmed, countryIso);
+          const found = await searchPlaces(trimmed, countryIso ?? "ke");
           setResults(found);
           setOpenResults(true);
         } catch {
