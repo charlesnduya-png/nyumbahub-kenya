@@ -19,7 +19,12 @@ export default function robots(): MetadataRoute.Robots {
         ],
       },
     ],
-    sitemap: `${APP_URL}/sitemap.xml`,
+    sitemap: [
+      `${APP_URL}/sitemap.xml`,
+      `${APP_URL}/sitemap-africa.xml`,
+      `${APP_URL}/sitemap-pages.xml`,
+      `${APP_URL}/sitemap-listings.xml`,
+    ],
     host: APP_URL,
   };
 }

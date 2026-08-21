@@ -39,10 +39,17 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   });
 }
 
-export async function getSitemapEntries(): Promise<SitemapEntry[]> {
-  const now = new Date();
+function uniqueEntries(entries: SitemapEntry[]) {
+  const seen = new Set<string>();
+  return entries.filter((entry) => {
+    if (seen.has(entry.url)) return false;
+    seen.add(entry.url);
+    return true;
+  });
+}
 
-  const staticRoutes: SitemapEntry[] = [
+export function getPagesSitemapEntries(now = new Date()): SitemapEntry[] {
+  return [
     { url: loc("/"), lastModified: now, changeFrequency: "daily", priority: 1 },
     {
       url: loc("/africa"),
@@ -117,37 +124,77 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
       priority: 0.3,
     },
   ];
+}
 
-  const salePlaceRoutes: SitemapEntry[] = getAllPropertyForSalePlaces().flatMap(
-    (place) => [
-      {
-        url: loc(`/property-for-sale/${place.slug}`),
-        lastModified: now,
-        changeFrequency: "daily" as const,
-        priority: place.kind === "county" || place.kind === "country" ? 0.9 : 0.82,
-      },
-      {
-        url: loc(`/rent/${place.slug}`),
-        lastModified: now,
-        changeFrequency: "daily" as const,
-        priority: 0.8,
-      },
-      {
-        url: loc(`/bnb/${place.slug}`),
-        lastModified: now,
-        changeFrequency: "daily" as const,
-        priority: 0.78,
-      },
-    ],
+/** All African countries and cities: sale, rent, and BnB landing pages. */
+export function getAfricaSitemapEntries(now = new Date()): SitemapEntry[] {
+  const hubs: SitemapEntry[] = [
+    {
+      url: loc("/africa"),
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 1,
+    },
+    {
+      url: loc("/property-for-sale"),
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.96,
+    },
+    {
+      url: loc("/rent"),
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.94,
+    },
+    {
+      url: loc("/bnb"),
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.92,
+    },
+  ];
+
+  const placeRoutes: SitemapEntry[] = getAllPropertyForSalePlaces().flatMap(
+    (place) => {
+      const isCountryOrCounty =
+        place.kind === "county" || place.kind === "country";
+      return [
+        {
+          url: loc(`/property-for-sale/${place.slug}`),
+          lastModified: now,
+          changeFrequency: "daily" as const,
+          priority: isCountryOrCounty ? 0.9 : 0.82,
+        },
+        {
+          url: loc(`/rent/${place.slug}`),
+          lastModified: now,
+          changeFrequency: "daily" as const,
+          priority: isCountryOrCounty ? 0.86 : 0.8,
+        },
+        {
+          url: loc(`/bnb/${place.slug}`),
+          lastModified: now,
+          changeFrequency: "daily" as const,
+          priority: isCountryOrCounty ? 0.84 : 0.78,
+        },
+      ];
+    },
   );
 
-  const seoLandingRoutes: SitemapEntry[] = ALL_SEO_LANDINGS.map((landing) => ({
+  const extraLandings: SitemapEntry[] = ALL_SEO_LANDINGS.map((landing) => ({
     url: loc(landing.path),
     lastModified: now,
-    changeFrequency: "daily",
+    changeFrequency: "daily" as const,
     priority: landing.priority ?? 0.75,
   }));
 
+  return uniqueEntries([...hubs, ...placeRoutes, ...extraLandings]);
+}
+
+export async function getListingsSitemapEntries(
+  now = new Date(),
+): Promise<SitemapEntry[]> {
   try {
     const [properties, posts, agents] = await withTimeout(
       Promise.all([
@@ -197,31 +244,42 @@ export async function getSitemapEntries(): Promise<SitemapEntry[]> {
       priority: 0.7,
     }));
 
-    return uniqueEntries([
-      ...staticRoutes,
-      ...salePlaceRoutes,
-      ...seoLandingRoutes,
-      ...propertyRoutes,
-      ...blogRoutes,
-      ...agentRoutes,
-    ]);
+    return uniqueEntries([...propertyRoutes, ...blogRoutes, ...agentRoutes]);
   } catch (error) {
-    console.error("sitemap generation failed", error);
-    return uniqueEntries([
-      ...staticRoutes,
-      ...salePlaceRoutes,
-      ...seoLandingRoutes,
-    ]);
+    console.error("listings sitemap generation failed", error);
+    return [];
   }
 }
 
-function uniqueEntries(entries: SitemapEntry[]) {
-  const seen = new Set<string>();
-  return entries.filter((entry) => {
-    if (seen.has(entry.url)) return false;
-    seen.add(entry.url);
-    return true;
-  });
+export async function getSitemapEntries(): Promise<SitemapEntry[]> {
+  const now = new Date();
+  const listings = await getListingsSitemapEntries(now);
+  return uniqueEntries([
+    ...getPagesSitemapEntries(now),
+    ...getAfricaSitemapEntries(now),
+    ...listings,
+  ]);
+}
+
+export const SITEMAP_INDEX_PATHS = [
+  "/sitemap-africa.xml",
+  "/sitemap-pages.xml",
+  "/sitemap-listings.xml",
+] as const;
+
+export function renderSitemapIndexXml(now = new Date()) {
+  const body = SITEMAP_INDEX_PATHS.map(
+    (path) => `  <sitemap>
+    <loc>${escapeXml(loc(path))}</loc>
+    <lastmod>${now.toISOString()}</lastmod>
+  </sitemap>`,
+  ).join("\n");
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${body}
+</sitemapindex>
+`;
 }
 
 export function escapeXml(value: string) {
@@ -251,3 +309,8 @@ ${body}
 </urlset>
 `;
 }
+
+export const SITEMAP_XML_HEADERS = {
+  "Content-Type": "application/xml; charset=utf-8",
+  "Cache-Control": "public, max-age=3600, s-maxage=3600",
+};
