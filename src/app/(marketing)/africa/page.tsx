@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Globe, MapPin, Palmtree, Search } from "lucide-react";
 
+import { AfricaMapBackdrop } from "@/components/africa/africa-map-backdrop";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,7 +53,7 @@ export default async function AfricaHubPage() {
   }));
 
   return (
-    <div className="gradient-mesh">
+    <div className="relative overflow-hidden gradient-mesh">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -66,45 +67,48 @@ export default async function AfricaHubPage() {
         }}
       />
 
-      <section className="border-b">
-        <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-          <Badge className="mb-4 gap-1">
-            <Globe className="h-3.5 w-3.5" />
-            54 African countries
-          </Badge>
-          <h1 className="font-display max-w-4xl text-4xl font-semibold tracking-tight sm:text-5xl">
-            The best real estate, rentals & BnB stays across Africa
-          </h1>
-          <p className="mt-4 max-w-2xl text-lg text-muted-foreground">
-            Your Home lists verified houses, apartments, land, commercial space,
-            monthly rentals, and holiday homes from Kenya to Nigeria, Ghana,
-            South Africa, Egypt, Morocco, Tanzania, Uganda, Rwanda, and every
-            African country.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Button size="lg" asChild>
-              <Link href="/properties">
-                <Search className="mr-2 h-4 w-4" />
-                Search all listings
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" asChild>
-              <Link href="/property-for-sale">Buy</Link>
-            </Button>
-            <Button size="lg" variant="outline" asChild>
-              <Link href="/rent">Rent</Link>
-            </Button>
-            <Button size="lg" variant="outline" asChild>
-              <Link href="/bnb">
-                <Palmtree className="mr-2 h-4 w-4" />
-                BnB
-              </Link>
-            </Button>
+      <section className="relative isolate min-h-[34rem] overflow-hidden border-b sm:min-h-[40rem] lg:min-h-[44rem]">
+        <AfricaMapBackdrop />
+        <div className="relative z-10 mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
+          <div className="max-w-xl">
+            <Badge className="mb-4 gap-1">
+              <Globe className="h-3.5 w-3.5" />
+              54 African countries
+            </Badge>
+            <h1 className="font-display max-w-3xl text-4xl font-semibold tracking-tight sm:text-5xl">
+              The best real estate, rentals & BnB stays across Africa
+            </h1>
+            <p className="mt-4 max-w-xl text-lg text-muted-foreground">
+              Your Home lists verified houses, apartments, land, commercial space,
+              monthly rentals, and holiday homes from Kenya to Nigeria, Ghana,
+              South Africa, Egypt, Morocco, Tanzania, Uganda, Rwanda, and every
+              African country.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Button size="lg" asChild>
+                <Link href="/properties">
+                  <Search className="mr-2 h-4 w-4" />
+                  Search all listings
+                </Link>
+              </Button>
+              <Button size="lg" variant="outline" asChild>
+                <Link href="/property-for-sale">Buy</Link>
+              </Button>
+              <Button size="lg" variant="outline" asChild>
+                <Link href="/rent">Rent</Link>
+              </Button>
+              <Button size="lg" variant="outline" asChild>
+                <Link href="/bnb">
+                  <Palmtree className="mr-2 h-4 w-4" />
+                  BnB
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <section className="relative z-10 mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <h2 className="font-display text-2xl font-semibold">Featured markets</h2>
         <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {featured.map((country) => (
@@ -126,7 +130,7 @@ export default async function AfricaHubPage() {
         </ul>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
+      <section className="relative z-10 mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
         {groups.map((group) => (
           <div key={group.region} className="mb-12 last:mb-0">
             <h2 className="font-display text-2xl font-semibold">
