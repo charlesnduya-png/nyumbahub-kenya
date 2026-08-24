@@ -1,4 +1,5 @@
 import { LazyChatAssistant } from "@/components/ai/lazy-chat-assistant";
+import { SignInSavePopup } from "@/components/auth/signin-save-popup";
 import { SiteVisitTracker } from "@/components/analytics/site-visit-tracker";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
@@ -17,6 +18,7 @@ export default function MarketingLayout({
       </main>
       <Footer />
       <LazyChatAssistant />
+      <SignInSavePopup />
     </div>
   );
 }
