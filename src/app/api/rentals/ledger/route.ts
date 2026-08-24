@@ -258,6 +258,13 @@ export async function PATCH(request: Request) {
       },
     });
 
+    try {
+      const { syncRentWallet } = await import("@/lib/wallet");
+      await syncRentWallet(prisma, payment.id);
+    } catch (walletError) {
+      console.error("Rent wallet sync failed:", walletError);
+    }
+
     return NextResponse.json({
       success: true,
       data: {

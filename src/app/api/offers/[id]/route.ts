@@ -106,6 +106,13 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       data: { status },
     });
 
+    try {
+      const { syncSaleWallet } = await import("@/lib/wallet");
+      await syncSaleWallet(prisma, updated.id);
+    } catch (walletError) {
+      console.error("Offer wallet sync failed:", walletError);
+    }
+
     if (status === "ACCEPTED" || status === "REJECTED") {
       await prisma.notification.create({
         data: {

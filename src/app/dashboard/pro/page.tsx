@@ -6,6 +6,7 @@ import {
   MessageSquareWarning,
   Plus,
   TrendingUp,
+  Wallet,
 } from "lucide-react";
 import { ProfilePhotoCard } from "@/components/professional/profile-photo-card";
 import { ViewsChart } from "@/components/professional/views-chart";
@@ -16,6 +17,7 @@ import { auth } from "@/lib/auth";
 import { resolveProfessionalActingContext } from "@/lib/account-team";
 import { prisma } from "@/lib/prisma";
 import { formatPrice, formatRelativeDate } from "@/lib/utils";
+import { getWalletSnapshot } from "@/lib/wallet";
 
 export default async function ProfessionalAdminPage() {
   const session = await auth();
@@ -28,7 +30,7 @@ export default async function ProfessionalAdminPage() {
   const ctx = await resolveProfessionalActingContext(userId);
   const ownerId = ctx.actingOwnerId;
 
-  const [properties, messages, leads, pendingOffers] = await Promise.all([
+  const [properties, messages, leads, pendingOffers, wallet] = await Promise.all([
     prisma.property.findMany({
       where: { ownerId },
       orderBy: { updatedAt: "desc" },
@@ -70,6 +72,12 @@ export default async function ProfessionalAdminPage() {
         },
       })
       .catch(() => 0),
+    (!ctx.isTeamMember ||
+    ctx.permissions.manageTeam ||
+    ctx.permissions.manageBookings ||
+    ctx.permissions.manageListings)
+      ? getWalletSnapshot(prisma, ownerId).catch(() => null)
+      : Promise.resolve(null),
   ]);
 
   const activeListings = properties.filter((p) => p.status === "ACTIVE").length;
@@ -127,6 +135,42 @@ export default async function ProfessionalAdminPage() {
       </div>
 
       {!ctx.isTeamMember ? <ProfilePhotoCard compact /> : null}
+
+      {wallet ? (
+        <Link href="/dashboard/pro/wallet">
+          <Card className="transition hover:border-primary/40 hover:shadow-md">
+            <CardContent className="grid gap-4 p-5 sm:grid-cols-3">
+              <div className="flex items-center gap-3">
+                <Wallet className="h-8 w-8 text-primary/70" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Available balance</p>
+                  <p className="text-2xl font-bold">
+                    {formatPrice(wallet.summary.availableBalance, {
+                      currency: wallet.summary.currency,
+                    })}
+                  </p>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Pending payments</p>
+                <p className="text-2xl font-bold">
+                  {formatPrice(wallet.summary.pendingBalance, {
+                    currency: wallet.summary.currency,
+                  })}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total earned</p>
+                <p className="text-2xl font-bold">
+                  {formatPrice(wallet.summary.lifetimeEarned, {
+                    currency: wallet.summary.currency,
+                  })}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {[

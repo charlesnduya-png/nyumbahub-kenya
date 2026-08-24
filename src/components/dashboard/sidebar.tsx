@@ -33,6 +33,7 @@ import {
   UserCircle,
   BadgeCheck,
   Wallet,
+  Banknote,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/types";
@@ -65,6 +66,7 @@ const professionalNav: NavItem[] = [
   { label: "All Listings", href: "/dashboard/pro/listings", icon: Building2 },
   { label: "Boma yangu", href: "/dashboard/pro/plots", icon: Home },
   { label: "Rent management", href: "/dashboard/pro/rent", icon: Wallet },
+  { label: "Wallet", href: "/dashboard/pro/wallet", icon: Banknote },
   { label: "BnB Bookings", href: "/dashboard/pro/bookings", icon: Calendar },
   { label: "Inquiries", href: "/dashboard/pro/inquiries", icon: MessageSquare },
   { label: "Viewings", href: "/dashboard/pro/viewings", icon: CalendarDays },

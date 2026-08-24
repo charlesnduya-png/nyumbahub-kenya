@@ -103,6 +103,13 @@ export function canAccessNavHref(
   if (href === "/dashboard/pro/bookings") {
     return permissions.manageBookings || canRead;
   }
+  if (href === "/dashboard/pro/wallet") {
+    return (
+      permissions.manageTeam ||
+      permissions.manageBookings ||
+      permissions.manageListings
+    );
+  }
   if (href === "/dashboard/pro/rental-reservations") {
     return permissions.manageListings || permissions.manageBookings || canRead;
   }

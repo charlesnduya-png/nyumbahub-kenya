@@ -77,7 +77,7 @@ export default function OwnerBookingsPage() {
 
   async function updateStatus(
     id: string,
-    status: "APPROVED" | "REJECTED" | "CANCELLED",
+    status: "APPROVED" | "REJECTED" | "CANCELLED" | "COMPLETED",
   ) {
     setActingId(id);
     try {
@@ -99,7 +99,9 @@ export default function OwnerBookingsPage() {
           ? "Booking approved"
           : status === "REJECTED"
             ? "Booking declined"
-            : "Booking cancelled",
+            : status === "COMPLETED"
+              ? "Stay marked complete — earnings moved to your wallet"
+              : "Booking cancelled",
       );
       await load();
     } catch {
@@ -209,6 +211,32 @@ export default function OwnerBookingsPage() {
                         Decline
                       </Button>
                     </div>
+                  </div>
+                ) : b.status === "APPROVED" ? (
+                  <div className="flex flex-wrap gap-2">
+                    {b.guest?.id ? (
+                      <Button variant="outline" size="sm" asChild>
+                        <Link
+                          href={`/dashboard/pro/inbox?peer=${b.guest.id}&property=${b.property.id}`}
+                        >
+                          <MessageCircle className="mr-1 h-3.5 w-3.5" />
+                          Chat with guest
+                        </Link>
+                      </Button>
+                    ) : null}
+                    <Button
+                      disabled={actingId === b.id}
+                      onClick={() => void updateStatus(b.id, "COMPLETED")}
+                    >
+                      Mark stay complete
+                    </Button>
+                    <Button
+                      variant="outline"
+                      disabled={actingId === b.id}
+                      onClick={() => void updateStatus(b.id, "CANCELLED")}
+                    >
+                      Cancel
+                    </Button>
                   </div>
                 ) : b.guest?.id ? (
                   <Button variant="outline" size="sm" asChild>

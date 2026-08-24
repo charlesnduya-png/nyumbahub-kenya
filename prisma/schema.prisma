@@ -73,6 +73,21 @@ enum PaymentMethod {
   CARD
 }
 
+enum WalletTxType {
+  BOOKING
+  RENT
+  SALE
+  PAYOUT
+  ADJUSTMENT
+}
+
+enum WalletTxStatus {
+  PENDING
+  AVAILABLE
+  PAID_OUT
+  CANCELLED
+}
+
 enum SubscriptionPlan {
   FREE
   BASIC
@@ -222,6 +237,8 @@ model User {
   accountTeamMembers   AccountTeamMember[]
   rentPaymentsAsTenant RentalRentPayment[] @relation("RentTenant")
   rentPaymentsMarked   RentalRentPayment[] @relation("RentMarkedBy")
+  wallet               ProfessionalWallet?
+  walletTransactions   WalletTransaction[]
 
   @@index([role])
   @@index([email])
@@ -719,6 +736,49 @@ model Payment {
 
   @@index([userId])
   @@index([status])
+}
+
+model ProfessionalWallet {
+  id               String              @id @default(cuid())
+  userId           String              @unique
+  availableBalance Float               @default(0)
+  pendingBalance   Float               @default(0)
+  lifetimeEarned   Float               @default(0)
+  lifetimePaidOut  Float               @default(0)
+  currency         String              @default("KES")
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions     WalletTransaction[]
+
+  @@index([lifetimeEarned])
+}
+
+model WalletTransaction {
+  id          String          @id @default(cuid())
+  walletId    String
+  userId      String
+  type        WalletTxType
+  status      WalletTxStatus  @default(PENDING)
+  amount      Float
+  grossAmount Float           @default(0)
+  feeAmount   Float           @default(0)
+  currency    String          @default("KES")
+  sourceType  String
+  sourceId    String
+  description String
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  clearedAt   DateTime?
+
+  wallet      ProfessionalWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceType, sourceId])
+  @@index([userId, createdAt])
+  @@index([walletId, status])
+  @@index([status, createdAt])
 }
 
 model BlogPost {

@@ -271,6 +271,15 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       });
     });
 
+    if (property.status === "SOLD") {
+      try {
+        const { syncSalesForProperty } = await import("@/lib/wallet");
+        await syncSalesForProperty(prisma, property.id);
+      } catch (walletError) {
+        console.error("Sale wallet sync failed:", walletError);
+      }
+    }
+
     return NextResponse.json({ success: true, data: property });
   } catch (error) {
     return NextResponse.json(

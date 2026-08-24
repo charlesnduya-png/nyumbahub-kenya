@@ -95,6 +95,19 @@ export async function PATCH(request: Request, { params }: RouteParams) {
           { status: 400 },
         );
       }
+    } else if (status === "COMPLETED") {
+      if (!isOwner) {
+        return NextResponse.json(
+          { success: false, error: "Only the property owner can complete bookings" },
+          { status: 403 },
+        );
+      }
+      if (booking.status !== "APPROVED") {
+        return NextResponse.json(
+          { success: false, error: "Only approved bookings can be marked complete" },
+          { status: 400 },
+        );
+      }
     }
 
     const updated = await prisma.booking.update({
@@ -104,6 +117,13 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         ...(ownerNote !== undefined ? { ownerNote } : {}),
       },
     });
+
+    try {
+      const { syncBookingWallet } = await import("@/lib/wallet");
+      await syncBookingWallet(prisma, updated.id);
+    } catch (walletError) {
+      console.error("Booking wallet sync failed:", walletError);
+    }
 
     if (status === "APPROVED" || status === "REJECTED") {
       const hostId = hostUserId;

@@ -40,7 +40,7 @@ export const createBookingSchema = z
   });
 
 export const updateBookingStatusSchema = z.object({
-  status: z.enum(["APPROVED", "REJECTED", "CANCELLED"]),
+  status: z.enum(["APPROVED", "REJECTED", "CANCELLED", "COMPLETED"]),
   ownerNote: z.string().trim().max(1000).optional().nullable(),
 });
 

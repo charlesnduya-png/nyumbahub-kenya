@@ -42,7 +42,7 @@ const ADMIN_SECTIONS = [
   },
   {
     title: "Payments",
-    description: "Agent and seller payments",
+    description: "Fees, professional earnings, and agent rankings",
     href: "/dashboard/admin/payments",
   },
   {
