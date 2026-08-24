@@ -94,6 +94,21 @@ enum WalletPayoutMethod {
   DIGITAL_WALLET
 }
 
+enum EscrowHoldStatus {
+  NONE
+  AWAITING_PAYMENT
+  HELD
+  RELEASED
+  REFUNDED
+}
+
+enum PlatformCommissionStatus {
+  ACCRUED
+  COLLECTED
+  REFUNDED
+  CANCELLED
+}
+
 enum SubscriptionPlan {
   FREE
   BASIC
@@ -245,6 +260,7 @@ model User {
   rentPaymentsMarked   RentalRentPayment[] @relation("RentMarkedBy")
   wallet               ProfessionalWallet?
   walletTransactions   WalletTransaction[]
+  bnbCommissionsHosted PlatformCommission[]
 
   @@index([role])
   @@index([email])
@@ -573,6 +589,9 @@ model Booking {
   nights       Int
   totalAmount  Float
   currency     String        @default("KES")
+  commissionAmount Float     @default(0)
+  hostAmount   Float         @default(0)
+  escrowStatus EscrowHoldStatus @default(NONE)
   status       BookingStatus @default(PENDING)
   guestMessage String?       @db.Text
   ownerNote    String?       @db.Text
@@ -581,6 +600,7 @@ model Booking {
 
   property     Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   guest        User          @relation("GuestBookings", fields: [guestId], references: [id], onDelete: Cascade)
+  platformCommission PlatformCommission?
 
   @@index([propertyId, status])
   @@index([guestId])
@@ -795,6 +815,27 @@ model WalletTransaction {
   @@index([userId, createdAt])
   @@index([walletId, status])
   @@index([status, createdAt])
+}
+
+model PlatformCommission {
+  id               String                    @id @default(cuid())
+  bookingId        String                    @unique
+  hostUserId       String
+  guestUserId      String
+  grossAmount      Float
+  commissionAmount Float
+  hostAmount       Float
+  currency         String                    @default("KES")
+  status           PlatformCommissionStatus  @default(ACCRUED)
+  collectedAt      DateTime?
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+
+  booking          Booking                   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  host             User                      @relation(fields: [hostUserId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([hostUserId])
 }
 
 model BlogPost {

@@ -192,11 +192,11 @@ export async function POST(request: Request) {
 
     const nights = nightsBetween(checkInDate, checkOutDate);
     const totalAmount = property.price * nights;
-    const { bnbCommissionAmount, BNB_BOOKING_COMMISSION_RATE } = await import(
-      "@/lib/pricing"
+    const { splitBnbPayment, bnbCommissionPercent } = await import(
+      "@/lib/bnb-split"
     );
-    const commission = bnbCommissionAmount(totalAmount);
-    const commissionPct = Math.round(BNB_BOOKING_COMMISSION_RATE * 100);
+    const split = splitBnbPayment(totalAmount);
+    const commissionPct = bnbCommissionPercent();
     const hostUserId = property.agent?.userId ?? property.ownerId;
 
     const bookingMessage = [
@@ -206,7 +206,8 @@ export async function POST(request: Request) {
       `Guests: ${guests}`,
       `Nights: ${nights}`,
       `Total: ${property.currency} ${totalAmount.toLocaleString()}`,
-      `Platform fee (${commissionPct}%): ${property.currency} ${commission.toLocaleString()}`,
+      `Platform fee (${commissionPct}%): ${property.currency} ${split.commissionAmount.toLocaleString()}`,
+      `Host payout: ${property.currency} ${split.hostAmount.toLocaleString()}`,
       guestMessage ? `\nGuest note: ${guestMessage}` : "",
     ]
       .filter(Boolean)
@@ -222,6 +223,8 @@ export async function POST(request: Request) {
         nights,
         totalAmount,
         currency: property.currency,
+        commissionAmount: split.commissionAmount,
+        hostAmount: split.hostAmount,
         guestMessage: guestMessage || null,
         status: "PENDING",
       },

@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient, WalletTxStatus, WalletTxType } from "@prisma/client";
-import { bnbCommissionAmount } from "@/lib/pricing";
+import { syncPlatformCommission } from "@/lib/bnb-commission";
+import { splitBnbPayment } from "@/lib/bnb-split";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -280,8 +281,9 @@ export async function syncBookingWallet(
   if (!booking) return;
 
   const hostUserId = booking.property.agent?.userId ?? booking.property.ownerId;
-  const feeAmount = bnbCommissionAmount(booking.totalAmount);
-  const amount = roundMoney(booking.totalAmount - feeAmount);
+  const split = splitBnbPayment(booking.totalAmount);
+  const feeAmount = split.commissionAmount;
+  const amount = split.hostAmount;
   const checkoutPassed = booking.checkOut.getTime() <= Date.now();
 
   let status: WalletTxStatus = "CANCELLED";
@@ -303,6 +305,12 @@ export async function syncBookingWallet(
     sourceId: booking.id,
     description: `BnB booking · ${booking.property.title}`,
   });
+
+  try {
+    await syncPlatformCommission(db, booking.id);
+  } catch (error) {
+    console.error("BnB commission sync failed:", error);
+  }
 }
 
 export async function syncRentWallet(

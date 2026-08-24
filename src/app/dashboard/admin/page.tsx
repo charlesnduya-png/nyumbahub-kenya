@@ -47,7 +47,7 @@ const ADMIN_SECTIONS = [
   },
   {
     title: "Wallets",
-    description: "Withdrawals, balances, and agent rankings",
+    description: "Withdrawals, BnB commission, balances, and rankings",
     href: "/dashboard/admin/wallets",
   },
   {

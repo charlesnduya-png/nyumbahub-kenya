@@ -72,7 +72,8 @@ export function AdminProfitTracker({ revenue }: { revenue: AdminRevenueSummary }
       <div>
         <h2 className="text-lg font-semibold">Profit tracking</h2>
         <p className="text-sm text-muted-foreground">
-          Completed payments (M-Pesa &amp; card) — Kenya time (EAT).
+          Listing fees collected, plus 10% BnB commission earned when a stay is
+          approved. Escrow will collect that fee in cash and auto-pay hosts.
         </p>
       </div>
 
@@ -102,6 +103,23 @@ export function AdminProfitTracker({ revenue }: { revenue: AdminRevenueSummary }
           title="All time"
           amount={revenue.allTime}
           subtitle="Total platform revenue"
+          change={null}
+          icon={Wallet}
+        />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <ProfitCard
+          title="BnB commission this month"
+          amount={revenue.bnbCommissionMonthly}
+          subtitle="10% of approved BnB bookings"
+          change={null}
+          icon={Coins}
+        />
+        <ProfitCard
+          title="BnB commission all time"
+          amount={revenue.bnbCommissionAllTime}
+          subtitle={`${revenue.bnbCommissionCount} booking${revenue.bnbCommissionCount === 1 ? "" : "s"} with a platform fee`}
           change={null}
           icon={Wallet}
         />

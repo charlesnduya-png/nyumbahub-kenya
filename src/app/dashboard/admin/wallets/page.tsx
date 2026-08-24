@@ -36,6 +36,26 @@ interface RankingRow {
   payoutLabel: string;
 }
 
+interface CommissionSummary {
+  bookingCount: number;
+  commissionEarned: number;
+  hostShare: number;
+  grossBooked: number;
+  rows: Array<{
+    id: string;
+    status: string;
+    bookingStatus: string;
+    propertyTitle: string;
+    hostName: string | null;
+    hostEmail: string;
+    grossAmount: number;
+    commissionAmount: number;
+    hostAmount: number;
+    currency: string;
+    createdAt: string;
+  }>;
+}
+
 interface WithdrawalRow {
   id: string;
   amount: number;
@@ -69,6 +89,13 @@ export default function AdminWalletsPage() {
   const [earnings, setEarnings] = useState<EarningsRow[]>([]);
   const [rankings, setRankings] = useState<RankingRow[]>([]);
   const [withdrawals, setWithdrawals] = useState<WithdrawalRow[]>([]);
+  const [commissions, setCommissions] = useState<CommissionSummary>({
+    bookingCount: 0,
+    commissionEarned: 0,
+    hostShare: 0,
+    grossBooked: 0,
+    rows: [],
+  });
   const [loading, setLoading] = useState(true);
   const [payoutUserId, setPayoutUserId] = useState("");
   const [payoutAmount, setPayoutAmount] = useState("");
@@ -87,6 +114,7 @@ export default function AdminWalletsPage() {
         setEarnings(json.data?.earnings ?? []);
         setRankings(json.data?.rankings ?? []);
         setWithdrawals(json.data?.withdrawals ?? []);
+        if (json.data?.commissions) setCommissions(json.data.commissions);
       }
     } finally {
       setLoading(false);
@@ -151,7 +179,7 @@ export default function AdminWalletsPage() {
         <div>
           <h1 className="text-2xl font-bold">Wallets</h1>
           <p className="text-muted-foreground">
-            Professional balances, withdrawals, Africa-wide payout methods, and rankings.
+            Withdrawals, 10% BnB site commission, balances, and payouts.
           </p>
         </div>
         <Button variant="outline" onClick={() => void load()}>
@@ -165,6 +193,7 @@ export default function AdminWalletsPage() {
             Withdrawals
             {pendingWithdrawals.length > 0 ? ` (${pendingWithdrawals.length})` : ""}
           </TabsTrigger>
+          <TabsTrigger value="commission">Site commission</TabsTrigger>
           <TabsTrigger value="rankings">Rankings</TabsTrigger>
           <TabsTrigger value="earnings">All earnings</TabsTrigger>
           <TabsTrigger value="payouts">Record payout</TabsTrigger>
@@ -263,6 +292,124 @@ export default function AdminWalletsPage() {
                           ) : (
                             <span className="text-muted-foreground">—</span>
                           )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="commission" className="mt-4 space-y-4">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Card>
+              <CardContent className="p-5">
+                <p className="text-sm text-muted-foreground">Site commission earned</p>
+                <p className="mt-1 text-2xl font-bold">
+                  {formatPrice(commissions.commissionEarned)}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  10% of {commissions.bookingCount} approved BnB booking
+                  {commissions.bookingCount === 1 ? "" : "s"}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-5">
+                <p className="text-sm text-muted-foreground">Host share (90%)</p>
+                <p className="mt-1 text-2xl font-bold">
+                  {formatPrice(commissions.hostShare)}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Goes to agent/landlord wallets, then their payout method
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-5">
+                <p className="text-sm text-muted-foreground">Gross bookings</p>
+                <p className="mt-1 text-2xl font-bold">
+                  {formatPrice(commissions.grossBooked)}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Guest total before the split
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>BnB commission ledger</CardTitle>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              {loading ? (
+                <p className="text-sm text-muted-foreground">Loading…</p>
+              ) : commissions.rows.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Approve a BnB booking to earn the 10% platform fee here. When
+                  escrow is connected, that fee is taken from the guest payment
+                  and the host share is paid out automatically.
+                </p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-muted-foreground">
+                      <th className="pb-3 pr-4 font-medium">When</th>
+                      <th className="pb-3 pr-4 font-medium">Stay</th>
+                      <th className="pb-3 pr-4 font-medium">Host</th>
+                      <th className="pb-3 pr-4 font-medium">Gross</th>
+                      <th className="pb-3 pr-4 font-medium">Site 10%</th>
+                      <th className="pb-3 pr-4 font-medium">Host 90%</th>
+                      <th className="pb-3 font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {commissions.rows.map((row) => (
+                      <tr key={row.id} className="border-b last:border-0">
+                        <td className="py-3 pr-4 text-muted-foreground">
+                          {formatRelativeDate(row.createdAt)}
+                        </td>
+                        <td className="py-3 pr-4">
+                          <div>{row.propertyTitle}</div>
+                          <div className="text-xs text-muted-foreground">
+                            Booking {row.bookingStatus}
+                          </div>
+                        </td>
+                        <td className="py-3 pr-4">
+                          <div>{row.hostName ?? row.hostEmail}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {row.hostEmail}
+                          </div>
+                        </td>
+                        <td className="py-3 pr-4">
+                          {formatPrice(row.grossAmount, {
+                            currency: row.currency,
+                          })}
+                        </td>
+                        <td className="py-3 pr-4 font-medium">
+                          {formatPrice(row.commissionAmount, {
+                            currency: row.currency,
+                          })}
+                        </td>
+                        <td className="py-3 pr-4">
+                          {formatPrice(row.hostAmount, {
+                            currency: row.currency,
+                          })}
+                        </td>
+                        <td className="py-3">
+                          <Badge
+                            variant={
+                              row.status === "COLLECTED" ? "default" : "secondary"
+                            }
+                          >
+                            {row.status === "ACCRUED"
+                              ? "Earned"
+                              : row.status === "COLLECTED"
+                                ? "Collected"
+                                : row.status}
+                          </Badge>
                         </td>
                       </tr>
                     ))}

@@ -10,6 +10,7 @@ import {
   reviewWalletWithdrawal,
   backfillRecentWalletActivity,
 } from "@/lib/wallet";
+import { getAdminBnbCommissionSummary } from "@/lib/bnb-commission";
 
 export async function GET() {
   const session = await auth();
@@ -25,15 +26,22 @@ export async function GET() {
     if (existingTx === 0) {
       await backfillRecentWalletActivity(prisma);
     }
-    const [rankings, earnings, withdrawals] = await Promise.all([
+    const [rankings, earnings, withdrawals, commissions] = await Promise.all([
       getAdminWalletRankings(prisma),
       getAdminWalletTransactions(prisma, 150),
       getAdminWithdrawals(prisma, 150),
+      getAdminBnbCommissionSummary(prisma).catch(() => ({
+        bookingCount: 0,
+        commissionEarned: 0,
+        hostShare: 0,
+        grossBooked: 0,
+        rows: [],
+      })),
     ]);
 
     return NextResponse.json({
       success: true,
-      data: { rankings, earnings, withdrawals },
+      data: { rankings, earnings, withdrawals, commissions },
     });
   } catch (error) {
     console.error("Admin wallet load failed:", error);

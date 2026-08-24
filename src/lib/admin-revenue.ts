@@ -70,6 +70,9 @@ export type AdminRevenueSummary = {
   monthlyVsLastMonth: number | null;
   last14Days: Array<{ label: string; dateKey: string; amount: number }>;
   last6Months: Array<{ label: string; amount: number }>;
+  bnbCommissionMonthly: number;
+  bnbCommissionAllTime: number;
+  bnbCommissionCount: number;
 };
 
 export async function getAdminRevenueSummary(
@@ -96,6 +99,8 @@ export async function getAdminRevenueSummary(
     prevMonthAgg,
     chartPayments,
     monthPayments,
+    bnbMonthAgg,
+    bnbAllAgg,
   ] = await Promise.all([
     sumWhere(prisma, { createdAt: { gte: todayStart } }),
     sumWhere(prisma, { createdAt: { gte: weekStart } }),
@@ -124,6 +129,25 @@ export async function getAdminRevenueSummary(
       },
       select: { amount: true, createdAt: true },
     }),
+    prisma.platformCommission
+      .aggregate({
+        where: {
+          status: { in: ["ACCRUED", "COLLECTED"] },
+          createdAt: { gte: monthStart },
+        },
+        _sum: { commissionAmount: true },
+      })
+      .catch(() => ({ _sum: { commissionAmount: 0 } })),
+    prisma.platformCommission
+      .aggregate({
+        where: { status: { in: ["ACCRUED", "COLLECTED"] } },
+        _sum: { commissionAmount: true },
+        _count: { _all: true },
+      })
+      .catch(() => ({
+        _sum: { commissionAmount: 0 },
+        _count: { _all: 0 },
+      })),
   ]);
 
   const daily = dailyAgg._sum.amount ?? 0;
@@ -217,5 +241,8 @@ export async function getAdminRevenueSummary(
           : null,
     last14Days,
     last6Months,
+    bnbCommissionMonthly: bnbMonthAgg._sum.commissionAmount ?? 0,
+    bnbCommissionAllTime: bnbAllAgg._sum.commissionAmount ?? 0,
+    bnbCommissionCount: bnbAllAgg._count._all ?? 0,
   };
 }
