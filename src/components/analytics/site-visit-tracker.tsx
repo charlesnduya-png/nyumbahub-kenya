@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
+import { isCrawlerUserAgent } from "@/lib/crawler";
 
 export function SiteVisitTracker() {
   const pathname = usePathname();
@@ -11,7 +12,11 @@ export function SiteVisitTracker() {
     if (
       !pathname ||
       pathname.startsWith("/dashboard") ||
-      pathname.startsWith("/api")
+      pathname.startsWith("/api") ||
+      pathname.startsWith("/sitemap") ||
+      isCrawlerUserAgent(
+        typeof navigator === "undefined" ? "" : navigator.userAgent,
+      )
     ) {
       return;
     }

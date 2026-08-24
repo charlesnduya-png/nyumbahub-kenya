@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 
-// Map DATABASE_URL → POSTGRES_* at runtime (Vercel/Neon inject vars inconsistently).
+// Map DATABASE_URL → pooled POSTGRES_PRISMA_URL at runtime.
 import "../../scripts/ensure-db-env.js";
 
 const globalForPrisma = globalThis as unknown as {
@@ -16,8 +16,7 @@ export const prisma =
         : ["error"],
   });
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
-}
+// Reuse one client per serverless isolate so we do not open extra Neon connections.
+globalForPrisma.prisma = prisma;
 
 export default prisma;

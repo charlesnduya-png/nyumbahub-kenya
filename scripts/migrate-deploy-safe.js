@@ -4,6 +4,14 @@
  */
 const { execSync } = require("node:child_process");
 
+// Preview/dev deploys should not keep production Neon awake with migrate locks.
+if (process.env.VERCEL === "1" && process.env.VERCEL_ENV !== "production") {
+  console.log(
+    `Skipping migrate deploy on Vercel ${process.env.VERCEL_ENV ?? "non-production"}.`,
+  );
+  process.exit(0);
+}
+
 function run(cmd) {
   return execSync(cmd, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 }

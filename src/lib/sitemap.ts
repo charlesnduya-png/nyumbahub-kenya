@@ -2,6 +2,7 @@ import { APP_URL } from "@/lib/seo";
 import { ALL_SEO_LANDINGS } from "@/lib/seo-locations";
 import { getAllPropertyForSalePlaces } from "@/lib/property-for-sale";
 import { prisma } from "@/lib/prisma";
+import { unstable_cache } from "next/cache";
 
 export type SitemapEntry = {
   url: string;
@@ -193,62 +194,68 @@ export function getAfricaSitemapEntries(now = new Date()): SitemapEntry[] {
 }
 
 export async function getListingsSitemapEntries(
-  now = new Date(),
+  _now = new Date(),
 ): Promise<SitemapEntry[]> {
-  try {
-    const [properties, posts, agents] = await withTimeout(
-      Promise.all([
-        prisma.property.findMany({
-          where: { status: "ACTIVE" },
-          select: { slug: true, updatedAt: true, isFeatured: true },
-          orderBy: { updatedAt: "desc" },
-          take: 1000,
-        }),
-        prisma.blogPost.findMany({
-          where: { published: true },
-          select: { slug: true, updatedAt: true },
-        }),
-        prisma.agent.findMany({
-          where: {
-            OR: [{ isVerified: true }, { isFeatured: true }],
-          },
-          select: { id: true, updatedAt: true },
-          take: 500,
-        }),
-      ]),
-      8000,
-    );
+  return unstable_cache(
+    async () => {
+      try {
+        const [properties, posts, agents] = await withTimeout(
+          Promise.all([
+            prisma.property.findMany({
+              where: { status: "ACTIVE" },
+              select: { slug: true, updatedAt: true, isFeatured: true },
+              orderBy: { updatedAt: "desc" },
+              take: 1000,
+            }),
+            prisma.blogPost.findMany({
+              where: { published: true },
+              select: { slug: true, updatedAt: true },
+            }),
+            prisma.agent.findMany({
+              where: {
+                OR: [{ isVerified: true }, { isFeatured: true }],
+              },
+              select: { id: true, updatedAt: true },
+              take: 500,
+            }),
+          ]),
+          8000,
+        );
 
-    const propertyRoutes: SitemapEntry[] = properties
-      .filter((property) => /^[a-z0-9-]+$/i.test(property.slug))
-      .map((property) => ({
-        url: loc(`/properties/${property.slug}`),
-        lastModified: property.updatedAt,
-        changeFrequency: "daily",
-        priority: property.isFeatured ? 0.9 : 0.8,
-      }));
+        const propertyRoutes: SitemapEntry[] = properties
+          .filter((property) => /^[a-z0-9-]+$/i.test(property.slug))
+          .map((property) => ({
+            url: loc(`/properties/${property.slug}`),
+            lastModified: property.updatedAt,
+            changeFrequency: "daily" as const,
+            priority: property.isFeatured ? 0.9 : 0.8,
+          }));
 
-    const blogRoutes: SitemapEntry[] = posts
-      .filter((post) => /^[a-z0-9-]+$/i.test(post.slug))
-      .map((post) => ({
-        url: loc(`/blog/${post.slug}`),
-        lastModified: post.updatedAt,
-        changeFrequency: "weekly",
-        priority: 0.65,
-      }));
+        const blogRoutes: SitemapEntry[] = posts
+          .filter((post) => /^[a-z0-9-]+$/i.test(post.slug))
+          .map((post) => ({
+            url: loc(`/blog/${post.slug}`),
+            lastModified: post.updatedAt,
+            changeFrequency: "weekly" as const,
+            priority: 0.65,
+          }));
 
-    const agentRoutes: SitemapEntry[] = agents.map((agent) => ({
-      url: loc(`/agents/${agent.id}`),
-      lastModified: agent.updatedAt,
-      changeFrequency: "weekly",
-      priority: 0.7,
-    }));
+        const agentRoutes: SitemapEntry[] = agents.map((agent) => ({
+          url: loc(`/agents/${agent.id}`),
+          lastModified: agent.updatedAt,
+          changeFrequency: "weekly" as const,
+          priority: 0.7,
+        }));
 
-    return uniqueEntries([...propertyRoutes, ...blogRoutes, ...agentRoutes]);
-  } catch (error) {
-    console.error("listings sitemap generation failed", error);
-    return [];
-  }
+        return uniqueEntries([...propertyRoutes, ...blogRoutes, ...agentRoutes]);
+      } catch (error) {
+        console.error("listings sitemap generation failed", error);
+        return [];
+      }
+    },
+    ["listings-sitemap"],
+    { revalidate: 3600, tags: ["active-listings"] },
+  )();
 }
 
 export async function getSitemapEntries(): Promise<SitemapEntry[]> {

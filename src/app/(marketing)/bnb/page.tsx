@@ -36,6 +36,8 @@ const destinations = [
   { name: "Naivasha", href: "/bnb/naivasha" },
 ];
 
+export const revalidate = 60;
+
 export default async function BnbPage() {
   const [bnbProperties, bnbCount] = await Promise.all([
     getBnbPropertiesForHome(24),

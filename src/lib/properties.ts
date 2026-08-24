@@ -237,64 +237,83 @@ function buildWhere(filters: Partial<SearchFilters> = {}) {
 export async function searchProperties(filters: SearchFilters) {
   const skip = (filters.page - 1) * filters.limit;
 
-  try {
-    const where = buildWhere(filters);
-    const [properties, total] = await Promise.all([
-      prisma.property.findMany({
-        where,
-        skip,
-        take: filters.limit,
-        orderBy: [{ isFeatured: "desc" }, { publishedAt: "desc" }],
-        include: imageInclude,
-      }),
-      prisma.property.count({ where }),
-    ]);
+  return unstable_cache(
+    async () => {
+      try {
+        const where = buildWhere(filters);
+        const [properties, total] = await Promise.all([
+          prisma.property.findMany({
+            where,
+            skip,
+            take: filters.limit,
+            orderBy: [{ isFeatured: "desc" }, { publishedAt: "desc" }],
+            include: imageInclude,
+          }),
+          prisma.property.count({ where }),
+        ]);
 
-    const totalPages = Math.ceil(total / filters.limit);
+        const totalPages = Math.ceil(total / filters.limit);
 
-    return {
-      data: properties.map(toPropertyCard),
-      total,
-      page: filters.page,
-      limit: filters.limit,
-      totalPages,
-      hasMore: filters.page < totalPages,
-    };
-  } catch {
-    return {
-      data: [] as PropertyCard[],
-      total: 0,
-      page: filters.page,
-      limit: filters.limit,
-      totalPages: 0,
-      hasMore: false,
-    };
-  }
+        return {
+          data: properties.map(toPropertyCard),
+          total,
+          page: filters.page,
+          limit: filters.limit,
+          totalPages,
+          hasMore: filters.page < totalPages,
+        };
+      } catch {
+        return {
+          data: [] as PropertyCard[],
+          total: 0,
+          page: filters.page,
+          limit: filters.limit,
+          totalPages: 0,
+          hasMore: false,
+        };
+      }
+    },
+    ["search-properties", JSON.stringify(filters)],
+    { revalidate: 60, tags: ["active-listings"] },
+  )();
 }
 
-async function getActiveProperties(options: {
-  listingType?: ListingType;
-  featured?: boolean;
-  limit?: number;
-} = {}): Promise<PropertyCard[]> {
+async function getActiveProperties(
+  options: {
+    listingType?: ListingType;
+    featured?: boolean;
+    limit?: number;
+  } = {},
+): Promise<PropertyCard[]> {
   const { listingType, featured, limit = 20 } = options;
 
-  try {
-    const properties = await prisma.property.findMany({
-      where: {
-        status: "ACTIVE",
-        ...(listingType ? { listingType } : {}),
-        ...(featured ? { isFeatured: true } : {}),
-      },
-      take: limit,
-      orderBy: [{ isFeatured: "desc" }, { publishedAt: "desc" }],
-      include: imageInclude,
-    });
+  return unstable_cache(
+    async () => {
+      try {
+        const properties = await prisma.property.findMany({
+          where: {
+            status: "ACTIVE",
+            ...(listingType ? { listingType } : {}),
+            ...(featured ? { isFeatured: true } : {}),
+          },
+          take: limit,
+          orderBy: [{ isFeatured: "desc" }, { publishedAt: "desc" }],
+          include: imageInclude,
+        });
 
-    return properties.map(toPropertyCard);
-  } catch {
-    return [];
-  }
+        return properties.map(toPropertyCard);
+      } catch {
+        return [];
+      }
+    },
+    [
+      "active-properties",
+      listingType ?? "all",
+      featured ? "featured" : "any",
+      String(limit),
+    ],
+    { revalidate: 120, tags: ["active-listings"] },
+  )();
 }
 
 const FOR_SALE_LISTING_TYPES = ["BUY", "LAND"] as const;
@@ -307,50 +326,61 @@ export async function searchListingsByLocation(input: {
   limit?: number;
 }) {
   const limit = input.limit ?? 24;
-  const where = {
-    status: "ACTIVE" as const,
-    listingType: { in: [...input.listingTypes] },
-    ...(input.country
-      ? { country: { equals: input.country, mode: "insensitive" as const } }
-      : {}),
-    ...(input.county
-      ? { county: { equals: input.county, mode: "insensitive" as const } }
-      : {}),
-    ...(input.town
-      ? { town: { contains: input.town, mode: "insensitive" as const } }
-      : {}),
-  };
+  const listingKey = [...input.listingTypes].sort().join(",");
+  const country = input.country ?? "";
+  const county = input.county ?? "";
+  const town = input.town ?? "";
 
-  try {
-    const [properties, total, stats] = await Promise.all([
-      prisma.property.findMany({
-        where,
-        take: limit,
-        orderBy: [{ isFeatured: "desc" }, { publishedAt: "desc" }],
-        include: imageInclude,
-      }),
-      prisma.property.count({ where }),
-      prisma.property.aggregate({
-        where,
-        _min: { price: true },
-        _max: { price: true },
-      }),
-    ]);
+  return unstable_cache(
+    async () => {
+      const where = {
+        status: "ACTIVE" as const,
+        listingType: { in: [...input.listingTypes] },
+        ...(input.country
+          ? { country: { equals: input.country, mode: "insensitive" as const } }
+          : {}),
+        ...(input.county
+          ? { county: { equals: input.county, mode: "insensitive" as const } }
+          : {}),
+        ...(input.town
+          ? { town: { contains: input.town, mode: "insensitive" as const } }
+          : {}),
+      };
 
-    return {
-      data: properties.map(toPropertyCard),
-      total,
-      minPrice: stats._min.price,
-      maxPrice: stats._max.price,
-    };
-  } catch {
-    return {
-      data: [] as PropertyCard[],
-      total: 0,
-      minPrice: null as number | null,
-      maxPrice: null as number | null,
-    };
-  }
+      try {
+        const [properties, total, stats] = await Promise.all([
+          prisma.property.findMany({
+            where,
+            take: limit,
+            orderBy: [{ isFeatured: "desc" }, { publishedAt: "desc" }],
+            include: imageInclude,
+          }),
+          prisma.property.count({ where }),
+          prisma.property.aggregate({
+            where,
+            _min: { price: true },
+            _max: { price: true },
+          }),
+        ]);
+
+        return {
+          data: properties.map(toPropertyCard),
+          total,
+          minPrice: stats._min.price,
+          maxPrice: stats._max.price,
+        };
+      } catch {
+        return {
+          data: [] as PropertyCard[],
+          total: 0,
+          minPrice: null as number | null,
+          maxPrice: null as number | null,
+        };
+      }
+    },
+    ["listings-by-location", listingKey, country, county, town, String(limit)],
+    { revalidate: 3600, tags: ["listings-by-location", "active-listings"] },
+  )();
 }
 
 export async function searchForSaleByLocation(input: {
@@ -369,59 +399,78 @@ export async function searchForSaleByLocation(input: {
 }
 
 export async function getForSaleCountsByCounty() {
-  try {
-    const rows = await prisma.property.groupBy({
-      by: ["county"],
-      where: {
-        status: "ACTIVE",
-        listingType: { in: [...FOR_SALE_LISTING_TYPES] },
-      },
-      _count: { _all: true },
-    });
-    const counts: Record<string, number> = {};
-    for (const row of rows) {
-      counts[row.county.trim().toLowerCase()] = row._count._all;
-    }
-    return counts;
-  } catch {
-    return {} as Record<string, number>;
-  }
+  return unstable_cache(
+    async () => {
+      try {
+        const rows = await prisma.property.groupBy({
+          by: ["county"],
+          where: {
+            status: "ACTIVE",
+            listingType: { in: [...FOR_SALE_LISTING_TYPES] },
+          },
+          _count: { _all: true },
+        });
+        const counts: Record<string, number> = {};
+        for (const row of rows) {
+          counts[row.county.trim().toLowerCase()] = row._count._all;
+        }
+        return counts;
+      } catch {
+        return {} as Record<string, number>;
+      }
+    },
+    ["for-sale-counts-county"],
+    { revalidate: 3600, tags: ["listing-counts", "active-listings"] },
+  )();
 }
 
 export async function getListingCountsByCountry(
   listingTypes: readonly ListingType[] = FOR_SALE_LISTING_TYPES,
 ) {
-  try {
-    const rows = await prisma.property.groupBy({
-      by: ["country"],
-      where: {
-        status: "ACTIVE",
-        listingType: { in: [...listingTypes] },
-      },
-      _count: { _all: true },
-    });
-    const counts: Record<string, number> = {};
-    for (const row of rows) {
-      const name = row.country?.trim().toLowerCase();
-      if (name) counts[name] = row._count._all;
-    }
-    return counts;
-  } catch {
-    return {} as Record<string, number>;
-  }
+  const listingKey = [...listingTypes].sort().join(",");
+  return unstable_cache(
+    async () => {
+      try {
+        const rows = await prisma.property.groupBy({
+          by: ["country"],
+          where: {
+            status: "ACTIVE",
+            listingType: { in: [...listingTypes] },
+          },
+          _count: { _all: true },
+        });
+        const counts: Record<string, number> = {};
+        for (const row of rows) {
+          const name = row.country?.trim().toLowerCase();
+          if (name) counts[name] = row._count._all;
+        }
+        return counts;
+      } catch {
+        return {} as Record<string, number>;
+      }
+    },
+    ["listing-counts-country", listingKey],
+    { revalidate: 3600, tags: ["listing-counts", "active-listings"] },
+  )();
 }
 
 export async function countActiveProperties(listingType?: ListingType) {
-  try {
-    return await prisma.property.count({
-      where: {
-        status: "ACTIVE",
-        ...(listingType ? { listingType } : {}),
-      },
-    });
-  } catch {
-    return 0;
-  }
+  return unstable_cache(
+    async () => {
+      try {
+        return await prisma.property.count({
+          where: {
+            status: "ACTIVE",
+            ...(listingType ? { listingType } : {}),
+          },
+        });
+      } catch {
+        return 0;
+      }
+    },
+    ["count-active", listingType ?? "all"],
+    { revalidate: 120, tags: ["active-listings"] },
+  )();
 }
 
 export function getFeaturedPropertiesForHome(limit = 8) {
@@ -523,6 +572,9 @@ export const getPropertyBySlug = cache(async (slug: string) => {
 
 export function revalidatePropertySlug(slug: string) {
   revalidateTag(`property:${slug}`);
+  revalidateTag("active-listings");
+  revalidateTag("listings-by-location");
+  revalidateTag("listing-counts");
   revalidatePath("/");
   revalidatePath("/rent");
   revalidatePath("/bnb");
@@ -546,22 +598,28 @@ export async function getRelatedProperties(
   county: string,
   limit = 3,
 ): Promise<PropertyCard[]> {
-  try {
-    const properties = await prisma.property.findMany({
-      where: {
-        status: "ACTIVE",
-        county: { equals: county, mode: "insensitive" },
-        slug: { not: slug },
-      },
-      take: limit,
-      orderBy: { publishedAt: "desc" },
-      include: imageInclude,
-    });
+  return unstable_cache(
+    async () => {
+      try {
+        const properties = await prisma.property.findMany({
+          where: {
+            status: "ACTIVE",
+            county: { equals: county, mode: "insensitive" },
+            slug: { not: slug },
+          },
+          take: limit,
+          orderBy: { publishedAt: "desc" },
+          include: imageInclude,
+        });
 
-    return properties.map(toPropertyCard);
-  } catch {
-    return [];
-  }
+        return properties.map(toPropertyCard);
+      } catch {
+        return [];
+      }
+    },
+    ["related-properties", slug, county, String(limit)],
+    { revalidate: 300, tags: ["active-listings"] },
+  )();
 }
 
 export async function getPropertiesByIds(ids: string[]): Promise<PropertyCard[]> {

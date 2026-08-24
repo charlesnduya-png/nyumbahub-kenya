@@ -1,12 +1,17 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { isCrawlerUserAgent } from "@/lib/crawler";
 import { prisma } from "@/lib/prisma";
 
 const SESSION_COOKIE = "nyumba_sid";
-const SKIP_PREFIXES = ["/api", "/dashboard", "/_next", "/favicon"];
+const SKIP_PREFIXES = ["/api", "/dashboard", "/_next", "/favicon", "/sitemap"];
 
 export async function POST(request: Request) {
   try {
+    if (isCrawlerUserAgent(request.headers.get("user-agent"))) {
+      return NextResponse.json({ success: true, skipped: true });
+    }
+
     const body = await request.json().catch(() => ({}));
     const path =
       typeof body.path === "string" ? body.path.trim().slice(0, 500) : "/";

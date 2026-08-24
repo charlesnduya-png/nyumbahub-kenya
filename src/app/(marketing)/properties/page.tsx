@@ -17,8 +17,7 @@ export async function generateMetadata({
   return buildPropertiesSearchMetadata(params);
 }
 
-// This page must reflect the latest ACTIVE/RUNTED status changes immediately.
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 async function getProperties(searchParams: Record<string, string | string[] | undefined>) {
   const raw: Record<string, string> = {};

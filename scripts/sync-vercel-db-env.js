@@ -32,8 +32,8 @@ function parseUrl(url) {
       ? url
       : url.replace(`@${host}`, `@${host.replace(/^([^.]+)\./, "$1-pooler.")}`);
   const prismaUrl = pooler.includes("?")
-    ? `${pooler}&pgbouncer=true&connect_timeout=15`
-    : `${pooler}?pgbouncer=true&connect_timeout=15`;
+    ? `${pooler}&pgbouncer=true&connection_limit=1&connect_timeout=15`
+    : `${pooler}?pgbouncer=true&connection_limit=1&connect_timeout=15`;
   return {
     direct: url,
     pooler: prismaUrl.replace("&pgbouncer=true&connect_timeout=15", "").replace("?pgbouncer=true&connect_timeout=15", "") || url,
@@ -69,8 +69,8 @@ function main() {
     (_, id) => `@ep-${id}-pooler.`,
   );
   const prismaUrl = poolerBase.includes("?")
-    ? `${poolerBase}&pgbouncer=true&connect_timeout=15`
-    : `${poolerBase}?pgbouncer=true&connect_timeout=15`;
+    ? `${poolerBase}&pgbouncer=true&connection_limit=1&connect_timeout=15`
+    : `${poolerBase}?pgbouncer=true&connection_limit=1&connect_timeout=15`;
 
   const parsed = new URL(direct);
   const host = parsed.hostname;
