@@ -11,6 +11,58 @@ export type WalletSummary = {
   currency: string;
 };
 
+export type WalletPayoutDetails = {
+  method: "MOBILE_MONEY" | "BANK" | null;
+  accountName: string;
+  phone: string;
+  provider: string;
+  bankName: string;
+  bankAccount: string;
+  bankBranch: string;
+};
+
+export function emptyPayoutDetails(): WalletPayoutDetails {
+  return {
+    method: null,
+    accountName: "",
+    phone: "",
+    provider: "M-Pesa",
+    bankName: "",
+    bankAccount: "",
+    bankBranch: "",
+  };
+}
+
+export function payoutDetailsFromWallet(wallet: {
+  payoutMethod: "MOBILE_MONEY" | "BANK" | null;
+  payoutAccountName: string | null;
+  payoutPhone: string | null;
+  payoutProvider: string | null;
+  payoutBankName: string | null;
+  payoutBankAccount: string | null;
+  payoutBankBranch: string | null;
+}): WalletPayoutDetails {
+  return {
+    method: wallet.payoutMethod,
+    accountName: wallet.payoutAccountName ?? "",
+    phone: wallet.payoutPhone ?? "",
+    provider: wallet.payoutProvider ?? "M-Pesa",
+    bankName: wallet.payoutBankName ?? "",
+    bankAccount: wallet.payoutBankAccount ?? "",
+    bankBranch: wallet.payoutBankBranch ?? "",
+  };
+}
+
+export function formatPayoutMethod(payout: WalletPayoutDetails) {
+  if (!payout.method) return "Not set";
+  if (payout.method === "MOBILE_MONEY") {
+    const provider = payout.provider || "Mobile money";
+    return payout.phone ? `${provider} · ${payout.phone}` : provider;
+  }
+  const bank = payout.bankName || "Bank";
+  return payout.bankAccount ? `${bank} · ${payout.bankAccount}` : bank;
+}
+
 export type WalletTxRow = {
   id: string;
   type: WalletTxType;
@@ -441,6 +493,7 @@ export async function getWalletSnapshot(db: PrismaClient, userId: string) {
       lifetimePaidOut: wallet.lifetimePaidOut,
       currency: wallet.currency,
     } satisfies WalletSummary,
+    payout: payoutDetailsFromWallet(wallet),
   };
 }
 
@@ -455,8 +508,29 @@ export async function getWalletOverview(db: PrismaClient, userId: string) {
 
   return {
     summary: snapshot.summary,
+    payout: snapshot.payout,
     transactions: transactions.map(toTxRow),
   };
+}
+
+export async function updateWalletPayoutMethod(
+  db: PrismaClient,
+  userId: string,
+  payout: WalletPayoutDetails,
+) {
+  const wallet = await getOrCreateWallet(db, userId);
+  return db.professionalWallet.update({
+    where: { id: wallet.id },
+    data: {
+      payoutMethod: payout.method,
+      payoutAccountName: payout.accountName.trim() || null,
+      payoutPhone: payout.phone.trim() || null,
+      payoutProvider: payout.provider.trim() || null,
+      payoutBankName: payout.bankName.trim() || null,
+      payoutBankAccount: payout.bankAccount.trim() || null,
+      payoutBankBranch: payout.bankBranch.trim() || null,
+    },
+  });
 }
 
 export async function backfillRecentWalletActivity(db: PrismaClient) {
@@ -509,6 +583,13 @@ export async function getAdminWalletRankings(db: PrismaClient) {
           lifetimeEarned: true,
           lifetimePaidOut: true,
           currency: true,
+          payoutMethod: true,
+          payoutAccountName: true,
+          payoutPhone: true,
+          payoutProvider: true,
+          payoutBankName: true,
+          payoutBankAccount: true,
+          payoutBankBranch: true,
         },
       },
     },
@@ -527,6 +608,12 @@ export async function getAdminWalletRankings(db: PrismaClient) {
       lifetimeEarned: user.wallet?.lifetimeEarned ?? 0,
       lifetimePaidOut: user.wallet?.lifetimePaidOut ?? 0,
       currency: user.wallet?.currency ?? "KES",
+      payout: user.wallet
+        ? payoutDetailsFromWallet(user.wallet)
+        : emptyPayoutDetails(),
+      payoutLabel: user.wallet
+        ? formatPayoutMethod(payoutDetailsFromWallet(user.wallet))
+        : "Not set",
     }))
     .sort((a, b) => b.lifetimeEarned - a.lifetimeEarned || b.pendingBalance - a.pendingBalance);
 }

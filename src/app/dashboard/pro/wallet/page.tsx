@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Banknote, Clock3, TrendingUp, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PayoutMethodForm } from "@/components/professional/payout-method-form";
 import { auth } from "@/lib/auth";
 import { resolveProfessionalActingContext } from "@/lib/account-team";
 import { prisma } from "@/lib/prisma";
@@ -28,10 +29,11 @@ export default async function ProfessionalWalletPage() {
   if (!session?.user?.id) return null;
 
   const ctx = await resolveProfessionalActingContext(session.user.id);
-  const { summary, transactions } = await getWalletOverview(
+  const { summary, payout, transactions } = await getWalletOverview(
     prisma,
     ctx.actingOwnerId,
   );
+  const canEdit = !ctx.isTeamMember || ctx.permissions.manageTeam;
 
   const stats = [
     {
@@ -65,8 +67,8 @@ export default async function ProfessionalWalletPage() {
       <div>
         <h1 className="text-2xl font-bold">Wallet</h1>
         <p className="mt-1 text-muted-foreground">
-          Track what you have made, what is still pending, and payouts from
-          Your Home.
+          Track what you have made, set how you get paid, and see pending
+          payouts from Your Home.
         </p>
       </div>
 
@@ -84,6 +86,19 @@ export default async function ProfessionalWalletPage() {
           </Card>
         ))}
       </div>
+
+      <Card id="payout-method">
+        <CardHeader>
+          <CardTitle>Payout method</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="mb-4 text-sm text-muted-foreground">
+            Save the M-Pesa, mobile money, or bank details Your Home should use
+            when sending your earnings.
+          </p>
+          <PayoutMethodForm initial={payout} canEdit={canEdit} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

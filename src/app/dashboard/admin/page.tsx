@@ -42,8 +42,13 @@ const ADMIN_SECTIONS = [
   },
   {
     title: "Payments",
-    description: "Fees, professional earnings, and agent rankings",
+    description: "Listing fees, boosts, and subscriptions",
     href: "/dashboard/admin/payments",
+  },
+  {
+    title: "Wallets",
+    description: "Professional balances, payout methods, and agent rankings",
+    href: "/dashboard/admin/wallets",
   },
   {
     title: "Subscriptions",

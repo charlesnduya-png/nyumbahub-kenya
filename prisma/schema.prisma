@@ -88,6 +88,11 @@ enum WalletTxStatus {
   CANCELLED
 }
 
+enum WalletPayoutMethod {
+  MOBILE_MONEY
+  BANK
+}
+
 enum SubscriptionPlan {
   FREE
   BASIC
@@ -746,6 +751,13 @@ model ProfessionalWallet {
   lifetimeEarned   Float               @default(0)
   lifetimePaidOut  Float               @default(0)
   currency         String              @default("KES")
+  payoutMethod     WalletPayoutMethod?
+  payoutAccountName String?
+  payoutPhone      String?
+  payoutProvider   String?
+  payoutBankName   String?
+  payoutBankAccount String?
+  payoutBankBranch String?
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
 
