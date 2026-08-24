@@ -34,6 +34,8 @@ import {
   BadgeCheck,
   Wallet,
   Banknote,
+  BadgePercent,
+  Star,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/types";
@@ -115,7 +117,9 @@ const buyerNav: NavItem[] = [
   { label: "My offers", href: "/dashboard/tenant/offers", icon: HandCoins },
   { label: "Rental reservations", href: "/dashboard/tenant/rental-reservations", icon: KeyRound },
   { label: "Saved Homes", href: "/dashboard/tenant/saved", icon: Heart },
+  { label: "Membership", href: "/dashboard/tenant/membership", icon: BadgePercent },
   { label: "My Bookings", href: "/dashboard/tenant/bookings", icon: Palmtree },
+  { label: "My reviews", href: "/dashboard/tenant/reviews", icon: Star },
   { label: "My Viewings", href: "/dashboard/tenant/viewings", icon: Calendar },
   { label: "Recently Viewed", href: "/dashboard/tenant/recent", icon: Clock3 },
   { label: "Browse Rentals", href: "/rent", icon: Building2 },

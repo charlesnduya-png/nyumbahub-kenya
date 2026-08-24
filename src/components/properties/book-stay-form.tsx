@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { formatPrice } from "@/lib/utils";
 import { nightsBetween } from "@/lib/validations/booking";
+import { applyMemberPrice } from "@/lib/membership";
 
 interface BookStayFormProps {
   propertyId: string;
@@ -20,6 +21,7 @@ interface BookStayFormProps {
   pricePerNight: number;
   currency?: string;
   hostUserId?: string;
+  memberDiscountRate?: number;
 }
 
 function todayIsoDate() {
@@ -33,6 +35,7 @@ export function BookStayForm({
   pricePerNight,
   currency = "KES",
   hostUserId,
+  memberDiscountRate = 0.1,
 }: BookStayFormProps) {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -53,7 +56,11 @@ export function BookStayForm({
     return nightsBetween(start, end);
   }, [checkIn, checkOut]);
 
-  const total = nights * pricePerNight;
+  const listTotal = nights * pricePerNight;
+  const memberLevel =
+    memberDiscountRate >= 0.15 ? 3 : memberDiscountRate >= 0.12 ? 2 : 1;
+  const memberPrice = applyMemberPrice(listTotal, memberLevel);
+  const total = memberPrice.guestPays;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -141,8 +148,8 @@ export function BookStayForm({
       <div>
         <p className="text-sm font-medium">Book stay · {propertyTitle}</p>
         <p className="text-xs text-muted-foreground">
-          {formatPrice(pricePerNight, { currency })} / night · book & chat on
-          Your Home
+          {formatPrice(pricePerNight, { currency })} / night · members save{" "}
+          {memberPrice.discountPercent}%
         </p>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -193,8 +200,14 @@ export function BookStayForm({
       {nights > 0 ? (
         <p className="text-sm text-muted-foreground">
           {nights} night{nights === 1 ? "" : "s"} ·{" "}
+          <span className="mr-1 line-through">
+            {formatPrice(memberPrice.listAmount, { currency })}
+          </span>
           <span className="font-semibold text-foreground">
             {formatPrice(total, { currency })}
+          </span>
+          <span className="ml-1 text-emerald-700 dark:text-emerald-300">
+            member save {memberPrice.discountPercent}%
           </span>
         </p>
       ) : null}

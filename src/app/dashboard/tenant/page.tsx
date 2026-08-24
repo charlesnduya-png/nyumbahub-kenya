@@ -8,10 +8,12 @@ import {
   Search,
   UserRound,
 } from "lucide-react";
+import { MembershipCard } from "@/components/membership/membership-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
+import { getCustomerMembership } from "@/lib/customer-membership";
 import { prisma } from "@/lib/prisma";
 import { formatPrice, formatRelativeDate, formatDate } from "@/lib/utils";
 
@@ -58,8 +60,12 @@ export default async function TenantAccountPage() {
 
   let data = empty;
 
+  let membership = null as Awaited<
+    ReturnType<typeof getCustomerMembership>
+  > | null;
+
   if (userId) {
-    const [user, favorites, viewings, leads, savedCount, viewingCount, leadCount, recentCount] =
+    const [user, favorites, viewings, leads, savedCount, viewingCount, leadCount, recentCount, member] =
       await Promise.all([
         prisma.user.findUnique({
           where: { id: userId },
@@ -132,9 +138,11 @@ export default async function TenantAccountPage() {
         }),
         prisma.lead.count({ where: { buyerId: userId } }),
         prisma.recentlyViewed.count({ where: { userId } }),
+        getCustomerMembership(userId),
       ]);
 
     const inquiryCount = leadCount;
+    membership = member;
 
     data = {
       savedHomes: favorites.map((f) => ({
@@ -198,6 +206,8 @@ export default async function TenantAccountPage() {
           </Link>
         </Button>
       </div>
+
+      {membership ? <MembershipCard membership={membership} compact /> : null}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
@@ -393,8 +403,12 @@ export default async function TenantAccountPage() {
             <p className="font-medium">{data.phone || "—"}</p>
           </div>
           <div className="rounded-xl border p-3">
-            <p className="text-xs text-muted-foreground">Account type</p>
-            <p className="font-medium">Tenant / Buyer</p>
+            <p className="text-xs text-muted-foreground">Membership</p>
+            <p className="font-medium">
+              {membership
+                ? `Level ${membership.level} · ${membership.name}`
+                : "Your Home Member"}
+            </p>
           </div>
         </CardContent>
       </Card>

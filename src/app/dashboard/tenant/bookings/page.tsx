@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { GuestReviewForm } from "@/components/reviews/guest-review-form";
+import { canReviewStay } from "@/lib/membership";
 import { formatPrice } from "@/lib/utils";
 
 type BookingRow = {
@@ -16,10 +18,13 @@ type BookingRow = {
   guests: number;
   nights: number;
   totalAmount: number;
+  listAmount?: number;
+  memberDiscountAmount?: number;
   currency: string;
   status: string;
   guestMessage?: string | null;
   ownerNote?: string | null;
+  review?: { id: string } | null;
   property: {
     id: string;
     title: string;
@@ -129,6 +134,11 @@ export default function GuestBookingsPage() {
                     {b.property.town}, {b.property.county} · {b.nights} night
                     {b.nights === 1 ? "" : "s"} ·{" "}
                     {formatPrice(b.totalAmount, { currency: b.currency })}
+                    {b.memberDiscountAmount ? (
+                      <span className="ml-1 text-emerald-700 dark:text-emerald-300">
+                        (saved {formatPrice(b.memberDiscountAmount, { currency: b.currency })})
+                      </span>
+                    ) : null}
                   </p>
                 </div>
                 <Badge variant={statusVariant(b.status)}>{b.status}</Badge>
@@ -143,6 +153,27 @@ export default function GuestBookingsPage() {
                   <p className="rounded-lg bg-muted/50 p-3">
                     Host note: {b.ownerNote}
                   </p>
+                ) : null}
+                {b.review ? (
+                  <p className="text-sm text-muted-foreground">
+                    You reviewed this stay.{" "}
+                    <Link
+                      href="/dashboard/tenant/reviews"
+                      className="text-primary hover:underline"
+                    >
+                      See your reviews
+                    </Link>
+                  </p>
+                ) : canReviewStay({
+                    status: b.status,
+                    checkOut: b.checkOut,
+                    hasReview: false,
+                  }) ? (
+                  <GuestReviewForm
+                    bookingId={b.id}
+                    propertyTitle={b.property.title}
+                    onSaved={() => void load()}
+                  />
                 ) : null}
                 {b.status === "PENDING" || b.status === "APPROVED" ? (
                   <div className="flex flex-wrap gap-2">

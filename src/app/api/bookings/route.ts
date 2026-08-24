@@ -71,27 +71,28 @@ export async function GET() {
 
     const bookings = await prisma.booking.findMany({
       where: { guestId: guestUserId },
-      include: {
-        property: {
-          select: {
-            id: true,
-            title: true,
-            slug: true,
-            town: true,
-            county: true,
-            price: true,
-            currency: true,
-            listingType: true,
-            ownerId: true,
-            agent: { select: { userId: true } },
-            images: {
-              where: { isPrimary: true },
-              take: 1,
-              select: { url: true },
+        include: {
+          property: {
+            select: {
+              id: true,
+              title: true,
+              slug: true,
+              town: true,
+              county: true,
+              price: true,
+              currency: true,
+              listingType: true,
+              ownerId: true,
+              agent: { select: { userId: true } },
+              images: {
+                where: { isPrimary: true },
+                take: 1,
+                select: { url: true },
+              },
             },
           },
+          review: { select: { id: true } },
         },
-      },
       orderBy: { createdAt: "desc" },
       take: 100,
     });
@@ -191,7 +192,12 @@ export async function POST(request: Request) {
     }
 
     const nights = nightsBetween(checkInDate, checkOutDate);
-    const totalAmount = property.price * nights;
+    const listAmount = property.price * nights;
+    const { getCustomerMembership } = await import("@/lib/customer-membership");
+    const { applyMemberPrice } = await import("@/lib/membership");
+    const membership = await getCustomerMembership(session.user.id);
+    const memberPrice = applyMemberPrice(listAmount, membership.level);
+    const totalAmount = memberPrice.guestPays;
     const { splitBnbPayment, bnbCommissionPercent } = await import(
       "@/lib/bnb-split"
     );
@@ -205,7 +211,9 @@ export async function POST(request: Request) {
       `Check-out: ${checkOutDate.toLocaleDateString("en-KE")}`,
       `Guests: ${guests}`,
       `Nights: ${nights}`,
-      `Total: ${property.currency} ${totalAmount.toLocaleString()}`,
+      `List price: ${property.currency} ${listAmount.toLocaleString()}`,
+      `Member save (${memberPrice.discountPercent}% · Level ${membership.level}): ${property.currency} ${memberPrice.discountAmount.toLocaleString()}`,
+      `Guest total: ${property.currency} ${totalAmount.toLocaleString()}`,
       `Platform fee (${commissionPct}%): ${property.currency} ${split.commissionAmount.toLocaleString()}`,
       `Host payout: ${property.currency} ${split.hostAmount.toLocaleString()}`,
       guestMessage ? `\nGuest note: ${guestMessage}` : "",
@@ -222,6 +230,9 @@ export async function POST(request: Request) {
         guests,
         nights,
         totalAmount,
+        listAmount,
+        memberDiscountAmount: memberPrice.discountAmount,
+        memberLevel: membership.level,
         currency: property.currency,
         commissionAmount: split.commissionAmount,
         hostAmount: split.hostAmount,

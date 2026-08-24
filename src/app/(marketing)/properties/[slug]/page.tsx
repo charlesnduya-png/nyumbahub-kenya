@@ -31,6 +31,9 @@ import {
 import { toWhatsAppNumber, telHref } from "@/lib/phone";
 import { formatPrice } from "@/lib/utils";
 import { getListingTypeLabel, getPropertyTypeLabel } from "@/lib/kenya";
+import { getPropertyReviews } from "@/lib/reviews";
+import { getCustomerMembership } from "@/lib/customer-membership";
+import { PropertyReviews } from "@/components/reviews/property-reviews";
 
 const BookStayForm = nextDynamic(
   () =>
@@ -222,6 +225,12 @@ export default async function PropertyDetailPage({ params }: PageProps) {
   const listingHost = resolveListingHost(property);
 
   const description = getPropertyDescription(property);
+  const [guestReviews, membership] = await Promise.all([
+    getPropertyReviews(property.id),
+    session?.user?.id
+      ? getCustomerMembership(session.user.id)
+      : Promise.resolve(null),
+  ]);
 
   const jsonLd = propertyJsonLd({
     id: property.id,
@@ -310,6 +319,11 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                 )}
               </p>
               <div className="mt-2 flex flex-wrap gap-2 sm:justify-end">
+                {guestReviews.count > 0 ? (
+                  <Badge className="bg-primary text-primary-foreground">
+                    {guestReviews.average.toFixed(1)} {guestReviews.label}
+                  </Badge>
+                ) : null}
                 {property.listingType === "RENT" && rentalRooms.length > 0 ? (
                   <Badge variant="secondary">
                     {roomsAvailable} of {rentalRooms.length} rooms available
@@ -536,6 +550,8 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                 <MortgageCalculator propertyPrice={property.price} />
               )}
 
+              <PropertyReviews reviews={guestReviews} />
+
               <RelatedPropertiesSection slug={slug} county={property.county} />
             </div>
 
@@ -575,6 +591,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                       pricePerNight={property.price}
                       currency={property.currency}
                       hostUserId={hostUserId}
+                      memberDiscountRate={membership?.discountRate ?? 0.1}
                     />
                   ) : property.listingType === "RENT" ? (
                     <RentalListingActions

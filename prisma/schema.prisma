@@ -588,6 +588,9 @@ model Booking {
   guests       Int           @default(1)
   nights       Int
   totalAmount  Float
+  listAmount   Float         @default(0)
+  memberDiscountAmount Float @default(0)
+  memberLevel  Int           @default(1)
   currency     String        @default("KES")
   commissionAmount Float     @default(0)
   hostAmount   Float         @default(0)
@@ -601,6 +604,7 @@ model Booking {
   property     Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   guest        User          @relation("GuestBookings", fields: [guestId], references: [id], onDelete: Cascade)
   platformCommission PlatformCommission?
+  review       Review?
 
   @@index([propertyId, status])
   @@index([guestId])
@@ -707,16 +711,27 @@ model Message {
 }
 
 model Review {
-  id         String   @id @default(cuid())
-  propertyId String
-  userId     String
-  rating     Int
-  comment    String?  @db.Text
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id            String    @id @default(cuid())
+  propertyId    String
+  userId        String
+  bookingId     String?   @unique
+  rating        Int
+  cleanliness   Int       @default(0)
+  locationScore Int       @default(0)
+  value         Int       @default(0)
+  comfort       Int       @default(0)
+  staff         Int       @default(0)
+  liked         String?   @db.Text
+  disliked      String?   @db.Text
+  comment       String?   @db.Text
+  hostReply     String?   @db.Text
+  hostRepliedAt DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  booking  Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
 
   @@unique([propertyId, userId])
   @@index([propertyId])
