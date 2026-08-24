@@ -102,7 +102,7 @@ export default function AdminWalletsPage() {
         <div>
           <h1 className="text-2xl font-bold">Wallets</h1>
           <p className="text-muted-foreground">
-            Professional balances, payout methods, earnings, and agent rankings.
+            Professional balances, Africa-wide payout methods, earnings, and rankings.
           </p>
         </div>
         <Button variant="outline" onClick={() => void load()}>

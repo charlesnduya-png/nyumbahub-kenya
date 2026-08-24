@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { resolveProfessionalActingContext } from "@/lib/account-team";
 import { prisma } from "@/lib/prisma";
+import { africanCountrySchema } from "@/lib/african-countries";
 import { getWalletOverview, updateWalletPayoutMethod } from "@/lib/wallet";
 
 function canViewWallet(ctx: {
@@ -55,18 +56,21 @@ export async function GET() {
 
 const payoutSchema = z
   .object({
-    method: z.enum(["MOBILE_MONEY", "BANK"]),
+    method: z.enum(["MOBILE_MONEY", "BANK", "DIGITAL_WALLET"]),
+    country: africanCountrySchema,
     accountName: z.string().trim().min(2).max(120),
     phone: z.string().trim().max(30).optional().default(""),
     provider: z.string().trim().max(60).optional().default(""),
     bankName: z.string().trim().max(80).optional().default(""),
     bankAccount: z.string().trim().max(40).optional().default(""),
     bankBranch: z.string().trim().max(80).optional().default(""),
+    swift: z.string().trim().max(20).optional().default(""),
+    email: z.string().trim().max(120).optional().default(""),
   })
   .superRefine((data, ctx) => {
     if (data.method === "MOBILE_MONEY") {
       const digits = data.phone.replace(/\D/g, "");
-      if (digits.length < 9) {
+      if (digits.length < 8) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "Enter the mobile money number we should send payouts to",
@@ -85,8 +89,19 @@ const payoutSchema = z
       if (!data.bankAccount) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Enter the bank account number",
+          message: "Enter the bank account number or IBAN",
           path: ["bankAccount"],
+        });
+      }
+    }
+    if (data.method === "DIGITAL_WALLET") {
+      const emailOk = Boolean(data.email && data.email.includes("@"));
+      const digits = data.phone.replace(/\D/g, "");
+      if (!emailOk && digits.length < 8) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Enter the wallet email or phone number",
+          path: ["email"],
         });
       }
     }

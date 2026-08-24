@@ -12,55 +12,77 @@ export type WalletSummary = {
 };
 
 export type WalletPayoutDetails = {
-  method: "MOBILE_MONEY" | "BANK" | null;
+  method: "MOBILE_MONEY" | "BANK" | "DIGITAL_WALLET" | null;
+  country: string;
   accountName: string;
   phone: string;
   provider: string;
   bankName: string;
   bankAccount: string;
   bankBranch: string;
+  swift: string;
+  email: string;
 };
 
 export function emptyPayoutDetails(): WalletPayoutDetails {
   return {
     method: null,
+    country: "Kenya",
     accountName: "",
     phone: "",
     provider: "M-Pesa",
     bankName: "",
     bankAccount: "",
     bankBranch: "",
+    swift: "",
+    email: "",
   };
 }
 
 export function payoutDetailsFromWallet(wallet: {
-  payoutMethod: "MOBILE_MONEY" | "BANK" | null;
+  payoutMethod: "MOBILE_MONEY" | "BANK" | "DIGITAL_WALLET" | null;
+  payoutCountry?: string | null;
   payoutAccountName: string | null;
   payoutPhone: string | null;
   payoutProvider: string | null;
   payoutBankName: string | null;
   payoutBankAccount: string | null;
   payoutBankBranch: string | null;
+  payoutSwift?: string | null;
+  payoutEmail?: string | null;
 }): WalletPayoutDetails {
   return {
     method: wallet.payoutMethod,
+    country: wallet.payoutCountry ?? "Kenya",
     accountName: wallet.payoutAccountName ?? "",
     phone: wallet.payoutPhone ?? "",
     provider: wallet.payoutProvider ?? "M-Pesa",
     bankName: wallet.payoutBankName ?? "",
     bankAccount: wallet.payoutBankAccount ?? "",
     bankBranch: wallet.payoutBankBranch ?? "",
+    swift: wallet.payoutSwift ?? "",
+    email: wallet.payoutEmail ?? "",
   };
 }
 
 export function formatPayoutMethod(payout: WalletPayoutDetails) {
   if (!payout.method) return "Not set";
+  const place = payout.country ? `${payout.country} · ` : "";
   if (payout.method === "MOBILE_MONEY") {
     const provider = payout.provider || "Mobile money";
-    return payout.phone ? `${provider} · ${payout.phone}` : provider;
+    return payout.phone
+      ? `${place}${provider} · ${payout.phone}`
+      : `${place}${provider}`;
+  }
+  if (payout.method === "DIGITAL_WALLET") {
+    const provider = payout.provider || "Digital wallet";
+    const dest = payout.email || payout.phone;
+    return dest ? `${place}${provider} · ${dest}` : `${place}${provider}`;
   }
   const bank = payout.bankName || "Bank";
-  return payout.bankAccount ? `${bank} · ${payout.bankAccount}` : bank;
+  return payout.bankAccount
+    ? `${place}${bank} · ${payout.bankAccount}`
+    : `${place}${bank}`;
 }
 
 export type WalletTxRow = {
@@ -523,12 +545,15 @@ export async function updateWalletPayoutMethod(
     where: { id: wallet.id },
     data: {
       payoutMethod: payout.method,
+      payoutCountry: payout.country.trim() || null,
       payoutAccountName: payout.accountName.trim() || null,
       payoutPhone: payout.phone.trim() || null,
       payoutProvider: payout.provider.trim() || null,
       payoutBankName: payout.bankName.trim() || null,
       payoutBankAccount: payout.bankAccount.trim() || null,
       payoutBankBranch: payout.bankBranch.trim() || null,
+      payoutSwift: payout.swift.trim() || null,
+      payoutEmail: payout.email.trim() || null,
     },
   });
 }
@@ -590,6 +615,9 @@ export async function getAdminWalletRankings(db: PrismaClient) {
           payoutBankName: true,
           payoutBankAccount: true,
           payoutBankBranch: true,
+          payoutCountry: true,
+          payoutSwift: true,
+          payoutEmail: true,
         },
       },
     },

@@ -67,8 +67,7 @@ export default async function ProfessionalWalletPage() {
       <div>
         <h1 className="text-2xl font-bold">Wallet</h1>
         <p className="mt-1 text-muted-foreground">
-          Track what you have made, set how you get paid, and see pending
-          payouts from Your Home.
+          Track earnings and set how you get paid anywhere in Africa.
         </p>
       </div>
 
@@ -93,8 +92,10 @@ export default async function ProfessionalWalletPage() {
         </CardHeader>
         <CardContent>
           <p className="mb-4 text-sm text-muted-foreground">
-            Save the M-Pesa, mobile money, or bank details Your Home should use
-            when sending your earnings.
+            Choose your country, then save mobile money, a local bank account,
+            or a digital wallet. Providers change with the country — M-Pesa in
+            Kenya, MTN MoMo in Ghana, Wave in Senegal, EcoCash in Zimbabwe, and
+            so on.
           </p>
           <PayoutMethodForm initial={payout} canEdit={canEdit} />
         </CardContent>
