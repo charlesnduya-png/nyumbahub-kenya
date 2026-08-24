@@ -461,7 +461,7 @@ export async function recordWalletPayout(
         feeAmount: 0,
         sourceType: "PAYOUT",
         sourceId: `payout_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        description: input.note?.trim() || "Payout to professional",
+        description: input.note?.trim() || "Admin payout to professional",
         clearedAt: new Date(),
       },
     });
@@ -473,6 +473,156 @@ export async function recordWalletPayout(
 
     return payout;
   });
+}
+
+export const MIN_WITHDRAWAL_AMOUNT = 10;
+export const WITHDRAWAL_SOURCE = "WITHDRAWAL";
+
+export async function requestWalletWithdrawal(
+  db: PrismaClient,
+  input: { userId: string; amount: number; note?: string },
+) {
+  const amount = roundMoney(input.amount);
+  if (amount < MIN_WITHDRAWAL_AMOUNT) {
+    throw new Error(`Minimum withdrawal is ${MIN_WITHDRAWAL_AMOUNT}`);
+  }
+
+  return db.$transaction(async (tx) => {
+    const wallet = await getOrCreateWallet(tx, input.userId);
+    if (!wallet.payoutMethod) {
+      throw new Error("Save a payout method before requesting a withdrawal");
+    }
+    if (wallet.availableBalance + 0.001 < amount) {
+      throw new Error("Withdrawal is more than your available balance");
+    }
+
+    const destination = formatPayoutMethod(payoutDetailsFromWallet(wallet));
+    const note = input.note?.trim();
+    const withdrawal = await tx.walletTransaction.create({
+      data: {
+        walletId: wallet.id,
+        userId: input.userId,
+        type: "PAYOUT",
+        status: "PENDING",
+        amount,
+        grossAmount: amount,
+        feeAmount: 0,
+        currency: wallet.currency,
+        sourceType: WITHDRAWAL_SOURCE,
+        sourceId: `wd_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        description: note
+          ? `Withdrawal · ${destination} · ${note}`
+          : `Withdrawal · ${destination}`,
+      },
+    });
+
+    await applyBalanceDelta(tx, wallet.id, { available: -amount });
+    return withdrawal;
+  });
+}
+
+export async function reviewWalletWithdrawal(
+  db: PrismaClient,
+  input: {
+    withdrawalId: string;
+    action: "approve" | "reject";
+    note?: string;
+  },
+) {
+  return db.$transaction(async (tx) => {
+    const row = await tx.walletTransaction.findUnique({
+      where: { id: input.withdrawalId },
+    });
+    if (
+      !row ||
+      row.type !== "PAYOUT" ||
+      row.sourceType !== WITHDRAWAL_SOURCE
+    ) {
+      throw new Error("Withdrawal request not found");
+    }
+    if (row.status !== "PENDING") {
+      throw new Error("This withdrawal has already been reviewed");
+    }
+
+    const note = input.note?.trim();
+    if (input.action === "reject") {
+      await tx.walletTransaction.update({
+        where: { id: row.id },
+        data: {
+          status: "CANCELLED",
+          description: note
+            ? `${row.description} · Rejected: ${note}`
+            : `${row.description} · Rejected`,
+        },
+      });
+      await applyBalanceDelta(tx, row.walletId, { available: row.amount });
+      return { id: row.id, userId: row.userId, amount: row.amount, status: "CANCELLED" as const };
+    }
+
+    await tx.walletTransaction.update({
+      where: { id: row.id },
+      data: {
+        status: "PAID_OUT",
+        clearedAt: new Date(),
+        description: note
+          ? `${row.description} · Paid: ${note}`
+          : `${row.description} · Paid`,
+      },
+    });
+    await applyBalanceDelta(tx, row.walletId, { paidOut: row.amount });
+    return { id: row.id, userId: row.userId, amount: row.amount, status: "PAID_OUT" as const };
+  });
+}
+
+export async function getAdminWithdrawals(db: PrismaClient, take = 150) {
+  const rows = await db.walletTransaction.findMany({
+    where: { sourceType: WITHDRAWAL_SOURCE },
+    orderBy: { createdAt: "desc" },
+    take,
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          agentProfile: { select: { agencyName: true } },
+          wallet: {
+            select: {
+              payoutMethod: true,
+              payoutCountry: true,
+              payoutAccountName: true,
+              payoutPhone: true,
+              payoutProvider: true,
+              payoutBankName: true,
+              payoutBankAccount: true,
+              payoutBankBranch: true,
+              payoutSwift: true,
+              payoutEmail: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return rows
+    .map((row) => ({
+      ...toTxRow(row),
+      userId: row.user.id,
+      userName: row.user.name,
+      userEmail: row.user.email,
+      userRole: row.user.role,
+      agencyName: row.user.agentProfile?.agencyName ?? null,
+      payoutLabel: row.user.wallet
+        ? formatPayoutMethod(payoutDetailsFromWallet(row.user.wallet))
+        : "Not set",
+    }))
+    .sort((a, b) => {
+      const rank = (status: string) =>
+        status === "PENDING" ? 0 : status === "PAID_OUT" ? 1 : 2;
+      return rank(a.status) - rank(b.status) || b.createdAt.localeCompare(a.createdAt);
+    });
 }
 
 function toTxRow(tx: {

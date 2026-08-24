@@ -47,7 +47,7 @@ const ADMIN_SECTIONS = [
   },
   {
     title: "Wallets",
-    description: "Professional balances, Africa-wide payouts, and agent rankings",
+    description: "Withdrawals, balances, and agent rankings",
     href: "/dashboard/admin/wallets",
   },
   {

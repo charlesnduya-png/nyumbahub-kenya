@@ -36,23 +36,47 @@ interface RankingRow {
   payoutLabel: string;
 }
 
+interface WithdrawalRow {
+  id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  description: string;
+  createdAt: string;
+  userName: string | null;
+  userEmail: string;
+  userRole: string;
+  agencyName: string | null;
+  payoutLabel: string;
+}
+
 function typeLabel(type: string) {
   if (type === "BOOKING") return "BnB";
   if (type === "RENT") return "Rent";
   if (type === "SALE") return "Sale";
-  if (type === "PAYOUT") return "Payout";
+  if (type === "PAYOUT") return "Withdrawal";
   return type;
+}
+
+function withdrawalStatus(status: string) {
+  if (status === "PENDING") return "Requested";
+  if (status === "PAID_OUT") return "Paid";
+  if (status === "CANCELLED") return "Rejected";
+  return status;
 }
 
 export default function AdminWalletsPage() {
   const [earnings, setEarnings] = useState<EarningsRow[]>([]);
   const [rankings, setRankings] = useState<RankingRow[]>([]);
+  const [withdrawals, setWithdrawals] = useState<WithdrawalRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [payoutUserId, setPayoutUserId] = useState("");
   const [payoutAmount, setPayoutAmount] = useState("");
   const [payoutNote, setPayoutNote] = useState("");
   const [payoutBusy, setPayoutBusy] = useState(false);
   const [payoutError, setPayoutError] = useState<string | null>(null);
+  const [reviewBusy, setReviewBusy] = useState<string | null>(null);
+  const [reviewError, setReviewError] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -62,6 +86,7 @@ export default function AdminWalletsPage() {
       if (json.success) {
         setEarnings(json.data?.earnings ?? []);
         setRankings(json.data?.rankings ?? []);
+        setWithdrawals(json.data?.withdrawals ?? []);
       }
     } finally {
       setLoading(false);
@@ -94,7 +119,31 @@ export default function AdminWalletsPage() {
     }
   }
 
+  async function reviewWithdrawal(
+    withdrawalId: string,
+    action: "approve" | "reject",
+  ) {
+    setReviewBusy(withdrawalId + action);
+    setReviewError(null);
+    try {
+      const res = await fetch("/api/admin/wallet", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ withdrawalId, action }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        setReviewError(json.error ?? "Could not update withdrawal");
+        return;
+      }
+      await load();
+    } finally {
+      setReviewBusy(null);
+    }
+  }
+
   const selected = rankings.find((row) => row.userId === payoutUserId);
+  const pendingWithdrawals = withdrawals.filter((row) => row.status === "PENDING");
 
   return (
     <div className="space-y-6">
@@ -102,7 +151,7 @@ export default function AdminWalletsPage() {
         <div>
           <h1 className="text-2xl font-bold">Wallets</h1>
           <p className="text-muted-foreground">
-            Professional balances, Africa-wide payout methods, earnings, and rankings.
+            Professional balances, withdrawals, Africa-wide payout methods, and rankings.
           </p>
         </div>
         <Button variant="outline" onClick={() => void load()}>
@@ -110,12 +159,119 @@ export default function AdminWalletsPage() {
         </Button>
       </div>
 
-      <Tabs defaultValue="rankings">
+      <Tabs defaultValue="withdrawals">
         <TabsList className="flex h-auto flex-wrap">
+          <TabsTrigger value="withdrawals">
+            Withdrawals
+            {pendingWithdrawals.length > 0 ? ` (${pendingWithdrawals.length})` : ""}
+          </TabsTrigger>
           <TabsTrigger value="rankings">Rankings</TabsTrigger>
           <TabsTrigger value="earnings">All earnings</TabsTrigger>
           <TabsTrigger value="payouts">Record payout</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="withdrawals" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Professional withdrawal requests</CardTitle>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              {reviewError ? (
+                <p className="mb-3 text-sm text-destructive">{reviewError}</p>
+              ) : null}
+              {loading ? (
+                <p className="text-sm text-muted-foreground">Loading…</p>
+              ) : withdrawals.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No withdrawal requests yet. When an agent or landlord asks to
+                  withdraw, it appears here so you can send the money and mark it
+                  paid.
+                </p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-muted-foreground">
+                      <th className="pb-3 pr-4 font-medium">When</th>
+                      <th className="pb-3 pr-4 font-medium">Professional</th>
+                      <th className="pb-3 pr-4 font-medium">Send to</th>
+                      <th className="pb-3 pr-4 font-medium">Amount</th>
+                      <th className="pb-3 pr-4 font-medium">Status</th>
+                      <th className="pb-3 font-medium">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {withdrawals.map((row) => (
+                      <tr key={row.id} className="border-b last:border-0">
+                        <td className="py-3 pr-4 text-muted-foreground">
+                          {formatRelativeDate(row.createdAt)}
+                        </td>
+                        <td className="py-3 pr-4">
+                          <div className="font-medium">
+                            {row.agencyName || row.userName || row.userEmail}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {row.userRole} · {row.userEmail}
+                          </div>
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            {row.description}
+                          </div>
+                        </td>
+                        <td className="py-3 pr-4">{row.payoutLabel}</td>
+                        <td className="py-3 pr-4 font-medium">
+                          {formatPrice(row.amount, { currency: row.currency })}
+                        </td>
+                        <td className="py-3 pr-4">
+                          <Badge
+                            variant={
+                              row.status === "PAID_OUT"
+                                ? "default"
+                                : row.status === "CANCELLED"
+                                  ? "destructive"
+                                  : "secondary"
+                            }
+                          >
+                            {withdrawalStatus(row.status)}
+                          </Badge>
+                        </td>
+                        <td className="py-3">
+                          {row.status === "PENDING" ? (
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                size="sm"
+                                disabled={Boolean(reviewBusy)}
+                                onClick={() =>
+                                  void reviewWithdrawal(row.id, "approve")
+                                }
+                              >
+                                {reviewBusy === `${row.id}approve`
+                                  ? "Paying…"
+                                  : "Mark paid"}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={Boolean(reviewBusy)}
+                                onClick={() =>
+                                  void reviewWithdrawal(row.id, "reject")
+                                }
+                              >
+                                {reviewBusy === `${row.id}reject`
+                                  ? "Rejecting…"
+                                  : "Reject"}
+                              </Button>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="rankings" className="mt-4">
           <Card>

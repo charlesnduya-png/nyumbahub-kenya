@@ -3,13 +3,15 @@ import { Banknote, Clock3, TrendingUp, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PayoutMethodForm } from "@/components/professional/payout-method-form";
+import { WalletWithdrawForm } from "@/components/professional/wallet-withdraw-form";
 import { auth } from "@/lib/auth";
 import { resolveProfessionalActingContext } from "@/lib/account-team";
 import { prisma } from "@/lib/prisma";
 import { formatPrice, formatRelativeDate } from "@/lib/utils";
 import { getWalletOverview } from "@/lib/wallet";
 
-function statusLabel(status: string) {
+function statusLabel(status: string, type?: string) {
+  if (type === "PAYOUT" && status === "PENDING") return "Withdrawal requested";
   if (status === "PENDING") return "Pending";
   if (status === "AVAILABLE") return "Cleared";
   if (status === "PAID_OUT") return "Paid out";
@@ -20,7 +22,7 @@ function typeLabel(type: string) {
   if (type === "BOOKING") return "BnB booking";
   if (type === "RENT") return "Rent collected";
   if (type === "SALE") return "Sale offer";
-  if (type === "PAYOUT") return "Payout";
+  if (type === "PAYOUT") return "Withdrawal";
   return "Adjustment";
 }
 
@@ -67,7 +69,7 @@ export default async function ProfessionalWalletPage() {
       <div>
         <h1 className="text-2xl font-bold">Wallet</h1>
         <p className="mt-1 text-muted-foreground">
-          Track earnings and set how you get paid anywhere in Africa.
+          Track earnings, set how you get paid, and request a withdrawal.
         </p>
       </div>
 
@@ -98,6 +100,21 @@ export default async function ProfessionalWalletPage() {
             so on.
           </p>
           <PayoutMethodForm initial={payout} canEdit={canEdit} />
+        </CardContent>
+      </Card>
+
+      <Card id="withdraw">
+        <CardHeader>
+          <CardTitle>Withdraw</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <WalletWithdrawForm
+            availableBalance={summary.availableBalance}
+            currency={summary.currency}
+            payout={payout}
+            canEdit={canEdit}
+            hasPayoutMethod={Boolean(payout.method)}
+          />
         </CardContent>
       </Card>
 
@@ -178,7 +195,7 @@ export default async function ProfessionalWalletPage() {
                               : "secondary"
                         }
                       >
-                        {statusLabel(row.status)}
+                        {statusLabel(row.status, row.type)}
                       </Badge>
                     </td>
                   </tr>

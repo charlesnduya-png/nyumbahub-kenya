@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { resolveProfessionalActingContext } from "@/lib/account-team";
+import { notifyAdmins } from "@/lib/admin-notify";
 import { prisma } from "@/lib/prisma";
 import { africanCountrySchema } from "@/lib/african-countries";
-import { getWalletOverview, updateWalletPayoutMethod } from "@/lib/wallet";
+import { getWalletOverview, updateWalletPayoutMethod, requestWalletWithdrawal } from "@/lib/wallet";
 
 function canViewWallet(ctx: {
   isTeamMember: boolean;
@@ -145,5 +146,62 @@ export async function PATCH(request: Request) {
       { success: false, error: "Unable to save payout method" },
       { status: 500 },
     );
+  }
+}
+
+const withdrawSchema = z.object({
+  amount: z.coerce.number().positive(),
+  note: z.string().trim().max(200).optional().default(""),
+});
+
+export async function POST(request: Request) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json(
+      { success: false, error: "Sign in required" },
+      { status: 401 },
+    );
+  }
+
+  try {
+    const ctx = await resolveProfessionalActingContext(session.user.id);
+    const canEdit = !ctx.isTeamMember || ctx.permissions.manageTeam;
+    if (!canEdit) {
+      return NextResponse.json(
+        { success: false, error: "Only the account owner can request a withdrawal" },
+        { status: 403 },
+      );
+    }
+
+    const parsed = withdrawSchema.safeParse(await request.json().catch(() => ({})));
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: "Enter a withdrawal amount" },
+        { status: 400 },
+      );
+    }
+
+    const withdrawal = await requestWalletWithdrawal(prisma, {
+      userId: ctx.actingOwnerId,
+      amount: parsed.data.amount,
+      note: parsed.data.note || undefined,
+    });
+
+    try {
+      await notifyAdmins({
+        type: "PAYMENT",
+        title: "Wallet withdrawal requested",
+        body: `A professional asked to withdraw ${withdrawal.amount} ${withdrawal.currency}.`,
+        link: "/dashboard/admin/wallets",
+      });
+    } catch (error) {
+      console.error("Notify admins of withdrawal failed:", error);
+    }
+
+    return NextResponse.json({ success: true, data: { id: withdrawal.id } });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unable to request withdrawal";
+    return NextResponse.json({ success: false, error: message }, { status: 400 });
   }
 }
