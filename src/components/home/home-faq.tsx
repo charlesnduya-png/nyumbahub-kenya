@@ -9,7 +9,7 @@ import { HOME_FAQ_ITEMS } from "@/lib/seo";
 export function HomeFaq() {
   return (
     <section
-      className="border-t bg-card/50 py-16"
+      className="cv-auto border-t bg-card/50 py-16"
       aria-labelledby="home-faq-heading"
     >
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">

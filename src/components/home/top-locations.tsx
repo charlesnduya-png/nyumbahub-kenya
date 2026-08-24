@@ -21,7 +21,7 @@ export function TopLocations({
 
   return (
     <section
-      className="gradient-mesh py-16 sm:py-20"
+      className="cv-auto gradient-mesh py-16 sm:py-20"
       aria-labelledby="locations-heading"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -57,7 +57,6 @@ export function TopLocations({
                       : "(max-width: 640px) 100vw, 33vw"
                   }
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  priority={index === 0}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-5">

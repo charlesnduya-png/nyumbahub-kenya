@@ -18,13 +18,17 @@ import "./globals.css";
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
+  preload: true,
 });
 
 const fraunces = Fraunces({
   variable: "--font-fraunces",
   subsets: ["latin"],
+  weight: ["600"],
   display: "swap",
+  preload: true,
 });
 
 export const viewport: Viewport = {
@@ -101,6 +105,12 @@ export default function RootLayout({
 
   return (
     <html lang="en-KE" suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href="https://images.unsplash.com" />
+        <link rel="preconnect" href="https://res.cloudinary.com" />
+        <link rel="dns-prefetch" href="https://images.unsplash.com" />
+        <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+      </head>
       <body
         className={`${dmSans.variable} ${fraunces.variable} font-sans antialiased`}
       >

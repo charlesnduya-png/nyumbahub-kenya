@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "leaflet/dist/leaflet.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -174,6 +173,24 @@ body {
 
 .animate-float-soft {
   animation: float-soft 5s ease-in-out infinite;
+}
+
+@keyframes hero-zoom {
+  from {
+    transform: scale(1.06);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.hero-zoom {
+  animation: hero-zoom 5.5s linear forwards;
+}
+
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 520px;
 }
 
 @keyframes palm-sway {
@@ -379,6 +396,10 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .hero-zoom {
+    animation: none;
+  }
+
   .animate-float-soft,
   .animate-bnb-icon,
   .animate-logo-mark,

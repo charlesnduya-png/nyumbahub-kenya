@@ -6,7 +6,7 @@ import { FeaturedProperties } from "@/components/home/featured-properties";
 import { HomeFaq } from "@/components/home/home-faq";
 import { LatestBlog } from "@/components/home/latest-blog";
 import { LatestProperties } from "@/components/home/latest-properties";
-import { MortgageCalculator } from "@/components/home/mortgage-calculator";
+import { LazyMortgageCalculator } from "@/components/home/lazy-mortgage-calculator";
 import { TopLocations } from "@/components/home/top-locations";
 import { getPublishedBlogPosts } from "@/lib/blog";
 import { getFeaturedAgentsForHome } from "@/lib/featured-agents";
@@ -49,10 +49,10 @@ export default async function HomePage() {
     blogPosts,
   ] = await Promise.all([
     getFeaturedAgentsForHome(4),
-    getFeaturedPropertiesForHome(8),
-    getRentalPropertiesForHome(8),
-    getBnbPropertiesForHome(8),
-    getLatestPropertiesForHome(8),
+    getFeaturedPropertiesForHome(6),
+    getRentalPropertiesForHome(6),
+    getBnbPropertiesForHome(6),
+    getLatestPropertiesForHome(6),
     getBrowseCategories(),
     getTopLocations(6),
     getPublishedBlogPosts(3),
@@ -76,6 +76,7 @@ export default async function HomePage() {
           subtitle="Monthly rentals across Nairobi, Lagos, Accra, Kampala and beyond"
           viewAllHref="/rent"
           viewAllLabel="Browse all rentals"
+          className="cv-auto"
         />
         <FeaturedProperties
           properties={bnbProperties}
@@ -83,12 +84,13 @@ export default async function HomePage() {
           subtitle="Beach villas, city Airbnbs, lake cottages — priced per night"
           viewAllHref="/bnb"
           viewAllLabel="Browse all BnBs"
+          className="cv-auto"
         />
         <Categories categories={categories} />
         <LatestProperties properties={latestProperties} />
         <TopLocations locations={locations} />
         <FeaturedAgents agents={featuredAgents} />
-        <MortgageCalculator />
+        <LazyMortgageCalculator />
         <HomeFaq />
         <LatestBlog posts={blogPosts} />
         <CtaSection />

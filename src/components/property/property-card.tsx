@@ -1,13 +1,11 @@
-"use client";
-
 import Link from "next/link";
-import { Bath, BedDouble, Heart, MapPin, ShieldCheck, Star } from "lucide-react";
-import * as React from "react";
+import { Bath, BedDouble, MapPin, ShieldCheck, Star } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ListingHostRow } from "@/components/properties/listing-host-row";
+import { FavoriteToggle } from "@/components/property/favorite-toggle";
 import { PropertyMediaImage } from "@/components/property/property-media-image";
 import { cn, formatPrice } from "@/lib/utils";
 import { getListingTypeLabel, getPropertyTypeLabel } from "@/lib/kenya";
@@ -24,7 +22,6 @@ export function PropertyCardComponent({
   className,
   priority = false,
 }: PropertyCardProps) {
-  const [favorited, setFavorited] = React.useState(false);
   const imageUrl = property.primaryImage?.url ?? property.images?.[0]?.url ?? null;
   const location = [property.estate, property.town, property.county, property.country]
     .filter(Boolean)
@@ -50,7 +47,7 @@ export function PropertyCardComponent({
           src={imageUrl}
           alt={property.primaryImage?.alt ?? property.title}
           fill
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          sizes="(max-width: 640px) 85vw, (max-width: 1024px) 50vw, 25vw"
           className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
           priority={priority}
         />
@@ -74,27 +71,7 @@ export function PropertyCardComponent({
           )}
         </div>
 
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className={cn(
-            "absolute right-3 top-3 z-20 h-9 w-9 rounded-full bg-white/90 text-foreground backdrop-blur-sm hover:bg-white dark:bg-black/70 dark:text-white dark:hover:bg-black/90",
-            favorited && "text-red-500 hover:text-red-600",
-          )}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setFavorited((prev) => !prev);
-          }}
-          aria-label={favorited ? "Remove from wishlist" : "Add to wishlist"}
-          aria-pressed={favorited}
-        >
-          <Heart
-            className={cn("h-4 w-4", favorited && "fill-current")}
-            aria-hidden="true"
-          />
-        </Button>
+        <FavoriteToggle />
 
         <div className="absolute bottom-3 left-3">
           <span className="rounded-lg bg-white/95 px-2.5 py-1 text-xs font-medium text-foreground backdrop-blur-sm dark:bg-black/80 dark:text-white">
@@ -167,10 +144,7 @@ export function PropertyCardComponent({
         {property.listingType === "RENT" && (
           <div className="relative z-20 mt-4">
             <Button className="w-full" size="sm" asChild>
-              <Link
-                href={`/properties/${property.slug}`}
-                onClick={(e) => e.stopPropagation()}
-              >
+              <Link href={`/properties/${property.slug}`}>
                 Reserve rental
               </Link>
             </Button>

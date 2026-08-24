@@ -1,4 +1,4 @@
-import { AiChatAssistant } from "@/components/ai/chat-assistant";
+import { LazyChatAssistant } from "@/components/ai/lazy-chat-assistant";
 import { SiteVisitTracker } from "@/components/analytics/site-visit-tracker";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
@@ -16,7 +16,7 @@ export default function MarketingLayout({
         {children}
       </main>
       <Footer />
-      <AiChatAssistant />
+      <LazyChatAssistant />
     </div>
   );
 }

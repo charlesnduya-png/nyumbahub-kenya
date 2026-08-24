@@ -22,7 +22,7 @@ export function LatestProperties({
 
   return (
     <section
-      className="gradient-mesh py-16 sm:py-20"
+      className="cv-auto gradient-mesh py-16 sm:py-20"
       aria-labelledby="latest-heading"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -45,11 +45,10 @@ export function LatestProperties({
         </div>
 
         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {properties.map((property, index) => (
+          {properties.map((property) => (
             <PropertyCardComponent
               key={property.id}
               property={property}
-              priority={index < 4}
             />
           ))}
         </div>

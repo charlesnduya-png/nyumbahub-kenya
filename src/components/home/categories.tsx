@@ -19,7 +19,7 @@ export function Categories({
   }
 
   return (
-    <section className="py-16 sm:py-20" aria-labelledby="categories-heading">
+    <section className="cv-auto py-16 sm:py-20" aria-labelledby="categories-heading">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center">
           <h2
@@ -55,6 +55,7 @@ export function Categories({
                   fill
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  quality={70}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-5">

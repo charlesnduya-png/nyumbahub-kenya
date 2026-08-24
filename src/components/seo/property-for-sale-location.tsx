@@ -221,7 +221,7 @@ export function LocationMarketPage({
               <PropertyCardComponent
                 key={property.id}
                 property={property}
-                priority={index < 4}
+                priority={index === 0}
               />
             ))}
           </div>

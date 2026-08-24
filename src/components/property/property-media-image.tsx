@@ -55,6 +55,8 @@ export function PropertyMediaImage({
       <img
         src={current}
         alt={alt}
+        loading={priority ? "eager" : "lazy"}
+        decoding="async"
         className={cn(
           fill && "absolute inset-0 h-full w-full object-cover",
           className,
@@ -73,7 +75,10 @@ export function PropertyMediaImage({
       height={fill ? undefined : height}
       className={className}
       sizes={sizes}
-      priority={priority}
+      quality={70}
+      {...(priority
+        ? { priority: true as const }
+        : { loading: "lazy" as const })}
       onError={() => setCurrent(FALLBACK)}
     />
   );

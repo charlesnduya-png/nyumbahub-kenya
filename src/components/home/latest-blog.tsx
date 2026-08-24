@@ -24,7 +24,7 @@ export function LatestBlog({
 
   return (
     <section
-      className="gradient-mesh py-16 sm:py-20"
+      className="cv-auto gradient-mesh py-16 sm:py-20"
       aria-labelledby="blog-heading"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -47,7 +47,7 @@ export function LatestBlog({
         </div>
 
         <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {posts.map((post, index) => (
+          {posts.map((post) => (
             <article
               key={post.id}
               className="group overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all hover:-translate-y-1 hover:shadow-md"
@@ -64,7 +64,6 @@ export function LatestBlog({
                       fill
                       sizes="(max-width: 768px) 100vw, 33vw"
                       className="object-cover transition-transform duration-500 group-hover:scale-105"
-                      priority={index === 0}
                     />
                   ) : (
                     <div className="flex h-full items-center justify-center bg-muted">

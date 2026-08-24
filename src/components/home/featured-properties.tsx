@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react";
 
 import { PropertyCardComponent } from "@/components/property/property-card";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import type { PropertyCard } from "@/types";
 
 interface FeaturedPropertiesProps {
@@ -11,6 +12,8 @@ interface FeaturedPropertiesProps {
   subtitle?: string;
   viewAllHref?: string;
   viewAllLabel?: string;
+  priorityCount?: number;
+  className?: string;
 }
 
 export function FeaturedProperties({
@@ -19,13 +22,15 @@ export function FeaturedProperties({
   subtitle = "Hand-picked listings verified by our team",
   viewAllHref = "/properties?isFeatured=true",
   viewAllLabel = "View all featured",
+  priorityCount = 0,
+  className,
 }: FeaturedPropertiesProps) {
   if (properties.length === 0) {
     return null;
   }
 
   return (
-    <section className="py-16 sm:py-20" aria-labelledby="featured-heading">
+    <section className={cn("py-16 sm:py-20", className)} aria-labelledby="featured-heading">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
           <div>
@@ -53,7 +58,7 @@ export function FeaturedProperties({
             >
               <PropertyCardComponent
                 property={property}
-                priority={index < 2}
+                priority={index < priorityCount}
               />
             </div>
           ))}
