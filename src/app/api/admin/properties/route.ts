@@ -2,12 +2,16 @@ import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { isSiteOwnerEmail } from "@/lib/site-owner";
 
 export async function GET() {
   try {
     const session = await auth();
 
-    if (!session?.user?.id || session.user.role !== "ADMIN") {
+    if (
+      !session?.user?.id ||
+      (session.user.role !== "ADMIN" && !isSiteOwnerEmail(session.user.email))
+    ) {
       return NextResponse.json(
         { success: false, error: "Admin access required" },
         { status: 403 },

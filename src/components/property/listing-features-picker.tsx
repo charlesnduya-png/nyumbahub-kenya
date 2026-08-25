@@ -9,11 +9,23 @@ import {
 export function ListingFeaturesPicker({
   value,
   onChange,
+  listingType,
 }: {
   value: string[];
   onChange: (next: ListingFeatureSlug[]) => void;
+  listingType?: string;
 }) {
   const selected = new Set(value);
+  const hotelGroupIds = ["hotel", "utilities", "security-parking", "outdoor"];
+  const groups =
+    listingType === "HOTEL"
+      ? hotelGroupIds
+          .map((id) => LISTING_FEATURE_GROUPS.find((group) => group.id === id))
+          .filter(
+            (group): group is (typeof LISTING_FEATURE_GROUPS)[number] =>
+              Boolean(group),
+          )
+      : LISTING_FEATURE_GROUPS;
 
   function toggle(slug: ListingFeatureSlug, checked: boolean) {
     const next = new Set(selected);
@@ -24,7 +36,7 @@ export function ListingFeaturesPicker({
 
   return (
     <div className="space-y-6">
-      {LISTING_FEATURE_GROUPS.map((group) => (
+      {groups.map((group) => (
         <div key={group.id}>
           <p className="mb-3 text-sm font-semibold">{group.label}</p>
           <div className="grid gap-2 sm:grid-cols-2">

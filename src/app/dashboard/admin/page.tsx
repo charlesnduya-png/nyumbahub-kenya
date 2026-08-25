@@ -26,6 +26,11 @@ const ADMIN_SECTIONS = [
     href: "/dashboard/admin/properties",
   },
   {
+    title: "Hotels",
+    description: "Hotel listings, nightly bookings, and guest reviews",
+    href: "/dashboard/admin/hotels",
+  },
+  {
     title: "Reported accounts",
     description: "Review customer reports about agents",
     href: "/dashboard/admin/reported-accounts",

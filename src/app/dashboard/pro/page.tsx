@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   Building2,
   HandCoins,
+  Hotel,
   Inbox,
   MessageSquareWarning,
   Plus,
@@ -30,7 +31,8 @@ export default async function ProfessionalAdminPage() {
   const ctx = await resolveProfessionalActingContext(userId);
   const ownerId = ctx.actingOwnerId;
 
-  const [properties, messages, leads, pendingOffers, wallet] = await Promise.all([
+  const [properties, messages, leads, pendingOffers, wallet, hotelListings] =
+    await Promise.all([
     prisma.property.findMany({
       where: { ownerId },
       orderBy: { updatedAt: "desc" },
@@ -44,6 +46,7 @@ export default async function ProfessionalAdminPage() {
         price: true,
         slug: true,
         views: true,
+        listingType: true,
       },
     }),
     prisma.message.findMany({
@@ -78,6 +81,12 @@ export default async function ProfessionalAdminPage() {
     ctx.permissions.manageListings)
       ? getWalletSnapshot(prisma, ownerId).catch(() => null)
       : Promise.resolve(null),
+    prisma.property.count({
+      where: {
+        listingType: "HOTEL",
+        OR: [{ ownerId }, { agent: { userId: ownerId } }],
+      },
+    }),
   ]);
 
   const activeListings = properties.filter((p) => p.status === "ACTIVE").length;
@@ -171,6 +180,26 @@ export default async function ProfessionalAdminPage() {
           </Card>
         </Link>
       ) : null}
+
+      <Link href="/dashboard/pro/hotels" className="block">
+        <Card className="transition hover:border-primary/40 hover:shadow-md">
+          <CardContent className="flex flex-wrap items-center justify-between gap-4 p-5">
+            <div className="flex items-center gap-3">
+              <Hotel className="h-8 w-8 text-primary/70" />
+              <div>
+                <p className="text-sm text-muted-foreground">Hotels</p>
+                <p className="text-2xl font-bold">
+                  {hotelListings} hotel{hotelListings === 1 ? "" : "s"}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Listings, nightly bookings, and guest reviews
+                </p>
+              </div>
+            </div>
+            <span className="text-sm font-medium text-primary">Open hotels</span>
+          </CardContent>
+        </Card>
+      </Link>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {[

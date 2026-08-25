@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Building2, Hotel, Search, Sparkles } from "lucide-react";
+import { ListHotelCta } from "@/components/hotels/list-hotel-cta";
 import { FeaturedProperties } from "@/components/home/featured-properties";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -69,9 +70,9 @@ export default async function HotelsPage() {
             <Button size="lg" variant="outline" asChild>
               <Link href="/register">Guest account (free)</Link>
             </Button>
-            <Button size="lg" variant="secondary" asChild>
-              <Link href="/register/professional">List a hotel</Link>
-            </Button>
+            <ListHotelCta size="lg" variant="secondary">
+              List a hotel
+            </ListHotelCta>
           </div>
 
           <div className="mt-8 flex flex-wrap gap-4 text-sm text-muted-foreground">
@@ -115,9 +116,7 @@ export default async function HotelsPage() {
             Add rooms or the whole property. Guests book dates on the site, and
             you approve each stay from your bookings inbox.
           </p>
-          <Button className="mt-6" asChild>
-            <Link href="/register/professional">List a hotel</Link>
-          </Button>
+          <ListHotelCta className="mt-6">List a hotel</ListHotelCta>
         </div>
       </section>
     </div>

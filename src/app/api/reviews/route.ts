@@ -1,18 +1,103 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth";
+import { canViewWith, resolveProfessionalActingContext } from "@/lib/account-team";
 import { canReviewStay, guestDisplayName } from "@/lib/membership";
 import { prisma } from "@/lib/prisma";
+import { isSiteOwnerEmail } from "@/lib/site-owner";
 import { createReviewSchema } from "@/lib/validations/review";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const propertyId = searchParams.get("propertyId")?.trim();
   const mine = searchParams.get("mine") === "1";
+  const host = searchParams.get("host") === "1";
+  const listingTypeParam = searchParams.get("listingType");
+  const listingType =
+    listingTypeParam === "HOTEL" || listingTypeParam === "HOLIDAY"
+      ? (listingTypeParam as "HOTEL" | "HOLIDAY")
+      : undefined;
 
   const session = await auth();
 
   try {
+    if (host) {
+      if (!session?.user?.id) {
+        return NextResponse.json(
+          { success: false, error: "Sign in required" },
+          { status: 401 },
+        );
+      }
+
+      const ctx = await resolveProfessionalActingContext(session.user.id);
+      const isAdmin =
+        session.user.role === "ADMIN" || isSiteOwnerEmail(session.user.email);
+      const canHostReviews =
+        isAdmin ||
+        canViewWith(ctx, "manageBookings") ||
+        canViewWith(ctx, "manageListings");
+
+      if (!canHostReviews) {
+        return NextResponse.json(
+          { success: false, error: "Not allowed" },
+          { status: 403 },
+        );
+      }
+
+      const hostUserId = ctx.actingOwnerId;
+      const reviews = await prisma.review.findMany({
+        where: {
+          property: {
+            ...(listingType ? { listingType } : {}),
+            ...(isAdmin
+              ? {}
+              : {
+                  OR: [
+                    { ownerId: hostUserId },
+                    { agent: { userId: hostUserId } },
+                  ],
+                }),
+          },
+        },
+        include: {
+          user: { select: { name: true } },
+          property: {
+            select: {
+              id: true,
+              title: true,
+              slug: true,
+              town: true,
+              county: true,
+              listingType: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 100,
+      });
+
+      return NextResponse.json({
+        success: true,
+        data: reviews.map((review) => ({
+          id: review.id,
+          rating: review.rating,
+          cleanliness: review.cleanliness,
+          locationScore: review.locationScore,
+          value: review.value,
+          comfort: review.comfort,
+          staff: review.staff,
+          liked: review.liked,
+          disliked: review.disliked,
+          comment: review.comment,
+          hostReply: review.hostReply,
+          hostRepliedAt: review.hostRepliedAt,
+          createdAt: review.createdAt,
+          guestName: guestDisplayName(review.user.name),
+          property: review.property,
+        })),
+      });
+    }
+
     if (mine) {
       if (!session?.user?.id) {
         return NextResponse.json(

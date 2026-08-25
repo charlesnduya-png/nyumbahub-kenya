@@ -7,6 +7,7 @@ import {
 } from "@/lib/validations/booking";
 import { canViewWith, resolveProfessionalActingContext } from "@/lib/account-team";
 import { isStayListing, stayLabel } from "@/lib/listing-kinds";
+import { isSiteOwnerEmail } from "@/lib/site-owner";
 
 function inboxPathForRole(role: string, peerId: string, propertyId: string) {
   const params = new URLSearchParams({ peer: peerId, property: propertyId });
@@ -16,7 +17,7 @@ function inboxPathForRole(role: string, peerId: string, propertyId: string) {
   return `/dashboard/pro/inbox?${params.toString()}`;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json(
@@ -25,9 +26,17 @@ export async function GET() {
     );
   }
 
+  const listingTypeParam = new URL(request.url).searchParams.get("listingType");
+  const listingType =
+    listingTypeParam === "HOTEL" || listingTypeParam === "HOLIDAY"
+      ? (listingTypeParam as "HOTEL" | "HOLIDAY")
+      : undefined;
+
   const ctx = await resolveProfessionalActingContext(session.user.id);
+  const isAdmin =
+    session.user.role === "ADMIN" || isSiteOwnerEmail(session.user.email);
   const canHostBookings =
-    session.user.role === "ADMIN" || canViewWith(ctx, "manageBookings");
+    isAdmin || canViewWith(ctx, "manageBookings");
 
   const hostUserId = ctx.actingOwnerId;
   const guestUserId = session.user.id;
@@ -36,10 +45,17 @@ export async function GET() {
     if (canHostBookings) {
       const bookings = await prisma.booking.findMany({
         where: {
-          OR: [
-            { property: { ownerId: hostUserId } },
-            { property: { agent: { userId: hostUserId } } },
-          ],
+          property: {
+            ...(listingType ? { listingType } : {}),
+            ...(isAdmin
+              ? {}
+              : {
+                  OR: [
+                    { ownerId: hostUserId },
+                    { agent: { userId: hostUserId } },
+                  ],
+                }),
+          },
         },
         include: {
           property: {

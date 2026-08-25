@@ -124,7 +124,7 @@ export default async function ProfessionalWalletPage() {
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
           <p>
-            Approved BnB stays add a pending payment (90% after the 10% platform
+            Approved BnB and hotel stays add a pending payment (90% after the 10% platform
             fee). It clears to your balance after checkout, or when you mark the
             stay complete.
           </p>
@@ -135,6 +135,10 @@ export default async function ProfessionalWalletPage() {
           <p>
             <Link href="/dashboard/pro/bookings" className="text-primary hover:underline">
               BnB bookings
+            </Link>
+            {" · "}
+            <Link href="/dashboard/pro/hotels/bookings" className="text-primary hover:underline">
+              Hotel bookings
             </Link>
             {" · "}
             <Link href="/dashboard/pro/rent" className="text-primary hover:underline">

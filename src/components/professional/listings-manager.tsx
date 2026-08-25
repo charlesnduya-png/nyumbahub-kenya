@@ -154,7 +154,25 @@ function mapApiListing(p: {
   };
 }
 
-export function ListingsManager() {
+export function ListingsManager({
+  listingType,
+  excludeListingTypes,
+  hideHeader = false,
+  title = "All listings",
+  subtitle = "Update photos, location, details, and track views. Hotels are managed under Hotels.",
+  newHref = "/dashboard/seller/properties/new",
+  newLabel = "Add property",
+  emptyHint = "You have no listings yet. Add your first property to start selling or renting on Your Home.",
+}: {
+  listingType?: ManagedListing["listingType"];
+  excludeListingTypes?: ManagedListing["listingType"][];
+  hideHeader?: boolean;
+  title?: string;
+  subtitle?: string;
+  newHref?: string;
+  newLabel?: string;
+  emptyHint?: string;
+} = {}) {
   const [listings, setListings] = useState<ManagedListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<ManagedListing | null>(null);
@@ -184,15 +202,26 @@ export function ListingsManager() {
     void load();
   }, []);
 
+  const visible = useMemo(() => {
+    let rows = listings;
+    if (listingType) {
+      rows = rows.filter((p) => p.listingType === listingType);
+    }
+    if (excludeListingTypes?.length) {
+      rows = rows.filter((p) => !excludeListingTypes.includes(p.listingType));
+    }
+    return rows;
+  }, [listings, listingType, excludeListingTypes]);
+
   const counts = useMemo(
     () => ({
-      all: listings.length,
-      active: listings.filter((p) => p.status === "ACTIVE").length,
-      pending: listings.filter((p) => p.status === "PENDING").length,
-      archived: listings.filter((p) => p.status === "ARCHIVED").length,
-      views: listings.reduce((s, p) => s + p.views, 0),
+      all: visible.length,
+      active: visible.filter((p) => p.status === "ACTIVE").length,
+      pending: visible.filter((p) => p.status === "PENDING").length,
+      archived: visible.filter((p) => p.status === "ARCHIVED").length,
+      views: visible.reduce((s, p) => s + p.views, 0),
     }),
-    [listings],
+    [visible],
   );
 
   function openEdit(listing: ManagedListing) {
@@ -408,20 +437,20 @@ export function ListingsManager() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">All listings</h1>
-          <p className="text-muted-foreground">
-            Update photos, location, details, and track views for every property.
-          </p>
+      {hideHeader ? null : (
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">{title}</h1>
+            <p className="text-muted-foreground">{subtitle}</p>
+          </div>
+          <Button asChild>
+            <Link href={newHref}>
+              <Plus className="mr-2 h-4 w-4" />
+              {newLabel}
+            </Link>
+          </Button>
         </div>
-        <Button asChild>
-          <Link href="/dashboard/seller/properties/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Add property
-          </Link>
-        </Button>
-      </div>
+      )}
 
       <div className="flex flex-wrap gap-2">
         <Badge variant="secondary">All {counts.all}</Badge>
@@ -434,7 +463,7 @@ export function ListingsManager() {
         </Badge>
       </div>
 
-      {counts.views > 0 ? (
+      {counts.views > 0 && !listingType ? (
         <ViewsChart
           data={[{ label: "Total", views: counts.views, inquiries: 0 }]}
           title="Listing views"
@@ -443,21 +472,20 @@ export function ListingsManager() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Listings inventory</CardTitle>
+          <CardTitle>
+            {listingType === "HOTEL" ? "Your hotels" : "Listings inventory"}
+          </CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           {loading ? (
             <p className="py-8 text-center text-muted-foreground">
               Loading listings…
             </p>
-          ) : listings.length === 0 ? (
+          ) : visible.length === 0 ? (
             <div className="py-8 text-center">
-              <p className="text-muted-foreground">
-                You have no listings yet. Add your first property to start
-                selling or renting on Your Home.
-              </p>
+              <p className="text-muted-foreground">{emptyHint}</p>
               <Button asChild className="mt-4">
-                <Link href="/dashboard/seller/properties/new">Add property</Link>
+                <Link href={newHref}>{newLabel}</Link>
               </Button>
             </div>
           ) : (
@@ -465,8 +493,12 @@ export function ListingsManager() {
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
                   <th className="pb-3 pr-4 font-medium">Title</th>
-                  <th className="pb-3 pr-4 font-medium">Type</th>
-                  <th className="pb-3 pr-4 font-medium">Price</th>
+                  {listingType ? null : (
+                    <th className="pb-3 pr-4 font-medium">Type</th>
+                  )}
+                  <th className="pb-3 pr-4 font-medium">
+                    {listingType === "HOTEL" ? "Per night" : "Price"}
+                  </th>
                   <th className="pb-3 pr-4 font-medium">Location</th>
                   <th className="pb-3 pr-4 font-medium">Status</th>
                   <th className="pb-3 pr-4 font-medium">Views</th>
@@ -474,16 +506,21 @@ export function ListingsManager() {
                 </tr>
               </thead>
               <tbody>
-                {listings.map((p) => (
+                {visible.map((p) => (
                   <tr key={p.id} className="border-b last:border-0">
                     <td className="max-w-[220px] truncate py-3 pr-4 font-medium">
                       {p.title}
                     </td>
-                    <td className="py-3 pr-4">
-                      {getListingTypeLabel(p.listingType)}
-                    </td>
+                    {listingType ? null : (
+                      <td className="py-3 pr-4">
+                        {getListingTypeLabel(p.listingType)}
+                      </td>
+                    )}
                     <td className="py-3 pr-4">
                       {formatPrice(p.price, { currency: p.currency })}
+                      {p.listingType === "HOTEL" || p.listingType === "HOLIDAY"
+                        ? " /night"
+                        : ""}
                     </td>
                     <td className="py-3 pr-4 text-muted-foreground">
                       {p.town}, {p.county}
@@ -641,7 +678,11 @@ export function ListingsManager() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Bedrooms</Label>
+                <Label>
+                  {draft.listingType === "HOTEL" || listingType === "HOTEL"
+                    ? "Rooms"
+                    : "Bedrooms"}
+                </Label>
                 <Input
                   type="number"
                   value={draft.bedrooms ?? ""}
@@ -675,15 +716,20 @@ export function ListingsManager() {
                   setDraft((d) => ({
                     ...d,
                     listingType: v as ManagedListing["listingType"],
+                    propertyType:
+                      v === "HOTEL" ? "HOTEL" : d.propertyType,
                   }))
                 }
+                disabled={Boolean(listingType)}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {(
-                    ["BUY", "RENT", "LAND", "COMMERCIAL", "HOLIDAY", "HOTEL"] as const
+                    listingType
+                      ? [listingType]
+                      : (["BUY", "RENT", "LAND", "COMMERCIAL", "HOLIDAY", "HOTEL"] as const)
                   ).map((t) => (
                     <SelectItem key={t} value={t}>
                       {t}
@@ -717,6 +763,7 @@ export function ListingsManager() {
             <div className="space-y-2">
               <Label>Features</Label>
               <ListingFeaturesPicker
+                listingType={draft.listingType ?? listingType}
                 value={draft.features ?? []}
                 onChange={(features) => setDraft((d) => ({ ...d, features }))}
               />

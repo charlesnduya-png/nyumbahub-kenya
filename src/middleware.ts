@@ -40,7 +40,8 @@ export async function middleware(request: NextRequest) {
   // Not signed in → login (keep the page they asked for)
   if (!token) {
     const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
+    const callback = `${pathname}${request.nextUrl.search}`;
+    loginUrl.searchParams.set("callbackUrl", callback);
     if (pathname.startsWith("/dashboard/admin")) {
       loginUrl.searchParams.set("owner", "1");
     }
@@ -84,8 +85,11 @@ export async function middleware(request: NextRequest) {
     return res;
   }
 
-  // Owner must never stay on pro/tenant/seller/agent
+  // Owner must never stay on pro/tenant/seller/agent — except Add hotel/property
   if (isOwner || role === "ADMIN") {
+    if (pathname.startsWith("/dashboard/seller/properties/new")) {
+      return NextResponse.next();
+    }
     return NextResponse.redirect(new URL("/dashboard/admin", request.url));
   }
 

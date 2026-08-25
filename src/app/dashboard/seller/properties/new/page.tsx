@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useForm, type Resolver } from "react-hook-form";
@@ -63,6 +63,8 @@ import { cn } from "@/lib/utils";
 
 export default function NewPropertyPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const presetType = searchParams.get("type");
   const [aiLoading, setAiLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [productId, setProductId] = useState<ListingProductId>("featured");
@@ -113,6 +115,20 @@ export default function NewPropertyPage() {
   const values = watch();
   const isRentListing = values.listingType === "RENT";
   const isStay = isStayListing(values.listingType);
+  const isHotel = values.listingType === "HOTEL";
+
+  useEffect(() => {
+    if (presetType === "HOTEL") {
+      setValue("listingType", "HOTEL");
+      setValue("propertyType", "HOTEL");
+      setValue("features", [
+        "reception-24h",
+        "free-wifi",
+        "breakfast-included",
+        "security-24-7",
+      ]);
+    }
+  }, [presetType, setValue]);
 
   useEffect(() => {
     async function loadSubscription() {
@@ -304,11 +320,15 @@ export default function NewPropertyPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Add new property</h1>
+        <h1 className="text-2xl font-bold">
+          {isHotel ? "Add hotel" : "Add new property"}
+        </h1>
         <p className="text-muted-foreground">
-          {LISTINGS_ARE_FREE
-            ? `Free to use for now — up to ${FREE_TIER_MAX_LISTINGS} listings. Submit for admin approval when ready.`
-            : `Free accounts get up to ${FREE_TIER_MAX_LISTINGS} listings. Upgrade anytime for more inventory.`}
+          {isHotel
+            ? "Nightly hotel listing with rooms, facilities, photos, and guest bookings."
+            : LISTINGS_ARE_FREE
+              ? `Free to use for now — up to ${FREE_TIER_MAX_LISTINGS} listings. Submit for admin approval when ready.`
+              : `Free accounts get up to ${FREE_TIER_MAX_LISTINGS} listings. Upgrade anytime for more inventory.`}
         </p>
       </div>
 
@@ -504,7 +524,11 @@ export default function NewPropertyPage() {
               <Label htmlFor="title">Title</Label>
               <Input
                 id="title"
-                placeholder="e.g. 3-Bed Apartment in Kilimani"
+                placeholder={
+                  isHotel
+                    ? "e.g. Fairview Hotel, Nairobi CBD"
+                    : "e.g. 3-Bed Apartment in Kilimani"
+                }
                 {...register("title")}
               />
               {errors.title && (
@@ -593,7 +617,7 @@ export default function NewPropertyPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="bedrooms">Bedrooms</Label>
+                <Label htmlFor="bedrooms">{isHotel ? "Rooms" : "Bedrooms"}</Label>
                 <Input id="bedrooms" type="number" {...register("bedrooms")} />
               </div>
               <div className="space-y-2">
@@ -759,10 +783,11 @@ export default function NewPropertyPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Features</CardTitle>
+            <CardTitle>{isHotel ? "Hotel facilities" : "Features"}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <ListingFeaturesPicker
+              listingType={values.listingType}
               value={values.features ?? []}
               onChange={(features) => setValue("features", features)}
             />

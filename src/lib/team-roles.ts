@@ -82,6 +82,9 @@ export function canAccessNavHref(
   if (href === "/dashboard/pro/listings") {
     return permissions.manageListings || canRead;
   }
+  if (href === "/dashboard/pro/hotels" || href.startsWith("/dashboard/pro/hotels/")) {
+    return permissions.manageListings || permissions.manageBookings || canRead;
+  }
   if (href === "/dashboard/pro/plots") {
     return permissions.manageListings || permissions.manageRentals || canRead;
   }

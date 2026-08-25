@@ -59,7 +59,15 @@ interface AdminProperty {
   agent: { id: string; name: string | null; email: string } | null;
 }
 
-export function AdminPropertiesManager() {
+export function AdminPropertiesManager({
+  listingType,
+  hideHeader = false,
+  emptyHint,
+}: {
+  listingType?: string;
+  hideHeader?: boolean;
+  emptyHint?: string;
+} = {}) {
   const [properties, setProperties] = useState<AdminProperty[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -89,9 +97,17 @@ export function AdminPropertiesManager() {
     void load();
   }, [load]);
 
+  const scoped = useMemo(
+    () =>
+      listingType
+        ? properties.filter((p) => p.listingType === listingType)
+        : properties,
+    [properties, listingType],
+  );
+
   const countryReport = useMemo(
-    () => buildCountryListingsReport(properties),
-    [properties],
+    () => buildCountryListingsReport(scoped),
+    [scoped],
   );
 
   const countryOptions = useMemo(
@@ -100,21 +116,21 @@ export function AdminPropertiesManager() {
   );
 
   const filtered = useMemo(() => {
-    return properties.filter((p) => {
+    return scoped.filter((p) => {
       if (statusFilter !== "ALL" && p.status !== statusFilter) return false;
       const country = p.country?.trim() || DEFAULT_LISTING_COUNTRY;
       if (countryFilter !== "ALL" && country !== countryFilter) return false;
       return true;
     });
-  }, [properties, statusFilter, countryFilter]);
+  }, [scoped, statusFilter, countryFilter]);
 
   const counts = useMemo(
     () => ({
-      all: properties.length,
-      active: properties.filter((p) => p.status === "ACTIVE").length,
-      pending: properties.filter((p) => p.status === "PENDING").length,
+      all: scoped.length,
+      active: scoped.filter((p) => p.status === "ACTIVE").length,
+      pending: scoped.filter((p) => p.status === "PENDING").length,
     }),
-    [properties],
+    [scoped],
   );
 
   async function updateStatus(id: string, status: PropertyStatus) {
@@ -169,18 +185,20 @@ export function AdminPropertiesManager() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Properties</h1>
-          <p className="text-muted-foreground">
-            Track listings across African countries, then change status or remove
-            any property on Your Home.
-          </p>
+      {hideHeader ? null : (
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold">Properties</h1>
+            <p className="text-muted-foreground">
+              Track listings across African countries, then change status or remove
+              any property on Your Home.
+            </p>
+          </div>
+          <Button variant="outline" onClick={() => void load()} disabled={loading}>
+            Refresh
+          </Button>
         </div>
-        <Button variant="outline" onClick={() => void load()} disabled={loading}>
-          Refresh
-        </Button>
-      </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="secondary">All {counts.all}</Badge>
@@ -219,7 +237,8 @@ export function AdminPropertiesManager() {
       <Card>
         <CardHeader>
           <CardTitle>
-            All listings ({filtered.length}
+            {listingType === "HOTEL" ? "Hotels" : "All listings"} (
+            {filtered.length}
             {statusFilter !== "ALL" ? ` · ${statusFilter}` : ""})
           </CardTitle>
         </CardHeader>
@@ -231,7 +250,7 @@ export function AdminPropertiesManager() {
             </div>
           ) : filtered.length === 0 ? (
             <p className="py-8 text-center text-muted-foreground">
-              No listings match this filter.
+              {emptyHint ?? "No listings match this filter."}
             </p>
           ) : (
             <table className="w-full min-w-[900px] text-sm">

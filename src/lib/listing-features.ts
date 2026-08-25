@@ -78,6 +78,24 @@ export const LISTING_FEATURE_GROUPS = [
       { slug: "airport-access", name: "Near airport" },
     ],
   },
+  {
+    id: "hotel",
+    label: "Hotel facilities",
+    features: [
+      { slug: "reception-24h", name: "24-hour reception" },
+      { slug: "breakfast-included", name: "Breakfast included" },
+      { slug: "restaurant", name: "Restaurant" },
+      { slug: "bar-lounge", name: "Bar / lounge" },
+      { slug: "room-service", name: "Room service" },
+      { slug: "free-wifi", name: "Free WiFi" },
+      { slug: "airport-shuttle", name: "Airport shuttle" },
+      { slug: "conference-room", name: "Conference / meeting rooms" },
+      { slug: "hotel-spa", name: "Spa" },
+      { slug: "hotel-gym", name: "Fitness centre" },
+      { slug: "concierge", name: "Concierge" },
+      { slug: "laundry-service", name: "Laundry service" },
+    ],
+  },
 ] as const;
 
 export type ListingFeatureGroupId =

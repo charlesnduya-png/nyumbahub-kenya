@@ -3,7 +3,8 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { useForm, type Resolver } from "react-hook-form";
 import { BadgeCheck, Building2, IdCard, UserRound } from "lucide-react";
 import { toast } from "sonner";
@@ -26,11 +27,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { KENYA_COUNTIES } from "@/lib/kenya";
+import { addHotelPath, isProfessionalRole } from "@/lib/hotel-listing";
 import { registerSchema, type RegisterInput } from "@/lib/validations/auth";
 
 export default function ProfessionalRegisterPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (status !== "authenticated" || !session?.user) return;
+    if (!isProfessionalRole(session.user.role)) return;
+    router.replace(addHotelPath());
+  }, [status, session, router]);
 
   const {
     register,
@@ -86,6 +95,14 @@ export default function ProfessionalRegisterPage() {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  if (status === "authenticated" && isProfessionalRole(session?.user?.role)) {
+    return (
+      <p className="py-10 text-center text-sm text-muted-foreground">
+        You are already signed in. Opening add hotel…
+      </p>
+    );
   }
 
   return (
@@ -291,12 +308,22 @@ export default function ProfessionalRegisterPage() {
                 Create a customer account
               </Link>
             </p>
-            <p className="text-center text-sm text-muted-foreground">
-              Already registered?{" "}
-              <Link href="/login" className="text-primary hover:underline">
-                Sign in
-              </Link>
-            </p>
+            {status === "authenticated" ? (
+              <p className="text-center text-sm text-muted-foreground">
+                Signed in as {session?.user?.email}. This form is only for a
+                new professional account.
+              </p>
+            ) : (
+              <p className="text-center text-sm text-muted-foreground">
+                Already have an account?{" "}
+                <Link
+                  href={`/login?callbackUrl=${encodeURIComponent(addHotelPath())}`}
+                  className="text-primary hover:underline"
+                >
+                  Sign in to list a hotel
+                </Link>
+              </p>
+            )}
           </CardFooter>
         </form>
       </Card>

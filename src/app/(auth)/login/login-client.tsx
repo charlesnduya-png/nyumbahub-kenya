@@ -2,8 +2,8 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
+import { signIn, useSession } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { safeCallbackPath } from "@/lib/hotel-listing";
 import {
   SITE_OWNER_COOKIE,
   dashboardHomeForRole,
@@ -35,12 +36,27 @@ function setOwnerCookie(enabled: boolean) {
 }
 
 export default function LoginPageClient() {
+  const router = useRouter();
+  const { data: session, status } = useSession();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl");
   const ownerMode =
     searchParams.get("owner") === "1" ||
     Boolean(callbackUrl?.includes("/dashboard/admin"));
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (status !== "authenticated" || !session?.user) return;
+    const requested = safeCallbackPath(callbackUrl);
+    const allowAdmin =
+      isSiteOwnerEmail(session.user.email) || session.user.role === "ADMIN";
+    const dest =
+      requested &&
+      (allowAdmin || !requested.startsWith("/dashboard/admin"))
+        ? requested
+        : dashboardHomeForRole(session.user.role, session.user.email);
+    router.replace(dest);
+  }, [status, session, callbackUrl, router]);
 
   const {
     register,
@@ -136,6 +152,17 @@ export default function LoginPageClient() {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  if (status === "authenticated") {
+    return (
+      <Card>
+        <CardHeader className="text-center">
+          <CardTitle>You are already signed in</CardTitle>
+          <CardDescription>Opening your account…</CardDescription>
+        </CardHeader>
+      </Card>
+    );
   }
 
   return (
