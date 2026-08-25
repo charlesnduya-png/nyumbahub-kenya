@@ -82,6 +82,7 @@ export default function NewPropertyPage() {
   const { data: session } = useSession();
   const isAgent = session?.user?.role === "AGENT";
   const canSubmitWithoutPay = monthlyActive || !atLimit;
+  const addingHotel = presetType === "HOTEL";
 
   const {
     register,
@@ -92,8 +93,8 @@ export default function NewPropertyPage() {
   } = useForm<CreatePropertyInput>({
     resolver: zodResolver(createPropertySchema) as Resolver<CreatePropertyInput>,
     defaultValues: {
-      listingType: "BUY",
-      propertyType: "APARTMENT",
+      listingType: addingHotel ? "HOTEL" : "BUY",
+      propertyType: addingHotel ? "HOTEL" : "APARTMENT",
       county: "Nairobi",
       country: DEFAULT_LISTING_COUNTRY,
       town: "Kilimani",
@@ -102,7 +103,9 @@ export default function NewPropertyPage() {
       swimmingPool: false,
       security: true,
       parking: true,
-      features: ["security-24-7"],
+      features: addingHotel
+        ? [...DEFAULT_HOTEL_FEATURES]
+        : ["security-24-7"],
       images: [],
       videos: [],
       currency: DEFAULT_LISTING_CURRENCY,
@@ -511,7 +514,8 @@ export default function NewPropertyPage() {
         <Card>
           <CardHeader>
             <CardTitle>
-              {LISTINGS_ARE_FREE ? "2" : monthlyActive ? "3" : "4"}. Property details
+              {LISTINGS_ARE_FREE ? "2" : monthlyActive ? "3" : "4"}.{" "}
+              {isHotel ? "Hotel details" : "Property details"}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -531,6 +535,14 @@ export default function NewPropertyPage() {
               )}
             </div>
 
+            {isHotel ? (
+              <div className="rounded-xl border bg-muted/40 px-4 py-3">
+                <p className="text-sm font-semibold">Hotel</p>
+                <p className="text-sm text-muted-foreground">
+                  Nightly stay — guests pick dates and you confirm the booking.
+                </p>
+              </div>
+            ) : (
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Listing type</Label>
@@ -585,6 +597,7 @@ export default function NewPropertyPage() {
                 </Select>
               </div>
             </div>
+            )}
 
             <div className="grid gap-4 sm:grid-cols-[1fr_200px]">
               <div className="space-y-2">
