@@ -2,7 +2,7 @@
 
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  LISTING_FEATURE_GROUPS,
+  featureGroupsForListingType,
   type ListingFeatureSlug,
 } from "@/lib/listing-features";
 
@@ -16,16 +16,7 @@ export function ListingFeaturesPicker({
   listingType?: string;
 }) {
   const selected = new Set(value);
-  const hotelGroupIds = ["hotel", "utilities", "security-parking", "outdoor"];
-  const groups =
-    listingType === "HOTEL"
-      ? hotelGroupIds
-          .map((id) => LISTING_FEATURE_GROUPS.find((group) => group.id === id))
-          .filter(
-            (group): group is (typeof LISTING_FEATURE_GROUPS)[number] =>
-              Boolean(group),
-          )
-      : LISTING_FEATURE_GROUPS;
+  const groups = featureGroupsForListingType(listingType);
 
   function toggle(slug: ListingFeatureSlug, checked: boolean) {
     const next = new Set(selected);

@@ -8,14 +8,16 @@ import {
 export function ListingFeaturesDisplay({
   amenities,
   parkingSpaces,
+  listingType,
 }: {
   amenities?: Array<{
     amenity?: { name?: string | null; icon?: string | null } | null;
   }> | null;
   parkingSpaces?: number | null;
+  listingType?: string | null;
 }) {
   const slugs = listingFeatureSlugsFromAmenities(amenities);
-  const groups = groupedListingFeatures(slugs);
+  const groups = groupedListingFeatures(slugs, listingType ?? undefined);
   const hasParkingCount = (parkingSpaces ?? 0) > 0;
 
   if (groups.length === 0 && !hasParkingCount) {

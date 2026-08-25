@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   LISTING_FEATURE_GROUPS,
   LISTING_FEATURES,
+  featureGroupsForListingType,
   flagsFromListingFeatures,
   listingFeatureSlugsFromAmenities,
   sanitizeListingFeatureSlugs,
@@ -13,7 +14,10 @@ describe("listing features catalog", () => {
     const names = LISTING_FEATURES.map((feature) => feature.name.toLowerCase());
     expect(new Set(slugs).size).toBe(slugs.length);
     expect(new Set(names).size).toBe(names.length);
-    expect(LISTING_FEATURE_GROUPS).toHaveLength(5);
+    expect(LISTING_FEATURE_GROUPS.length).toBeGreaterThanOrEqual(5);
+    expect(
+      LISTING_FEATURE_GROUPS.some((group) => group.id === "hotel-services"),
+    ).toBe(true);
   });
 
   it("covers the requested luxury, parking, and premium tags", () => {
@@ -55,6 +59,20 @@ describe("listing features catalog", () => {
       security: false,
       parking: true,
     });
+  });
+
+  it("keeps hotel facilities off house listings", () => {
+    const hotelGroups = featureGroupsForListingType("HOTEL");
+    const houseGroups = featureGroupsForListingType("BUY");
+    expect(hotelGroups.every((group) => group.id.startsWith("hotel-"))).toBe(
+      true,
+    );
+    expect(houseGroups.some((group) => group.id.startsWith("hotel-"))).toBe(
+      false,
+    );
+    expect(
+      hotelGroups.flatMap((group) => group.features.map((f) => f.slug)),
+    ).toContain("reception-24h");
   });
 
   it("drops unknown slugs", () => {

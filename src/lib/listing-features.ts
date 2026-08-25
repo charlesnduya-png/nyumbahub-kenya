@@ -79,23 +79,97 @@ export const LISTING_FEATURE_GROUPS = [
     ],
   },
   {
-    id: "hotel",
-    label: "Hotel facilities",
+    id: "hotel-services",
+    label: "Hotel services",
     features: [
       { slug: "reception-24h", name: "24-hour reception" },
+      { slug: "concierge", name: "Concierge" },
+      { slug: "room-service", name: "Room service" },
+      { slug: "laundry-service", name: "Laundry / dry cleaning" },
+      { slug: "daily-housekeeping", name: "Daily housekeeping" },
+      { slug: "luggage-storage", name: "Luggage storage" },
+      { slug: "airport-shuttle", name: "Airport shuttle" },
+      { slug: "wheelchair-access", name: "Wheelchair accessible" },
+    ],
+  },
+  {
+    id: "hotel-room",
+    label: "In the room",
+    features: [
+      { slug: "free-wifi", name: "Free WiFi" },
+      { slug: "tv-in-room", name: "TV in room" },
+      { slug: "work-desk", name: "Work desk" },
+      { slug: "mini-fridge", name: "Mini fridge" },
+      { slug: "in-room-safe", name: "In-room safe" },
+      { slug: "kitchenette", name: "Kitchenette" },
+      { slug: "family-rooms", name: "Family rooms" },
+      { slug: "baby-cot", name: "Baby cot on request" },
+    ],
+  },
+  {
+    id: "hotel-dining",
+    label: "Food & drink",
+    features: [
       { slug: "breakfast-included", name: "Breakfast included" },
       { slug: "restaurant", name: "Restaurant" },
       { slug: "bar-lounge", name: "Bar / lounge" },
-      { slug: "room-service", name: "Room service" },
-      { slug: "free-wifi", name: "Free WiFi" },
-      { slug: "airport-shuttle", name: "Airport shuttle" },
-      { slug: "conference-room", name: "Conference / meeting rooms" },
-      { slug: "hotel-spa", name: "Spa" },
-      { slug: "hotel-gym", name: "Fitness centre" },
-      { slug: "concierge", name: "Concierge" },
-      { slug: "laundry-service", name: "Laundry service" },
+      { slug: "coffee-shop", name: "Coffee shop" },
     ],
   },
+  {
+    id: "hotel-wellness",
+    label: "Pool, spa & gym",
+    features: [
+      { slug: "hotel-pool", name: "Hotel swimming pool" },
+      { slug: "hotel-spa", name: "Spa" },
+      { slug: "hotel-gym", name: "Fitness centre" },
+      { slug: "hotel-sauna", name: "Sauna / steam" },
+    ],
+  },
+  {
+    id: "hotel-business",
+    label: "Business & meetings",
+    features: [
+      { slug: "conference-room", name: "Conference / meeting rooms" },
+      { slug: "business-centre", name: "Business centre" },
+    ],
+  },
+  {
+    id: "hotel-access",
+    label: "Parking, power & security",
+    features: [
+      { slug: "complimentary-parking", name: "Free on-site parking" },
+      { slug: "secure-hotel-parking", name: "Secure parking" },
+      { slug: "hotel-generator", name: "Hotel backup generator" },
+      { slug: "hotel-security", name: "24-hour hotel security" },
+      { slug: "hotel-cctv", name: "Hotel CCTV cameras" },
+      { slug: "hotel-lift", name: "Guest lift" },
+    ],
+  },
+] as const;
+
+const HOTEL_GROUP_PREFIX = "hotel-";
+
+export function isHotelFeatureGroupId(id: string) {
+  return id.startsWith(HOTEL_GROUP_PREFIX);
+}
+
+export function featureGroupsForListingType(listingType?: string) {
+  if (listingType === "HOTEL") {
+    return LISTING_FEATURE_GROUPS.filter((group) =>
+      isHotelFeatureGroupId(group.id),
+    );
+  }
+  return LISTING_FEATURE_GROUPS.filter(
+    (group) => !isHotelFeatureGroupId(group.id),
+  );
+}
+
+export const DEFAULT_HOTEL_FEATURES = [
+  "reception-24h",
+  "free-wifi",
+  "breakfast-included",
+  "hotel-security",
 ] as const;
 
 export type ListingFeatureGroupId =
@@ -137,6 +211,10 @@ const NAME_ALIASES: Record<string, string> = {
   "fibre internet": "fibre-internet",
   "24/7 security": "security-24-7",
   "swimming pool": "swimming-pool",
+  wifi: "free-wifi",
+  "free wifi": "free-wifi",
+  restaurant: "restaurant",
+  spa: "hotel-spa",
 };
 
 export const LISTING_FEATURE_SLUGS = LISTING_FEATURES.map(
@@ -188,20 +266,30 @@ export function flagsFromListingFeatures(slugs: string[]) {
     set.has("garage") ||
     set.has("covered-parking") ||
     set.has("ample-parking") ||
-    set.has("visitor-parking");
+    set.has("visitor-parking") ||
+    set.has("complimentary-parking") ||
+    set.has("secure-hotel-parking");
   return {
-    furnished: set.has("furnished"),
-    swimmingPool: set.has("swimming-pool"),
-    security: set.has("security-24-7"),
+    furnished: set.has("furnished") || set.has("kitchenette"),
+    swimmingPool: set.has("swimming-pool") || set.has("hotel-pool"),
+    security: set.has("security-24-7") || set.has("hotel-security"),
     parking,
   };
 }
 
-export function groupedListingFeatures(slugs: string[]) {
+export function groupedListingFeatures(
+  slugs: string[],
+  listingType?: string,
+) {
   const selected = new Set(sanitizeListingFeatureSlugs(slugs));
-  return LISTING_FEATURE_GROUPS.map((group) => ({
-    id: group.id,
-    label: group.label,
-    features: group.features.filter((feature) => selected.has(feature.slug)),
-  })).filter((group) => group.features.length > 0);
+  const groups = listingType
+    ? featureGroupsForListingType(listingType)
+    : LISTING_FEATURE_GROUPS;
+  return groups
+    .map((group) => ({
+      id: group.id,
+      label: group.label,
+      features: group.features.filter((feature) => selected.has(feature.slug)),
+    }))
+    .filter((group) => group.features.length > 0);
 }

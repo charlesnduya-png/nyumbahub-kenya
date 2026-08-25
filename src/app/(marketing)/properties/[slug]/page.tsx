@@ -454,6 +454,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                           "amenities" in property ? property.amenities : []
                         }
                         parkingSpaces={property.parkingSpaces}
+                        listingType={property.listingType}
                       />
                     </CardContent>
                   </Card>

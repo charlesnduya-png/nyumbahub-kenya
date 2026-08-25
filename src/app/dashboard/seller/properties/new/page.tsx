@@ -58,7 +58,7 @@ import {
   createPropertySchema,
   type CreatePropertyInput,
 } from "@/lib/validations/property";
-import { listingFeatureBySlug } from "@/lib/listing-features";
+import { listingFeatureBySlug, DEFAULT_HOTEL_FEATURES } from "@/lib/listing-features";
 import { cn } from "@/lib/utils";
 
 export default function NewPropertyPage() {
@@ -121,12 +121,7 @@ export default function NewPropertyPage() {
     if (presetType === "HOTEL") {
       setValue("listingType", "HOTEL");
       setValue("propertyType", "HOTEL");
-      setValue("features", [
-        "reception-24h",
-        "free-wifi",
-        "breakfast-included",
-        "security-24-7",
-      ]);
+      setValue("features", [...DEFAULT_HOTEL_FEATURES]);
     }
   }, [presetType, setValue]);
 
@@ -546,6 +541,9 @@ export default function NewPropertyPage() {
                     setValue("listingType", listingType);
                     if (listingType === "HOTEL") {
                       setValue("propertyType", "HOTEL");
+                      setValue("features", [...DEFAULT_HOTEL_FEATURES]);
+                    } else if (values.listingType === "HOTEL") {
+                      setValue("features", ["security-24-7"]);
                     }
                   }}
                 >
@@ -576,7 +574,9 @@ export default function NewPropertyPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {PROPERTY_CATEGORIES.map((c) => (
+                    {PROPERTY_CATEGORIES.filter((c) =>
+                      isHotel ? c.value === "HOTEL" : c.value !== "HOTEL",
+                    ).map((c) => (
                       <SelectItem key={c.value} value={c.value}>
                         {c.label}
                       </SelectItem>
@@ -786,13 +786,21 @@ export default function NewPropertyPage() {
             <CardTitle>{isHotel ? "Hotel facilities" : "Features"}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {isHotel ? (
+              <p className="text-sm text-muted-foreground">
+                Tick what this hotel offers guests — rooms, dining, spa, parking,
+                and services. House features are not used here.
+              </p>
+            ) : null}
             <ListingFeaturesPicker
               listingType={values.listingType}
               value={values.features ?? []}
               onChange={(features) => setValue("features", features)}
             />
             <div className="space-y-2">
-              <Label htmlFor="parkingSpaces">Parking spaces</Label>
+              <Label htmlFor="parkingSpaces">
+                {isHotel ? "Guest parking spaces" : "Parking spaces"}
+              </Label>
               <Input
                 id="parkingSpaces"
                 type="number"

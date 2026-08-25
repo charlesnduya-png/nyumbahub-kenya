@@ -761,7 +761,11 @@ export function ListingsManager({
               />
             </div>
             <div className="space-y-2">
-              <Label>Features</Label>
+              <Label>
+                {draft.listingType === "HOTEL" || listingType === "HOTEL"
+                  ? "Hotel facilities"
+                  : "Features"}
+              </Label>
               <ListingFeaturesPicker
                 listingType={draft.listingType ?? listingType}
                 value={draft.features ?? []}
@@ -769,7 +773,11 @@ export function ListingsManager({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-parking-spaces">Parking spaces</Label>
+              <Label htmlFor="edit-parking-spaces">
+                {draft.listingType === "HOTEL" || listingType === "HOTEL"
+                  ? "Guest parking spaces"
+                  : "Parking spaces"}
+              </Label>
               <Input
                 id="edit-parking-spaces"
                 type="number"
