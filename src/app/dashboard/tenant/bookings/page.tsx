@@ -96,10 +96,10 @@ export default function GuestBookingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">My BnB bookings</h1>
+        <h1 className="text-2xl font-bold">My stay bookings</h1>
         <p className="mt-1 text-muted-foreground">
-          Stays you requested on Your Home. Hosts approve bookings from their
-          side.
+          Hotel and BnB stays you requested on Your Home. Hosts approve bookings
+          from their side.
         </p>
       </div>
 

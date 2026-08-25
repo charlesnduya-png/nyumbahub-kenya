@@ -35,6 +35,7 @@ import {
   LISTING_TYPES,
   PROPERTY_CATEGORIES,
 } from "@/lib/kenya";
+import { isStayListing } from "@/lib/listing-kinds";
 import { LocationMapPicker } from "@/components/maps/location-map-picker";
 import { CurrencySelect } from "@/components/properties/currency-select";
 import { CountrySelect } from "@/components/properties/country-select";
@@ -111,6 +112,7 @@ export default function NewPropertyPage() {
 
   const values = watch();
   const isRentListing = values.listingType === "RENT";
+  const isStay = isStayListing(values.listingType);
 
   useEffect(() => {
     async function loadSubscription() {
@@ -515,12 +517,13 @@ export default function NewPropertyPage() {
                 <Label>Listing type</Label>
                 <Select
                   value={values.listingType}
-                  onValueChange={(v) =>
-                    setValue(
-                      "listingType",
-                      v as CreatePropertyInput["listingType"],
-                    )
-                  }
+                  onValueChange={(v) => {
+                    const listingType = v as CreatePropertyInput["listingType"];
+                    setValue("listingType", listingType);
+                    if (listingType === "HOTEL") {
+                      setValue("propertyType", "HOTEL");
+                    }
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -561,7 +564,9 @@ export default function NewPropertyPage() {
 
             <div className="grid gap-4 sm:grid-cols-[1fr_200px]">
               <div className="space-y-2">
-                <Label htmlFor="price">Price</Label>
+                <Label htmlFor="price">
+                  Price{isStay ? " (per night)" : isRentListing ? " (per month)" : ""}
+                </Label>
                 <Input id="price" type="number" {...register("price")} />
                 {errors.price && (
                   <p className="text-sm text-destructive">{errors.price.message}</p>

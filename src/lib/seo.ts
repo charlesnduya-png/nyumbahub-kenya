@@ -239,6 +239,10 @@ export function buildPropertiesSearchMetadata(
     title = `BnB & Holiday Stays${locationSuffix}`;
     description = `Short-stay apartments, beach villas, and city Airbnbs${locationSuffix}. Book on Your Home.`;
     keywords.push("BnB Kenya", "Airbnb Kenya", "holiday homes Kenya");
+  } else if (listingType === "HOTEL") {
+    title = `Hotels${locationSuffix}`;
+    description = `Book hotels and lodges${locationSuffix}. Prices per night, with member savings when you sign in.`;
+    keywords.push("hotels Kenya", "hotels Africa", "book hotel Nairobi");
   } else if (propertyType === "APARTMENT") {
     title = `Apartments${locationSuffix}`;
     description = `Flats and apartments for sale and rent${locationSuffix} on Your Home — Africa real estate you can trust.`;
@@ -363,6 +367,11 @@ export const HOME_FAQ_ITEMS = [
       "Yes. Book short-stay apartments, beach villas, and holiday homes across Africa — from Diani and Zanzibar to Cape Town, Marrakech, and Lagos.",
   },
   {
+    question: "Can I book a hotel on Your Home?",
+    answer:
+      "Yes. Browse Hotels for city hotels, lodges, and serviced rooms priced per night. Sign in for member savings, pick dates, and the host confirms your stay.",
+  },
+  {
     question: "Can I list my property for free?",
     answer:
       "Yes. Landlords, agents, and sellers can register on Your Home and list properties in any African country. Listings are reviewed for quality before going live.",
@@ -462,7 +471,9 @@ export function generatePropertyMetadata(
       ? "for rent"
       : property.listingType === "HOLIDAY"
         ? "BnB / holiday"
-        : property.listingType === "LAND"
+        : property.listingType === "HOTEL"
+          ? "hotel stay"
+          : property.listingType === "LAND"
           ? "land for sale"
           : property.listingType === "COMMERCIAL"
             ? "commercial"

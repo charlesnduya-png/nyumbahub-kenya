@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Menu,
   Palmtree,
+  Hotel,
   User,
   type LucideIcon,
 } from "lucide-react";
@@ -36,6 +37,7 @@ const navLinks: {
   { href: "/property-for-sale", label: "Buy" },
   { href: "/rent", label: "Rent" },
   { href: "/bnb", label: "BnB", icon: Palmtree },
+  { href: "/hotels", label: "Hotels", icon: Hotel },
   { href: "/africa", label: "Africa" },
   { href: "/properties?category=land-plots", label: "Land" },
   { href: "/properties?listingType=COMMERCIAL", label: "Commercial" },
@@ -71,10 +73,12 @@ export function Header() {
             {navLinks.map((link) => {
               const Icon = link.icon;
               const isBnb = link.href === "/bnb";
+              const isHotel = link.href === "/hotels";
               const isBuy = link.href === "/property-for-sale";
               const active =
                 pathname === link.href ||
                 (isBnb && pathname.startsWith("/bnb")) ||
+                (isHotel && pathname.startsWith("/hotels")) ||
                 (isBuy && pathname.startsWith("/property-for-sale"));
 
               return (
@@ -86,6 +90,8 @@ export function Header() {
                     active && "bg-accent/60 text-foreground",
                     isBnb &&
                       "font-semibold text-teal-700 hover:text-teal-800 dark:text-teal-300 dark:hover:text-teal-200",
+                    isHotel &&
+                      "font-semibold text-primary hover:text-primary",
                   )}
                 >
                   {Icon ? (
@@ -188,7 +194,12 @@ export function Header() {
                     >
                       {Icon ? (
                         <Icon
-                          className="animate-bnb-icon h-4 w-4 text-teal-600 dark:text-teal-400"
+                          className={cn(
+                            "h-4 w-4",
+                            link.href === "/bnb"
+                              ? "animate-bnb-icon text-teal-600 dark:text-teal-400"
+                              : "text-primary",
+                          )}
                           aria-hidden="true"
                         />
                       ) : null}

@@ -31,6 +31,7 @@ import {
 import { toWhatsAppNumber, telHref } from "@/lib/phone";
 import { formatPrice } from "@/lib/utils";
 import { getListingTypeLabel, getPropertyTypeLabel } from "@/lib/kenya";
+import { isStayListing, stayLabel } from "@/lib/listing-kinds";
 import { getPropertyReviews } from "@/lib/reviews";
 import { getCustomerMembership } from "@/lib/customer-membership";
 import { PropertyReviews } from "@/components/reviews/property-reviews";
@@ -311,7 +312,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                     / month
                   </span>
                 )}
-                {property.listingType === "HOLIDAY" && (
+                {isStayListing(property.listingType) && (
                   <span className="text-base font-normal text-muted-foreground">
                     {" "}
                     / night
@@ -566,8 +567,8 @@ export default async function PropertyDetailPage({ params }: PageProps) {
               <Card>
                 <CardHeader>
                   <CardTitle>
-                    {property.listingType === "HOLIDAY"
-                      ? "Book this BnB stay"
+                    {isStayListing(property.listingType)
+                      ? `Book this ${stayLabel(property.listingType).toLowerCase()} stay`
                       : property.listingType === "RENT"
                         ? "Reserve this rental"
                         : "Interested in this property?"}
@@ -583,7 +584,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                     />
                   ) : (
                     <>
-                  {property.listingType === "HOLIDAY" ? (
+                  {isStayListing(property.listingType) ? (
                     <BookStayForm
                       propertyId={property.id}
                       propertySlug={property.slug}
@@ -629,14 +630,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                       whatsappLabel="WhatsApp agent"
                     />
                   ) : null}
-                  {property.listingType !== "HOLIDAY" ? (
-                    property.listingType === "RENT" ? null : (
-                      <ScheduleViewingForm
-                        propertyId={property.id}
-                        propertyTitle={property.title}
-                      />
-                    )
-                  ) : property.listingType === "HOLIDAY" ? (
+                  {isStayListing(property.listingType) ? (
                     <p className="text-center text-xs text-muted-foreground">
                       Or{" "}
                       <Link href="/dashboard/tenant/messages" className="text-primary hover:underline">
@@ -647,7 +641,12 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                         view bookings
                       </Link>
                     </p>
-                  ) : null}
+                  ) : property.listingType === "RENT" ? null : (
+                    <ScheduleViewingForm
+                      propertyId={property.id}
+                      propertyTitle={property.title}
+                    />
+                  )}
                     </>
                   )}
                   <Separator />

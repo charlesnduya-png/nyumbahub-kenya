@@ -4,6 +4,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { getPropertyHostUserId } from "@/lib/messages";
 import { prisma } from "@/lib/prisma";
+import { isStayListing } from "@/lib/listing-kinds";
 
 const offerSchema = z.object({
   amount: z.coerce.number().positive().max(10_000_000_000),
@@ -87,9 +88,9 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    if (property.listingType === "HOLIDAY") {
+    if (isStayListing(property.listingType)) {
       return NextResponse.json(
-        { success: false, error: "Use booking for BnB stays" },
+        { success: false, error: "Use booking for hotel and BnB stays" },
         { status: 400 },
       );
     }

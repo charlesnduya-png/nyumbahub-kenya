@@ -83,6 +83,12 @@ export function getPagesSitemapEntries(now = new Date()): SitemapEntry[] {
       priority: 0.85,
     },
     {
+      url: loc("/hotels"),
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.85,
+    },
+    {
       url: loc("/agents"),
       lastModified: now,
       changeFrequency: "weekly",
@@ -153,6 +159,12 @@ export function getAfricaSitemapEntries(now = new Date()): SitemapEntry[] {
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.92,
+    },
+    {
+      url: loc("/hotels"),
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.91,
     },
   ];
 

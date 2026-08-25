@@ -1,4 +1,5 @@
 import { DEFAULT_LISTING_COUNTRY } from "@/lib/african-countries";
+import { isStayListing } from "@/lib/listing-kinds";
 
 export interface CountryReportListing {
   country?: string | null;
@@ -76,7 +77,7 @@ export function buildCountryListingsReport(
     if (listing.listingType === "BUY" || listing.listingType === "LAND") {
       current.buy += 1;
     }
-    if (listing.listingType === "RENT" || listing.listingType === "HOLIDAY") {
+    if (listing.listingType === "RENT" || isStayListing(listing.listingType)) {
       current.rent += 1;
     }
     byCountry.set(country, current);

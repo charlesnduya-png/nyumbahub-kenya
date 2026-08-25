@@ -9,6 +9,7 @@ import { FavoriteToggle } from "@/components/property/favorite-toggle";
 import { PropertyMediaImage } from "@/components/property/property-media-image";
 import { cn, formatPrice } from "@/lib/utils";
 import { getListingTypeLabel, getPropertyTypeLabel } from "@/lib/kenya";
+import { isStayListing } from "@/lib/listing-kinds";
 import type { PropertyCard } from "@/types";
 
 interface PropertyCardProps {
@@ -89,7 +90,7 @@ export function PropertyCardComponent({
                 /mo
               </span>
             )}
-            {property.listingType === "HOLIDAY" && (
+            {isStayListing(property.listingType) && (
               <span className="text-sm font-normal text-muted-foreground">
                 /night
               </span>

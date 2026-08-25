@@ -11,6 +11,7 @@ describe("Africa sitemap for Google Search Console", () => {
     expect(urls.some((url) => url.endsWith("/property-for-sale"))).toBe(true);
     expect(urls.some((url) => url.endsWith("/rent"))).toBe(true);
     expect(urls.some((url) => url.endsWith("/bnb"))).toBe(true);
+    expect(urls.some((url) => url.endsWith("/hotels"))).toBe(true);
   });
 
   it("lists every African country except the Kenya hub slug", () => {

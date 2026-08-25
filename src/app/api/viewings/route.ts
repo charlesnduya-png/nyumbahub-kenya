@@ -4,6 +4,7 @@ import { getPropertyHostUserId } from "@/lib/messages";
 import { prisma } from "@/lib/prisma";
 import { createViewingSchema } from "@/lib/validations/viewing";
 import { canViewWith, resolveProfessionalActingContext } from "@/lib/account-team";
+import { isStayListing } from "@/lib/listing-kinds";
 
 function proViewingsLink() {
   return "/dashboard/pro/viewings";
@@ -184,9 +185,9 @@ export async function POST(request: Request) {
       );
     }
 
-    if (property.listingType === "HOLIDAY") {
+    if (isStayListing(property.listingType)) {
       return NextResponse.json(
-        { success: false, error: "Use BnB booking for holiday stays" },
+        { success: false, error: "Use stay booking for hotels and BnBs" },
         { status: 400 },
       );
     }

@@ -6,6 +6,7 @@ import {
   nightsBetween,
 } from "@/lib/validations/booking";
 import { canViewWith, resolveProfessionalActingContext } from "@/lib/account-team";
+import { isStayListing, stayLabel } from "@/lib/listing-kinds";
 
 function inboxPathForRole(role: string, peerId: string, propertyId: string) {
   const params = new URLSearchParams({ peer: peerId, property: propertyId });
@@ -164,7 +165,7 @@ export async function POST(request: Request) {
       where: {
         OR: [{ id: propertyId }, { slug: propertyId }],
         status: "ACTIVE",
-        listingType: "HOLIDAY",
+        listingType: { in: ["HOLIDAY", "HOTEL"] },
       },
       select: {
         id: true,
@@ -173,13 +174,14 @@ export async function POST(request: Request) {
         currency: true,
         ownerId: true,
         slug: true,
+        listingType: true,
         agent: { select: { userId: true } },
       },
     });
 
-    if (!property) {
+    if (!property || !isStayListing(property.listingType)) {
       return NextResponse.json(
-        { success: false, error: "BnB listing not found or unavailable" },
+        { success: false, error: "Stay listing not found or unavailable" },
         { status: 404 },
       );
     }
@@ -205,8 +207,10 @@ export async function POST(request: Request) {
     const commissionPct = bnbCommissionPercent();
     const hostUserId = property.agent?.userId ?? property.ownerId;
 
+    const stayKind = stayLabel(property.listingType);
+
     const bookingMessage = [
-      `New BnB booking request for ${property.title}`,
+      `New ${stayKind} booking request for ${property.title}`,
       `Check-in: ${checkInDate.toLocaleDateString("en-KE")}`,
       `Check-out: ${checkOutDate.toLocaleDateString("en-KE")}`,
       `Guests: ${guests}`,
@@ -259,7 +263,7 @@ export async function POST(request: Request) {
       data: {
         userId: hostUserId,
         type: "BOOKING",
-        title: "New BnB booking request",
+        title: `New ${stayKind} booking request`,
         body: `${session.user.name ?? "A guest"} requested ${nights} night(s) at ${property.title}.`,
         link: inboxPathForRole(hostUser?.role ?? "SELLER", session.user.id, property.id),
       },

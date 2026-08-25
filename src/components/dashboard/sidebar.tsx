@@ -29,6 +29,7 @@ import {
   Clock3,
   UserRound,
   Palmtree,
+  Hotel,
   Activity,
   UserCircle,
   BadgeCheck,
@@ -69,7 +70,7 @@ const professionalNav: NavItem[] = [
   { label: "Boma yangu", href: "/dashboard/pro/plots", icon: Home },
   { label: "Rent management", href: "/dashboard/pro/rent", icon: Wallet },
   { label: "Wallet", href: "/dashboard/pro/wallet", icon: Banknote },
-  { label: "BnB Bookings", href: "/dashboard/pro/bookings", icon: Calendar },
+  { label: "Stay bookings", href: "/dashboard/pro/bookings", icon: Calendar },
   { label: "Inquiries", href: "/dashboard/pro/inquiries", icon: MessageSquare },
   { label: "Viewings", href: "/dashboard/pro/viewings", icon: CalendarDays },
   { label: "Offers", href: "/dashboard/pro/offers", icon: HandCoins },
@@ -124,6 +125,7 @@ const buyerNav: NavItem[] = [
   { label: "Recently Viewed", href: "/dashboard/tenant/recent", icon: Clock3 },
   { label: "Browse Rentals", href: "/rent", icon: Building2 },
   { label: "Browse BnBs", href: "/bnb", icon: Palmtree },
+  { label: "Browse hotels", href: "/hotels", icon: Hotel },
   { label: "Compare", href: "/compare", icon: LayoutDashboard },
 ];
 

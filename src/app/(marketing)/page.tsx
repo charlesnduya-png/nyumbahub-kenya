@@ -14,6 +14,7 @@ import { getBrowseCategories, getTopLocations } from "@/lib/marketing";
 import {
   getBnbPropertiesForHome,
   getFeaturedPropertiesForHome,
+  getHotelPropertiesForHome,
   getLatestPropertiesForHome,
   getRentalPropertiesForHome,
 } from "@/lib/properties";
@@ -43,6 +44,7 @@ export default async function HomePage() {
     featuredProperties,
     rentalProperties,
     bnbProperties,
+    hotelProperties,
     latestProperties,
     categories,
     locations,
@@ -52,6 +54,7 @@ export default async function HomePage() {
     getFeaturedPropertiesForHome(8),
     getRentalPropertiesForHome(8),
     getBnbPropertiesForHome(8),
+    getHotelPropertiesForHome(8),
     getLatestPropertiesForHome(8),
     getBrowseCategories(),
     getTopLocations(6),
@@ -84,6 +87,14 @@ export default async function HomePage() {
           subtitle="Beach villas, city Airbnbs, lake cottages — priced per night"
           viewAllHref="/bnb"
           viewAllLabel="Browse all BnBs"
+          className="cv-auto"
+        />
+        <FeaturedProperties
+          properties={hotelProperties}
+          title="Hotels"
+          subtitle="City hotels, lodges, and serviced rooms — priced per night"
+          viewAllHref="/hotels"
+          viewAllLabel="Browse all hotels"
           className="cv-auto"
         />
         <Categories categories={categories} />

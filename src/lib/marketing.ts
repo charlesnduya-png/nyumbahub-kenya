@@ -52,6 +52,12 @@ const CATEGORY_CONFIG: Omit<BrowseCategory, "listingCount">[] = [
     image: unsplash("photo-1582268611958-ebfd161ef9cf", 600),
   },
   {
+    label: "Hotels",
+    slug: "hotels",
+    propertyType: "HOTEL",
+    image: unsplash("photo-1566073771259-6a8506099945", 600),
+  },
+  {
     label: "Maisonettes",
     slug: "maisonettes",
     propertyType: "MAISONETTE",
@@ -100,7 +106,7 @@ const LOCATION_CONFIG: Omit<TopLocation, "listingCount">[] = [
 
 export async function getBrowseCategories(): Promise<BrowseCategory[]> {
   try {
-    const [byType, bnbCount, landCount, commercialCount] = await Promise.all([
+    const [byType, bnbCount, hotelCount, landCount, commercialCount] = await Promise.all([
       prisma.property.groupBy({
         by: ["propertyType"],
         where: { status: "ACTIVE" },
@@ -108,6 +114,9 @@ export async function getBrowseCategories(): Promise<BrowseCategory[]> {
       }),
       prisma.property.count({
         where: { status: "ACTIVE", listingType: "HOLIDAY" },
+      }),
+      prisma.property.count({
+        where: { status: "ACTIVE", listingType: "HOTEL" },
       }),
       prisma.property.count({
         where: {
@@ -143,9 +152,11 @@ export async function getBrowseCategories(): Promise<BrowseCategory[]> {
           ? landCount
           : cat.slug === "commercial"
             ? commercialCount
-            : cat.propertyType === "BNB"
-              ? bnbCount
-              : (counts.get(cat.propertyType as PropertyType) ?? 0),
+            : cat.slug === "hotels"
+              ? hotelCount
+              : cat.propertyType === "BNB"
+                ? bnbCount
+                : (counts.get(cat.propertyType as PropertyType) ?? 0),
     }));
   } catch {
     return CATEGORY_CONFIG.map((cat) => ({ ...cat, listingCount: 0 }));

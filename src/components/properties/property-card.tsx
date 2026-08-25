@@ -11,6 +11,7 @@ import { ListingHostRow } from "@/components/properties/listing-host-row";
 import { PropertyMediaImage } from "@/components/property/property-media-image";
 import { PropertyVideoPlayer } from "@/components/property/property-video-player";
 import { getListingTypeLabel, getPropertyTypeLabel } from "@/lib/kenya";
+import { isStayListing } from "@/lib/listing-kinds";
 import { formatPrice } from "@/lib/utils";
 import type { PropertyCard } from "@/types";
 
@@ -84,7 +85,7 @@ export function PropertyCardItem({ property }: PropertyCardItemProps) {
                 / month
               </span>
             )}
-            {property.listingType === "HOLIDAY" && (
+            {isStayListing(property.listingType) && (
               <span className="text-sm font-normal text-muted-foreground">
                 {" "}
                 / night

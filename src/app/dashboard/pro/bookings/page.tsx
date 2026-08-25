@@ -114,7 +114,7 @@ export default function OwnerBookingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">BnB bookings</h1>
+        <h1 className="text-2xl font-bold">Stay bookings</h1>
         <p className="mt-1 text-muted-foreground">
           Guests book stays on Your Home. Review each request and approve or
           decline from here.
@@ -126,8 +126,8 @@ export default function OwnerBookingsPage() {
       ) : bookings.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            No booking requests yet. When guests book your BnB listings, they
-            appear here for approval.
+            No booking requests yet. When guests book your hotel or BnB
+            listings, they appear here for approval.
           </CardContent>
         </Card>
       ) : (

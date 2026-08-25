@@ -17,6 +17,7 @@ const exploreLinks = [
   { href: "/property-for-sale", label: "Buy Property" },
   { href: "/rent", label: "Rent Property" },
   { href: "/bnb", label: "BnB & Holiday Homes" },
+  { href: "/hotels", label: "Hotels" },
   { href: "/africa", label: "All African countries" },
   { href: "/properties?category=land-plots", label: "Land & Plots" },
   { href: "/agents", label: "Find an Agent" },

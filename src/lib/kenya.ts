@@ -142,6 +142,7 @@ export const PROPERTY_CATEGORIES: Array<{
   { value: "WAREHOUSE", label: "Warehouse", group: "commercial" },
   { value: "PLOT", label: "Plot / Land", group: "land" },
   { value: "FARM", label: "Farm", group: "land" },
+  { value: "HOTEL", label: "Hotel", group: "commercial" },
   { value: "OTHER", label: "Other", group: "residential" },
 ];
 
@@ -174,6 +175,11 @@ export const LISTING_TYPES: Array<{
     value: "HOLIDAY",
     label: "BnB / Holiday",
     description: "Short-stay BnB, Airbnb-style and vacation homes",
+  },
+  {
+    value: "HOTEL",
+    label: "Hotel",
+    description: "Hotels, lodges, and serviced hotel rooms priced per night",
   },
 ];
 

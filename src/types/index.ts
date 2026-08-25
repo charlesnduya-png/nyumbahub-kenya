@@ -1,6 +1,6 @@
 export type Role = "BUYER" | "SELLER" | "AGENT" | "ADMIN";
 
-export type ListingType = "BUY" | "RENT" | "LAND" | "COMMERCIAL" | "HOLIDAY";
+export type ListingType = "BUY" | "RENT" | "LAND" | "COMMERCIAL" | "HOLIDAY" | "HOTEL";
 
 export type PropertyType =
   | "APARTMENT"
@@ -16,6 +16,7 @@ export type PropertyType =
   | "WAREHOUSE"
   | "PLOT"
   | "FARM"
+  | "HOTEL"
   | "OTHER";
 
 export type PropertyStatus =

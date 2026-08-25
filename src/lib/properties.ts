@@ -485,6 +485,10 @@ export function getBnbPropertiesForHome(limit = 8) {
   return getActiveProperties({ listingType: "HOLIDAY", limit });
 }
 
+export function getHotelPropertiesForHome(limit = 8) {
+  return getActiveProperties({ listingType: "HOTEL", limit });
+}
+
 export function getLatestPropertiesForHome(limit = 8) {
   return getActiveProperties({ limit });
 }

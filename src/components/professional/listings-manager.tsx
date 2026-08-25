@@ -60,7 +60,7 @@ export type ManagedListing = {
   id: string;
   title: string;
   slug: string;
-  listingType: "BUY" | "RENT" | "LAND" | "COMMERCIAL" | "HOLIDAY";
+  listingType: "BUY" | "RENT" | "LAND" | "COMMERCIAL" | "HOLIDAY" | "HOTEL";
   propertyType?: string;
   description?: string;
   price: number;
@@ -683,7 +683,7 @@ export function ListingsManager() {
                 </SelectTrigger>
                 <SelectContent>
                   {(
-                    ["BUY", "RENT", "LAND", "COMMERCIAL", "HOLIDAY"] as const
+                    ["BUY", "RENT", "LAND", "COMMERCIAL", "HOLIDAY", "HOTEL"] as const
                   ).map((t) => (
                     <SelectItem key={t} value={t}>
                       {t}

@@ -22,6 +22,7 @@ const SEARCH_TABS: { value: ListingType; label: string }[] = [
   { value: "BUY", label: "Buy" },
   { value: "RENT", label: "Rent" },
   { value: "HOLIDAY", label: "BnB" },
+  { value: "HOTEL", label: "Hotels" },
   { value: "LAND", label: "Land" },
   { value: "COMMERCIAL", label: "Commercial" },
 ];

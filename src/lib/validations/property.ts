@@ -11,6 +11,7 @@ export const listingTypeSchema = z.enum([
   "LAND",
   "COMMERCIAL",
   "HOLIDAY",
+  "HOTEL",
 ]);
 
 export const propertyTypeSchema = z.enum([
@@ -27,6 +28,7 @@ export const propertyTypeSchema = z.enum([
   "WAREHOUSE",
   "PLOT",
   "FARM",
+  "HOTEL",
   "OTHER",
 ]);
 

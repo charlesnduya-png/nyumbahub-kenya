@@ -40,7 +40,9 @@ export function Categories({
               href={
                 category.slug === "bnb"
                   ? "/bnb"
-                  : category.slug === "land-plots"
+                  : category.slug === "hotels"
+                    ? "/hotels"
+                    : category.slug === "land-plots"
                     ? "/properties?category=land-plots"
                     : category.slug === "commercial"
                       ? "/properties?category=commercial"
