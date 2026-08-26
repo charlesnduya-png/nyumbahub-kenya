@@ -1,6 +1,11 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getPropertiesByIds } from "@/lib/properties";
 import ComparePageClient from "./compare-client";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 interface ComparePageProps {
   searchParams: Promise<{ ids?: string }>;

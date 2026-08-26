@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
@@ -5,6 +6,10 @@ import { resolveProfessionalActingContext } from "@/lib/account-team";
 import { isSiteOwnerEmail } from "@/lib/site-owner";
 import type { TeamNavState } from "@/lib/team-roles";
 import type { Role } from "@/types";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default async function DashboardLayout({
   children,

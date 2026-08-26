@@ -72,12 +72,12 @@ describe("Africa sitemap for Google Search Console", () => {
     expect(xml).toContain("https://yourhome.co.ke/property-for-sale/lagos");
   });
 
-  it("can emit yourhome.africa URLs for the Africa Search Console property", () => {
+  it("always emits yourhome.co.ke URLs so the two domains do not compete", () => {
     const xml = renderSitemapXml(
       getAfricaSitemapEntries(new Date(), "https://yourhome.africa"),
     );
-    expect(xml).toContain("https://yourhome.africa/property-for-sale/lagos");
-    expect(xml).not.toContain("https://yourhome.co.ke/property-for-sale/lagos");
+    expect(xml).toContain("https://yourhome.co.ke/property-for-sale/lagos");
+    expect(xml).not.toContain("https://yourhome.africa/property-for-sale/lagos");
   });
 
   it("omits query-string listing filters that Search Console flags", () => {
@@ -90,21 +90,27 @@ describe("Africa sitemap for Google Search Console", () => {
       "https://yourhome.africa",
     );
     expect(xml).toContain("<sitemapindex");
-    expect(xml).toContain("https://yourhome.africa/sitemap-pages.xml");
-    expect(xml).toContain("https://yourhome.africa/sitemap-africa.xml");
-    expect(xml).toContain("https://yourhome.africa/sitemap-listings.xml");
+    expect(xml).toContain("https://yourhome.co.ke/sitemap-pages.xml");
+    expect(xml).toContain("https://yourhome.co.ke/sitemap-africa.xml");
+    expect(xml).toContain("https://yourhome.co.ke/sitemap-listings.xml");
+    expect(xml).not.toContain("https://yourhome.africa/");
   });
 
-  it("maps Search Console hosts to the matching sitemap origin", () => {
+  it("maps every Search Console host to the canonical sitemap origin", () => {
     expect(
       sitemapOriginFromRequest(
         new Request("https://yourhome.africa/sitemap.xml"),
       ),
-    ).toBe("https://yourhome.africa");
+    ).toBe("https://yourhome.co.ke");
     expect(
       sitemapOriginFromRequest(
         new Request("https://www.yourhome.africa/sitemap.xml"),
       ),
-    ).toBe("https://yourhome.africa");
+    ).toBe("https://yourhome.co.ke");
+    expect(
+      sitemapOriginFromRequest(
+        new Request("https://yourhome.co.ke/sitemap.xml"),
+      ),
+    ).toBe("https://yourhome.co.ke");
   });
 });

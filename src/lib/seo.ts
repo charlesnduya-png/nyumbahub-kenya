@@ -1,6 +1,15 @@
 import type { Metadata } from "next";
 import { iso2ForCountry } from "@/lib/african-countries";
 import { formatPrice } from "@/lib/utils";
+import {
+  AFRICA_SITE_HOST,
+  CANONICAL_SITE_URL,
+  PRIMARY_SITE_HOST,
+  SITE_DOMAIN_LABEL,
+  SITE_ORIGIN_URLS,
+  canonicalUrl,
+  normalizeSiteHost,
+} from "@/lib/site-domains";
 
 const APP_NAME =
   process.env.NEXT_PUBLIC_APP_NAME?.trim() || "Your Home";
@@ -9,18 +18,19 @@ function resolvePublicAppUrl() {
   const raw = (
     process.env.NEXT_PUBLIC_APP_URL?.trim() ||
     process.env.AUTH_URL?.trim() ||
-    "https://yourhome.co.ke"
+    CANONICAL_SITE_URL
   ).replace(/\/$/, "");
 
   try {
     const parsed = new URL(raw);
-    const host = parsed.hostname.replace(/^www\./i, "").toLowerCase();
-    if (host === "yourhome.co.ke") {
-      return "https://yourhome.co.ke";
+    const host = normalizeSiteHost(parsed.hostname);
+    // Both production hosts are the same product. Rank only .co.ke.
+    if (host === PRIMARY_SITE_HOST || host === AFRICA_SITE_HOST) {
+      return CANONICAL_SITE_URL;
     }
     return `${parsed.protocol}//${parsed.host}`.replace(/\/$/, "");
   } catch {
-    return "https://yourhome.co.ke";
+    return CANONICAL_SITE_URL;
   }
 }
 
@@ -31,12 +41,13 @@ const GOOGLE_SITE_VERIFICATION =
   "";
 
 const APP_DESCRIPTION =
-  "Your Home (yourhome.co.ke) — Africa's marketplace for verified houses, apartments, land, plots, rentals, and BnB stays. Search Kenya, Nigeria, Ghana, South Africa, Tanzania, Uganda, Egypt, Morocco, Rwanda, and all 54 African countries. List free. M-Pesa ready.";
+  `Your Home (${SITE_DOMAIN_LABEL}) — Africa's marketplace for verified houses, apartments, land, plots, rentals, and BnB stays. Search Kenya, Nigeria, Ghana, South Africa, Tanzania, Uganda, Egypt, Morocco, Rwanda, and all 54 African countries. List free. M-Pesa ready.`;
 
 /** Core + long-tail Africa real estate keywords for metadata. */
 const SEO_KEYWORDS = [
   "Your Home Kenya",
-  "yourhome.co.ke",
+  PRIMARY_SITE_HOST,
+  AFRICA_SITE_HOST,
   "Africa real estate",
   "best real estate Africa",
   "property for sale Africa",
@@ -80,11 +91,7 @@ export {
 };
 
 export function absoluteUrl(path = "/"): string {
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  if (normalizedPath === "/") {
-    return `${APP_URL}/`;
-  }
-  return new URL(normalizedPath, `${APP_URL}/`).toString();
+  return canonicalUrl(path);
 }
 
 export function truncateDescription(text: string, maxLength = 160): string {
@@ -120,6 +127,10 @@ export function buildPageMetadata(input: {
     keywords,
     alternates: {
       canonical: url,
+      languages: {
+        "x-default": url,
+        "en-KE": url,
+      },
     },
     robots: input.noIndex
       ? { index: false, follow: false }
@@ -275,10 +286,16 @@ export function organizationJsonLd() {
   return {
     "@context": "https://schema.org",
     "@type": ["Organization", "RealEstateAgent"],
-    "@id": `${APP_URL}/#organization`,
+    "@id": `${CANONICAL_SITE_URL}/#organization`,
     name: APP_NAME,
-    alternateName: ["Your Home Kenya", "yourhome.co.ke", "YourHome Kenya"],
+    alternateName: [
+      "Your Home Kenya",
+      PRIMARY_SITE_HOST,
+      AFRICA_SITE_HOST,
+      "YourHome Kenya",
+    ],
     url: absoluteUrl("/"),
+    sameAs: [...SITE_ORIGIN_URLS],
     logo: absoluteUrl("/opengraph-image"),
     image: absoluteUrl("/opengraph-image"),
     description: APP_DESCRIPTION,
@@ -317,18 +334,18 @@ export function websiteJsonLd() {
   return {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    "@id": `${APP_URL}/#website`,
+    "@id": `${CANONICAL_SITE_URL}/#website`,
     name: APP_NAME,
-    alternateName: "yourhome.co.ke",
+    alternateName: [PRIMARY_SITE_HOST, AFRICA_SITE_HOST],
     url: absoluteUrl("/"),
     description: APP_DESCRIPTION,
     inLanguage: ["en-KE", "en"],
-    publisher: { "@id": `${APP_URL}/#organization` },
+    publisher: { "@id": `${CANONICAL_SITE_URL}/#organization` },
     potentialAction: {
       "@type": "SearchAction",
       target: {
         "@type": "EntryPoint",
-        urlTemplate: `${APP_URL}/properties?town={search_term_string}`,
+        urlTemplate: `${CANONICAL_SITE_URL}/properties?town={search_term_string}`,
       },
       "query-input": "required name=search_term_string",
     },
@@ -354,7 +371,7 @@ export const HOME_FAQ_ITEMS = [
   {
     question: "Where can I find houses for sale in Africa?",
     answer:
-      "Browse verified houses, apartments, and land for sale across all 54 African countries on Your Home (yourhome.co.ke). Search Kenya, Nigeria, Ghana, South Africa, Tanzania, Uganda, Egypt, Morocco, Rwanda, and more.",
+      `Browse verified houses, apartments, and land for sale across all 54 African countries on Your Home (${SITE_DOMAIN_LABEL}). Search Kenya, Nigeria, Ghana, South Africa, Tanzania, Uganda, Egypt, Morocco, Rwanda, and more.`,
   },
   {
     question: "How do I rent an apartment in Nairobi, Lagos, or Accra?",
@@ -482,7 +499,7 @@ export function generatePropertyMetadata(
   const title = `${property.title} — ${typeLabel} ${listingLabel} in ${property.town}, ${countryName}`;
   const description = truncateDescription(
     property.description ||
-      `${typeLabel} ${listingLabel} in ${location}. ${priceLabel}. Verified listing on Your Home (yourhome.co.ke).`,
+      `${typeLabel} ${listingLabel} in ${location}. ${priceLabel}. Verified listing on Your Home (${SITE_DOMAIN_LABEL}).`,
   );
   const url = absoluteUrl(`/properties/${property.slug}`);
   const image = property.imageUrl ?? absoluteUrl("/opengraph-image");
@@ -490,7 +507,13 @@ export function generatePropertyMetadata(
   return {
     title,
     description,
-    alternates: { canonical: url },
+    alternates: {
+      canonical: url,
+      languages: {
+        "x-default": url,
+        "en-KE": url,
+      },
+    },
     openGraph: {
       type: "website",
       locale: "en_KE",
@@ -516,7 +539,8 @@ export function generatePropertyMetadata(
       property.listingType,
       property.propertyType,
       "Africa property",
-      "yourhome.co.ke",
+      PRIMARY_SITE_HOST,
+      AFRICA_SITE_HOST,
       APP_NAME,
     ],
   };
@@ -549,7 +573,8 @@ export function generateAgentMetadata(input: {
       "real estate agent Africa",
       input.county ? `${input.county} estate agent` : "Nairobi estate agent",
       "property agent Kenya",
-      "yourhome.co.ke agents",
+      `${PRIMARY_SITE_HOST} agents`,
+      `${AFRICA_SITE_HOST} agents`,
     ],
   });
 }
@@ -566,7 +591,13 @@ export function generateBlogMetadata(post: BlogMetadataInput): Metadata {
   return {
     title,
     description,
-    alternates: { canonical: url },
+    alternates: {
+      canonical: url,
+      languages: {
+        "x-default": url,
+        "en-KE": url,
+      },
+    },
     openGraph: {
       type: "article",
       locale: "en_KE",
@@ -593,7 +624,8 @@ export function generateBlogMetadata(post: BlogMetadataInput): Metadata {
       "real estate tips Africa",
       "housing market Africa",
       "buy property Africa",
-      "yourhome.co.ke",
+      PRIMARY_SITE_HOST,
+      AFRICA_SITE_HOST,
       APP_NAME,
     ],
   };

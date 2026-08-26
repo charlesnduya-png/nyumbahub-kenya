@@ -1,6 +1,12 @@
-import { APP_URL } from "@/lib/seo";
-import { originForHost } from "@/lib/site-domains";
 import { ALL_SEO_LANDINGS } from "@/lib/seo-locations";
+import {
+  AFRICA_SITE_HOST,
+  AFRICA_SITE_URL,
+  CANONICAL_SITE_URL,
+  PRIMARY_SITE_HOST,
+  canonicalOrigin,
+  canonicalUrl,
+} from "@/lib/site-domains";
 import { getAllPropertyForSalePlaces } from "@/lib/property-for-sale";
 import { prisma } from "@/lib/prisma";
 import { unstable_cache } from "next/cache";
@@ -19,19 +25,13 @@ export type SitemapEntry = {
   priority: number;
 };
 
-export function sitemapOriginFromRequest(request: Request): string {
-  const host =
-    request.headers.get("x-forwarded-host")?.split(",")[0]?.trim() ||
-    request.headers.get("host") ||
-    new URL(request.url).host;
-  return originForHost(host);
+/** Always the canonical host so .africa and .co.ke do not advertise two URL sets. */
+export function sitemapOriginFromRequest(_request?: Request): string {
+  return canonicalOrigin();
 }
 
-function loc(path = "/", origin = APP_URL): string {
-  const base = origin.replace(/\/$/, "");
-  if (!path || path === "/") return `${base}/`;
-  const suffix = path.startsWith("/") ? path : `/${path}`;
-  return `${base}${suffix}`;
+function loc(path = "/", _origin = CANONICAL_SITE_URL): string {
+  return canonicalUrl(path);
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
@@ -61,7 +61,7 @@ function uniqueEntries(entries: SitemapEntry[]) {
 
 export function getPagesSitemapEntries(
   now = new Date(),
-  origin = APP_URL,
+  origin = CANONICAL_SITE_URL,
 ): SitemapEntry[] {
   const href = (path: string) => loc(path, origin);
   return [
@@ -150,7 +150,7 @@ export function getPagesSitemapEntries(
 /** All African countries and cities: sale, rent, and BnB landing pages. */
 export function getAfricaSitemapEntries(
   now = new Date(),
-  origin = APP_URL,
+  origin = CANONICAL_SITE_URL,
 ): SitemapEntry[] {
   const href = (path: string) => loc(path, origin);
   const hubs: SitemapEntry[] = [
@@ -225,22 +225,26 @@ export function getAfricaSitemapEntries(
   return uniqueEntries([...hubs, ...placeRoutes, ...extraLandings]);
 }
 
+function rewriteToCanonicalSitemapUrl(url: string): string {
+  return url
+    .replaceAll(AFRICA_SITE_URL, CANONICAL_SITE_URL)
+    .replaceAll(`https://www.${AFRICA_SITE_HOST}`, CANONICAL_SITE_URL)
+    .replaceAll(`https://www.${PRIMARY_SITE_HOST}`, CANONICAL_SITE_URL);
+}
+
 function relabelSitemapEntries(
   entries: SitemapEntry[],
-  origin: string,
+  _origin = CANONICAL_SITE_URL,
 ): SitemapEntry[] {
-  if (!origin || origin === APP_URL) return entries;
   return entries.map((entry) => ({
     ...entry,
-    url: entry.url.startsWith(APP_URL)
-      ? `${origin}${entry.url.slice(APP_URL.length)}`
-      : entry.url,
+    url: rewriteToCanonicalSitemapUrl(entry.url),
   }));
 }
 
 export async function getListingsSitemapEntries(
   _now = new Date(),
-  origin = APP_URL,
+  origin = CANONICAL_SITE_URL,
 ): Promise<SitemapEntry[]> {
   const entries = await unstable_cache(
     async () => {
@@ -307,7 +311,7 @@ export async function getListingsSitemapEntries(
 }
 
 export async function getSitemapEntries(
-  origin = APP_URL,
+  origin = CANONICAL_SITE_URL,
 ): Promise<SitemapEntry[]> {
   const now = new Date();
   const listings = await getListingsSitemapEntries(now, origin);
@@ -324,7 +328,10 @@ export const SITEMAP_INDEX_PATHS = [
   "/sitemap-listings.xml",
 ] as const;
 
-export function renderSitemapIndexXml(now = new Date(), origin = APP_URL) {
+export function renderSitemapIndexXml(
+  now = new Date(),
+  origin = CANONICAL_SITE_URL,
+) {
   const body = SITEMAP_INDEX_PATHS.map(
     (path) => `  <sitemap>
     <loc>${escapeXml(loc(path, origin))}</loc>

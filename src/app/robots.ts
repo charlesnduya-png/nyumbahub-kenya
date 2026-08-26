@@ -1,10 +1,7 @@
 import type { MetadataRoute } from "next";
-import { headers } from "next/headers";
-import { originForHost } from "@/lib/site-domains";
+import { CANONICAL_SITE_URL } from "@/lib/site-domains";
 
-export default async function robots(): Promise<MetadataRoute.Robots> {
-  const origin = originForHost((await headers()).get("host"));
-
+export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
       {
@@ -23,11 +20,11 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
       },
     ],
     sitemap: [
-      `${origin}/sitemap.xml`,
-      `${origin}/sitemap-africa.xml`,
-      `${origin}/sitemap-pages.xml`,
-      `${origin}/sitemap-listings.xml`,
+      `${CANONICAL_SITE_URL}/sitemap.xml`,
+      `${CANONICAL_SITE_URL}/sitemap-africa.xml`,
+      `${CANONICAL_SITE_URL}/sitemap-pages.xml`,
+      `${CANONICAL_SITE_URL}/sitemap-listings.xml`,
     ],
-    host: origin,
+    host: CANONICAL_SITE_URL,
   };
 }
