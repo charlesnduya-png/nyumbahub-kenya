@@ -41,21 +41,23 @@ export default async function PropertiesPage({ searchParams }: PageProps) {
 
   const pageTitle =
     category === "land-plots"
-      ? "Land & plots in Kenya"
+      ? "Land & plots in Africa"
       : category === "commercial"
-        ? "Commercial property in Kenya"
+        ? "Commercial property in Africa"
         : agentId
           ? "Agent listings"
-          : "Properties in Kenya";
+          : typeof params.country === "string" && params.country
+            ? `Properties in ${params.country}`
+            : "Properties in Africa";
 
   const pageDescription =
     category === "land-plots"
-      ? "Browse vacant land, plots, and farms for sale across Kenya."
+      ? "Browse vacant land, plots, and farms for sale across Africa."
       : category === "commercial"
         ? "Offices, shops, and warehouse spaces for sale and rent."
         : agentId
           ? "Active homes listed by this agent on Your Home."
-          : "Browse verified homes, land, and commercial spaces from Nairobi to the coast.";
+          : "Browse verified homes, land, and commercial spaces from Nairobi to Lagos, Accra, Cape Town, and every African country.";
 
   return (
     <div className="min-h-dvh bg-background">

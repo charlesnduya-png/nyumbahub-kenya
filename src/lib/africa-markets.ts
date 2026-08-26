@@ -396,6 +396,14 @@ export const AFRICA_COUNTRY_MARKETS_BY_NAME = new Map(
   AFRICA_COUNTRY_MARKETS.map((country) => [country.name, country]),
 );
 
+export function citiesForCountry(countryName: string): string[] {
+  return (
+    AFRICA_COUNTRY_MARKETS_BY_NAME.get(countryName)?.cities.map(
+      (city) => city.name,
+    ) ?? []
+  );
+}
+
 export type AfricaCityMarket = {
   name: string;
   slug: string;

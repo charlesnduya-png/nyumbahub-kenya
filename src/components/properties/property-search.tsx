@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { CountrySelect, ALL_COUNTRIES_VALUE } from "@/components/properties/country-select";
 import { KENYA_COUNTIES, LISTING_TYPES } from "@/lib/kenya";
 import type { PropertyCard } from "@/types";
 
@@ -104,26 +105,46 @@ export function PropertySearchClient({
         </Select>
       </div>
       <div className="space-y-2">
-        <Label>County</Label>
-        <Select
-          value={searchParams.get("county") ?? "all"}
-          onValueChange={(v) => updateFilter("county", v)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="All counties" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All counties</SelectItem>
-            {KENYA_COUNTIES.map((c) => (
-              <SelectItem key={c} value={c}>
-                {c}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Label>Country</Label>
+        <CountrySelect
+          allowAll
+          value={searchParams.get("country") || ALL_COUNTRIES_VALUE}
+          onValueChange={(v) => {
+            const params = new URLSearchParams(searchParams.toString());
+            if (!v || v === ALL_COUNTRIES_VALUE) {
+              params.delete("country");
+            } else {
+              params.set("country", v);
+            }
+            if (v !== "Kenya") params.delete("county");
+            params.delete("page");
+            router.push(`/properties?${params.toString()}`);
+          }}
+        />
       </div>
+      {searchParams.get("country") === "Kenya" ? (
+        <div className="space-y-2">
+          <Label>County</Label>
+          <Select
+            value={searchParams.get("county") ?? "all"}
+            onValueChange={(v) => updateFilter("county", v)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All counties" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All counties</SelectItem>
+              {KENYA_COUNTIES.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : null}
       <div className="space-y-2">
-        <Label>Min price (KES)</Label>
+        <Label>Min price</Label>
         <Input
           type="number"
           placeholder="e.g. 5000000"
@@ -132,7 +153,7 @@ export function PropertySearchClient({
         />
       </div>
       <div className="space-y-2">
-        <Label>Max price (KES)</Label>
+        <Label>Max price</Label>
         <Input
           type="number"
           placeholder="e.g. 20000000"
@@ -197,7 +218,7 @@ export function PropertySearchClient({
             <Search className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
             <h3 className="text-lg font-medium">No properties match your search</h3>
             <p className="mt-2 text-muted-foreground">
-              Try adjusting your filters or browse all listings across Kenya.
+              Try adjusting your filters or browse all listings across Africa.
             </p>
           </div>
         ) : (
