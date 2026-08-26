@@ -1,7 +1,10 @@
 import type { MetadataRoute } from "next";
-import { APP_URL } from "@/lib/seo";
+import { headers } from "next/headers";
+import { originForHost } from "@/lib/site-domains";
 
-export default function robots(): MetadataRoute.Robots {
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  const origin = originForHost((await headers()).get("host"));
+
   return {
     rules: [
       {
@@ -20,11 +23,11 @@ export default function robots(): MetadataRoute.Robots {
       },
     ],
     sitemap: [
-      `${APP_URL}/sitemap.xml`,
-      `${APP_URL}/sitemap-africa.xml`,
-      `${APP_URL}/sitemap-pages.xml`,
-      `${APP_URL}/sitemap-listings.xml`,
+      `${origin}/sitemap.xml`,
+      `${origin}/sitemap-africa.xml`,
+      `${origin}/sitemap-pages.xml`,
+      `${origin}/sitemap-listings.xml`,
     ],
-    host: APP_URL,
+    host: origin,
   };
 }

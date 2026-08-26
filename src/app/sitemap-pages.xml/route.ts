@@ -3,12 +3,18 @@ import {
   SITEMAP_XML_HEADERS,
   getPagesSitemapEntries,
   renderSitemapXml,
+  sitemapOriginFromRequest,
 } from "@/lib/sitemap";
 
 export const revalidate = 3600;
 
-export async function GET() {
-  return new NextResponse(renderSitemapXml(getPagesSitemapEntries()), {
-    headers: SITEMAP_XML_HEADERS,
-  });
+export async function GET(request: Request) {
+  return new NextResponse(
+    renderSitemapXml(
+      getPagesSitemapEntries(new Date(), sitemapOriginFromRequest(request)),
+    ),
+    {
+      headers: SITEMAP_XML_HEADERS,
+    },
+  );
 }

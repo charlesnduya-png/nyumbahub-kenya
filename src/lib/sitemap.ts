@@ -1,4 +1,5 @@
 import { APP_URL } from "@/lib/seo";
+import { originForHost } from "@/lib/site-domains";
 import { ALL_SEO_LANDINGS } from "@/lib/seo-locations";
 import { getAllPropertyForSalePlaces } from "@/lib/property-for-sale";
 import { prisma } from "@/lib/prisma";
@@ -18,10 +19,19 @@ export type SitemapEntry = {
   priority: number;
 };
 
-function loc(path = "/"): string {
-  if (!path || path === "/") return `${APP_URL}/`;
+export function sitemapOriginFromRequest(request: Request): string {
+  const host =
+    request.headers.get("x-forwarded-host")?.split(",")[0]?.trim() ||
+    request.headers.get("host") ||
+    new URL(request.url).host;
+  return originForHost(host);
+}
+
+function loc(path = "/", origin = APP_URL): string {
+  const base = origin.replace(/\/$/, "");
+  if (!path || path === "/") return `${base}/`;
   const suffix = path.startsWith("/") ? path : `/${path}`;
-  return `${APP_URL}${suffix}`;
+  return `${base}${suffix}`;
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
@@ -49,83 +59,87 @@ function uniqueEntries(entries: SitemapEntry[]) {
   });
 }
 
-export function getPagesSitemapEntries(now = new Date()): SitemapEntry[] {
+export function getPagesSitemapEntries(
+  now = new Date(),
+  origin = APP_URL,
+): SitemapEntry[] {
+  const href = (path: string) => loc(path, origin);
   return [
-    { url: loc("/"), lastModified: now, changeFrequency: "daily", priority: 1 },
+    { url: href("/"), lastModified: now, changeFrequency: "daily", priority: 1 },
     {
-      url: loc("/africa"),
+      url: href("/africa"),
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.97,
     },
     {
-      url: loc("/property-for-sale"),
+      url: href("/property-for-sale"),
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.96,
     },
     {
-      url: loc("/properties"),
+      url: href("/properties"),
       lastModified: now,
       changeFrequency: "hourly",
       priority: 0.95,
     },
     {
-      url: loc("/rent"),
+      url: href("/rent"),
       lastModified: now,
       changeFrequency: "hourly",
       priority: 0.9,
     },
     {
-      url: loc("/bnb"),
+      url: href("/bnb"),
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.85,
     },
     {
-      url: loc("/hotels"),
+      url: href("/hotels"),
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.85,
     },
     {
-      url: loc("/agents"),
+      url: href("/agents"),
       lastModified: now,
       changeFrequency: "weekly",
       priority: 0.8,
     },
     {
-      url: loc("/blog"),
+      url: href("/blog"),
       lastModified: now,
       changeFrequency: "weekly",
       priority: 0.7,
     },
     {
-      url: loc("/about"),
+      url: href("/about"),
       lastModified: now,
       changeFrequency: "monthly",
       priority: 0.6,
     },
     {
-      url: loc("/pricing"),
+      url: href("/pricing"),
       lastModified: now,
       changeFrequency: "monthly",
       priority: 0.6,
     },
     {
-      url: loc("/privacy"),
+      url: href("/privacy"),
       lastModified: now,
       changeFrequency: "yearly",
       priority: 0.3,
     },
     {
-      url: loc("/terms"),
+      url: href("/terms"),
       lastModified: now,
       changeFrequency: "yearly",
       priority: 0.3,
     },
     {
-      url: loc("/cookies"),
+      url: href("/cookies"),
       lastModified: now,
       changeFrequency: "yearly",
       priority: 0.3,
@@ -134,34 +148,38 @@ export function getPagesSitemapEntries(now = new Date()): SitemapEntry[] {
 }
 
 /** All African countries and cities: sale, rent, and BnB landing pages. */
-export function getAfricaSitemapEntries(now = new Date()): SitemapEntry[] {
+export function getAfricaSitemapEntries(
+  now = new Date(),
+  origin = APP_URL,
+): SitemapEntry[] {
+  const href = (path: string) => loc(path, origin);
   const hubs: SitemapEntry[] = [
     {
-      url: loc("/africa"),
+      url: href("/africa"),
       lastModified: now,
       changeFrequency: "daily",
       priority: 1,
     },
     {
-      url: loc("/property-for-sale"),
+      url: href("/property-for-sale"),
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.96,
     },
     {
-      url: loc("/rent"),
+      url: href("/rent"),
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.94,
     },
     {
-      url: loc("/bnb"),
+      url: href("/bnb"),
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.92,
     },
     {
-      url: loc("/hotels"),
+      url: href("/hotels"),
       lastModified: now,
       changeFrequency: "daily",
       priority: 0.91,
@@ -174,19 +192,19 @@ export function getAfricaSitemapEntries(now = new Date()): SitemapEntry[] {
         place.kind === "county" || place.kind === "country";
       return [
         {
-          url: loc(`/property-for-sale/${place.slug}`),
+          url: href(`/property-for-sale/${place.slug}`),
           lastModified: now,
           changeFrequency: "daily" as const,
           priority: isCountryOrCounty ? 0.9 : 0.82,
         },
         {
-          url: loc(`/rent/${place.slug}`),
+          url: href(`/rent/${place.slug}`),
           lastModified: now,
           changeFrequency: "daily" as const,
           priority: isCountryOrCounty ? 0.86 : 0.8,
         },
         {
-          url: loc(`/bnb/${place.slug}`),
+          url: href(`/bnb/${place.slug}`),
           lastModified: now,
           changeFrequency: "daily" as const,
           priority: isCountryOrCounty ? 0.84 : 0.78,
@@ -196,7 +214,7 @@ export function getAfricaSitemapEntries(now = new Date()): SitemapEntry[] {
   );
 
   const extraLandings: SitemapEntry[] = ALL_SEO_LANDINGS.map((landing) => ({
-    url: loc(landing.path),
+    url: href(landing.path),
     lastModified: now,
     changeFrequency: "daily" as const,
     priority: landing.priority ?? 0.75,
@@ -205,10 +223,24 @@ export function getAfricaSitemapEntries(now = new Date()): SitemapEntry[] {
   return uniqueEntries([...hubs, ...placeRoutes, ...extraLandings]);
 }
 
+function relabelSitemapEntries(
+  entries: SitemapEntry[],
+  origin: string,
+): SitemapEntry[] {
+  if (!origin || origin === APP_URL) return entries;
+  return entries.map((entry) => ({
+    ...entry,
+    url: entry.url.startsWith(APP_URL)
+      ? `${origin}${entry.url.slice(APP_URL.length)}`
+      : entry.url,
+  }));
+}
+
 export async function getListingsSitemapEntries(
   _now = new Date(),
+  origin = APP_URL,
 ): Promise<SitemapEntry[]> {
-  return unstable_cache(
+  const entries = await unstable_cache(
     async () => {
       try {
         const [properties, posts, agents] = await withTimeout(
@@ -268,14 +300,18 @@ export async function getListingsSitemapEntries(
     ["listings-sitemap"],
     { revalidate: 3600, tags: ["active-listings"] },
   )();
+
+  return relabelSitemapEntries(entries, origin);
 }
 
-export async function getSitemapEntries(): Promise<SitemapEntry[]> {
+export async function getSitemapEntries(
+  origin = APP_URL,
+): Promise<SitemapEntry[]> {
   const now = new Date();
-  const listings = await getListingsSitemapEntries(now);
+  const listings = await getListingsSitemapEntries(now, origin);
   return uniqueEntries([
-    ...getPagesSitemapEntries(now),
-    ...getAfricaSitemapEntries(now),
+    ...getPagesSitemapEntries(now, origin),
+    ...getAfricaSitemapEntries(now, origin),
     ...listings,
   ]);
 }
@@ -286,10 +322,10 @@ export const SITEMAP_INDEX_PATHS = [
   "/sitemap-listings.xml",
 ] as const;
 
-export function renderSitemapIndexXml(now = new Date()) {
+export function renderSitemapIndexXml(now = new Date(), origin = APP_URL) {
   const body = SITEMAP_INDEX_PATHS.map(
     (path) => `  <sitemap>
-    <loc>${escapeXml(loc(path))}</loc>
+    <loc>${escapeXml(loc(path, origin))}</loc>
     <lastmod>${now.toISOString()}</lastmod>
   </sitemap>`,
   ).join("\n");

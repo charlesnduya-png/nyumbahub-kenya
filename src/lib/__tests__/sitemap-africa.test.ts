@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { AFRICA_COUNTRY_MARKETS, AFRICA_CITY_MARKETS } from "@/lib/africa-markets";
-import { getAfricaSitemapEntries, renderSitemapXml } from "@/lib/sitemap";
+import {
+  getAfricaSitemapEntries,
+  renderSitemapXml,
+  sitemapOriginFromRequest,
+} from "@/lib/sitemap";
 import { getPropertyForSalePlace } from "@/lib/property-for-sale";
 
 describe("Africa sitemap for Google Search Console", () => {
@@ -65,5 +69,26 @@ describe("Africa sitemap for Google Search Console", () => {
     expect(xml).toContain("<urlset");
     expect(xml).not.toContain("<sitemapindex");
     expect(xml).toContain("https://yourhome.co.ke/property-for-sale/lagos");
+  });
+
+  it("can emit yourhome.africa URLs for the Africa Search Console property", () => {
+    const xml = renderSitemapXml(
+      getAfricaSitemapEntries(new Date(), "https://yourhome.africa"),
+    );
+    expect(xml).toContain("https://yourhome.africa/property-for-sale/lagos");
+    expect(xml).not.toContain("https://yourhome.co.ke/property-for-sale/lagos");
+  });
+
+  it("maps Search Console hosts to the matching sitemap origin", () => {
+    expect(
+      sitemapOriginFromRequest(
+        new Request("https://yourhome.africa/sitemap.xml"),
+      ),
+    ).toBe("https://yourhome.africa");
+    expect(
+      sitemapOriginFromRequest(
+        new Request("https://www.yourhome.africa/sitemap.xml"),
+      ),
+    ).toBe("https://yourhome.africa");
   });
 });
