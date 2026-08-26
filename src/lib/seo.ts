@@ -3,8 +3,10 @@ import { iso2ForCountry } from "@/lib/african-countries";
 import { formatPrice } from "@/lib/utils";
 import {
   AFRICA_SITE_HOST,
+  CANONICAL_SITE_HOST,
   CANONICAL_SITE_URL,
   PRIMARY_SITE_HOST,
+  PRIMARY_SITE_URL,
   SITE_DOMAIN_LABEL,
   SITE_ORIGIN_URLS,
   canonicalUrl,
@@ -24,10 +26,9 @@ function resolvePublicAppUrl() {
   try {
     const parsed = new URL(raw);
     const host = normalizeSiteHost(parsed.hostname);
-    // Both production hosts are the same product. Rank only .co.ke.
-    if (host === PRIMARY_SITE_HOST || host === AFRICA_SITE_HOST) {
-      return CANONICAL_SITE_URL;
-    }
+    // Africa hostnames rank on www; .co.ke stays available for M-Pesa callbacks.
+    if (host === AFRICA_SITE_HOST) return CANONICAL_SITE_URL;
+    if (host === PRIMARY_SITE_HOST) return PRIMARY_SITE_URL;
     return `${parsed.protocol}//${parsed.host}`.replace(/\/$/, "");
   } catch {
     return CANONICAL_SITE_URL;
@@ -46,8 +47,9 @@ const APP_DESCRIPTION =
 /** Core + long-tail Africa real estate keywords for metadata. */
 const SEO_KEYWORDS = [
   "Your Home Kenya",
-  PRIMARY_SITE_HOST,
+  CANONICAL_SITE_HOST,
   AFRICA_SITE_HOST,
+  PRIMARY_SITE_HOST,
   "Africa real estate",
   "best real estate Africa",
   "property for sale Africa",
@@ -290,8 +292,9 @@ export function organizationJsonLd() {
     name: APP_NAME,
     alternateName: [
       "Your Home Kenya",
-      PRIMARY_SITE_HOST,
+      CANONICAL_SITE_HOST,
       AFRICA_SITE_HOST,
+      PRIMARY_SITE_HOST,
       "YourHome Kenya",
     ],
     url: absoluteUrl("/"),
@@ -336,7 +339,7 @@ export function websiteJsonLd() {
     "@type": "WebSite",
     "@id": `${CANONICAL_SITE_URL}/#website`,
     name: APP_NAME,
-    alternateName: [PRIMARY_SITE_HOST, AFRICA_SITE_HOST],
+    alternateName: [CANONICAL_SITE_HOST, AFRICA_SITE_HOST, PRIMARY_SITE_HOST],
     url: absoluteUrl("/"),
     description: APP_DESCRIPTION,
     inLanguage: ["en-KE", "en"],

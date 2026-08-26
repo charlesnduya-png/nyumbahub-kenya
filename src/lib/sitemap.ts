@@ -1,9 +1,9 @@
 import { ALL_SEO_LANDINGS } from "@/lib/seo-locations";
 import {
-  AFRICA_SITE_HOST,
   AFRICA_SITE_URL,
   CANONICAL_SITE_URL,
   PRIMARY_SITE_HOST,
+  PRIMARY_SITE_URL,
   canonicalOrigin,
   canonicalUrl,
 } from "@/lib/site-domains";
@@ -226,10 +226,11 @@ export function getAfricaSitemapEntries(
 }
 
 function rewriteToCanonicalSitemapUrl(url: string): string {
+  if (url.startsWith(CANONICAL_SITE_URL)) return url;
   return url
-    .replaceAll(AFRICA_SITE_URL, CANONICAL_SITE_URL)
-    .replaceAll(`https://www.${AFRICA_SITE_HOST}`, CANONICAL_SITE_URL)
-    .replaceAll(`https://www.${PRIMARY_SITE_HOST}`, CANONICAL_SITE_URL);
+    .replaceAll(`https://www.${PRIMARY_SITE_HOST}`, CANONICAL_SITE_URL)
+    .replaceAll(PRIMARY_SITE_URL, CANONICAL_SITE_URL)
+    .replaceAll(AFRICA_SITE_URL, CANONICAL_SITE_URL);
 }
 
 function relabelSitemapEntries(

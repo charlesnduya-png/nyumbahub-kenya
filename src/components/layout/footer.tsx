@@ -7,6 +7,7 @@ import {
   featuredAfricaCountrySlugs,
 } from "@/lib/africa-markets";
 import { APP_NAME } from "@/lib/seo";
+import { CANONICAL_SITE_URL, PRIMARY_SITE_URL } from "@/lib/site-domains";
 import {
   SEO_BUY_AREA_LANDINGS,
   SEO_COUNTY_LANDINGS,
@@ -212,7 +213,17 @@ export function Footer() {
 
         <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-border pt-8 sm:flex-row">
           <p className="text-sm text-muted-foreground">
-            &copy; {year} {APP_NAME}. All rights reserved.
+            &copy; {year} {APP_NAME}. All rights reserved.{" "}
+            <a
+              href={PRIMARY_SITE_URL}
+              className="hover:text-primary"
+            >
+              yourhome.co.ke
+            </a>
+            {" · "}
+            <a href={CANONICAL_SITE_URL} className="hover:text-primary">
+              www.yourhome.africa
+            </a>
           </p>
           <p
             className="text-xs text-muted-foreground"

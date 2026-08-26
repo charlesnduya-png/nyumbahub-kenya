@@ -11,6 +11,12 @@ const nextConfig: NextConfig = {
         destination: "https://yourhome.co.ke/:path*",
         permanent: true,
       },
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "yourhome.africa" }],
+        destination: "https://www.yourhome.africa/:path*",
+        permanent: true,
+      },
     ];
   },
   async headers() {

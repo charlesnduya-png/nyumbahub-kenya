@@ -9,7 +9,7 @@ import {
 import { CANONICAL_SITE_URL } from "@/lib/site-domains";
 
 describe("canonical SEO origin", () => {
-  it("points page metadata at yourhome.co.ke even for africa paths", () => {
+  it("points page metadata at www.yourhome.africa even for other hosts", () => {
     const metadata = buildPageMetadata({
       title: "Lagos rentals",
       description: "Apartments for rent in Lagos.",
@@ -17,9 +17,11 @@ describe("canonical SEO origin", () => {
     });
 
     expect(metadata.alternates?.canonical).toBe(
-      "https://yourhome.co.ke/rent/lagos",
+      "https://www.yourhome.africa/rent/lagos",
     );
-    expect(metadata.openGraph?.url).toBe("https://yourhome.co.ke/rent/lagos");
+    expect(metadata.openGraph?.url).toBe(
+      "https://www.yourhome.africa/rent/lagos",
+    );
   });
 
   it("keeps listing metadata on the canonical host", () => {
@@ -37,7 +39,7 @@ describe("canonical SEO origin", () => {
     });
 
     expect(metadata.alternates?.canonical).toBe(
-      "https://yourhome.co.ke/properties/westlands-apartment",
+      "https://www.yourhome.africa/properties/westlands-apartment",
     );
   });
 
@@ -49,6 +51,7 @@ describe("canonical SEO origin", () => {
     );
     expect(websiteJsonLd().url).toBe(`${CANONICAL_SITE_URL}/`);
     expect(organizationJsonLd().sameAs).toEqual([
+      "https://www.yourhome.africa",
       "https://yourhome.co.ke",
       "https://yourhome.africa",
     ]);
