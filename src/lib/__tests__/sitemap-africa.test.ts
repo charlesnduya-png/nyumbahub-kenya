@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { AFRICA_COUNTRY_MARKETS, AFRICA_CITY_MARKETS } from "@/lib/africa-markets";
 import {
   getAfricaSitemapEntries,
+  renderSitemapIndexXml,
   renderSitemapXml,
   sitemapOriginFromRequest,
 } from "@/lib/sitemap";
@@ -77,6 +78,21 @@ describe("Africa sitemap for Google Search Console", () => {
     );
     expect(xml).toContain("https://yourhome.africa/property-for-sale/lagos");
     expect(xml).not.toContain("https://yourhome.co.ke/property-for-sale/lagos");
+  });
+
+  it("omits query-string listing filters that Search Console flags", () => {
+    expect(urls.some((url) => url.includes("?"))).toBe(false);
+  });
+
+  it("renders a sitemap index Google can fetch for the whole site", () => {
+    const xml = renderSitemapIndexXml(
+      new Date(),
+      "https://yourhome.africa",
+    );
+    expect(xml).toContain("<sitemapindex");
+    expect(xml).toContain("https://yourhome.africa/sitemap-pages.xml");
+    expect(xml).toContain("https://yourhome.africa/sitemap-africa.xml");
+    expect(xml).toContain("https://yourhome.africa/sitemap-listings.xml");
   });
 
   it("maps Search Console hosts to the matching sitemap origin", () => {

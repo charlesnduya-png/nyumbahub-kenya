@@ -213,7 +213,9 @@ export function getAfricaSitemapEntries(
     },
   );
 
-  const extraLandings: SitemapEntry[] = ALL_SEO_LANDINGS.map((landing) => ({
+  const extraLandings: SitemapEntry[] = ALL_SEO_LANDINGS.filter(
+    (landing) => !landing.path.includes("?"),
+  ).map((landing) => ({
     url: href(landing.path),
     lastModified: now,
     changeFrequency: "daily" as const,
