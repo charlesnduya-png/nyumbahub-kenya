@@ -1,8 +1,16 @@
 import { z } from "zod";
 
 import { MAX_LISTING_IMAGES, MAX_LISTING_VIDEOS } from "@/lib/listing-media";
-import { listingCurrencySchema } from "@/lib/currencies";
-import { africanCountrySchema } from "@/lib/african-countries";
+import {
+  DEFAULT_LISTING_CURRENCY,
+  LISTING_CURRENCY_CODES,
+  listingCurrencySchema,
+} from "@/lib/currencies";
+import {
+  AFRICAN_COUNTRY_NAMES,
+  DEFAULT_LISTING_COUNTRY,
+  africanCountrySchema,
+} from "@/lib/african-countries";
 import { LISTING_FEATURE_SLUGS } from "@/lib/listing-features";
 
 export const listingTypeSchema = z.enum([
@@ -38,8 +46,20 @@ function emptyToNull(value: unknown) {
   return value;
 }
 
+/** Like emptyToNull, but leave missing keys undefined so PATCH does not overwrite them. */
+function emptyToNullKeepMissing(value: unknown) {
+  if (value === undefined) return undefined;
+  if (value === "" || value === null) return null;
+  return value;
+}
+
 const optionalInt = z.preprocess(
   emptyToNull,
+  z.coerce.number().int().min(0).max(50).nullable().optional(),
+);
+
+const optionalIntPatch = z.preprocess(
+  emptyToNullKeepMissing,
   z.coerce.number().int().min(0).max(50).nullable().optional(),
 );
 
@@ -48,8 +68,24 @@ const optionalPositive = z.preprocess(
   z.coerce.number().positive().nullable().optional(),
 );
 
+const optionalPositivePatch = z.preprocess(
+  emptyToNullKeepMissing,
+  z.coerce.number().positive().nullable().optional(),
+);
+
 const optionalYear = z.preprocess(
   emptyToNull,
+  z.coerce
+    .number()
+    .int()
+    .min(1800)
+    .max(new Date().getFullYear() + 2)
+    .nullable()
+    .optional(),
+);
+
+const optionalYearPatch = z.preprocess(
+  emptyToNullKeepMissing,
   z.coerce
     .number()
     .int()
@@ -65,6 +101,12 @@ const optionalCoord = (min: number, max: number) =>
     z.coerce.number().min(min).max(max).nullable().optional(),
   );
 
+const optionalCoordPatch = (min: number, max: number) =>
+  z.preprocess(
+    emptyToNullKeepMissing,
+    z.coerce.number().min(min).max(max).nullable().optional(),
+  );
+
 const amenityFlagsSchema = z.object({
   parking: z.boolean().default(false),
   parkingSpaces: z.coerce.number().int().min(0).max(50).optional(),
@@ -72,6 +114,29 @@ const amenityFlagsSchema = z.object({
   furnished: z.boolean().default(false),
   security: z.boolean().default(false),
 });
+
+const propertyImageInputSchema = z
+  .object({
+    url: z.string().min(1, "Image URL is required").optional(),
+    publicId: z.string().min(1).optional().nullable(),
+    alt: z.string().max(200).optional().nullable(),
+    isPrimary: z.boolean().optional(),
+    order: z.coerce.number().int().min(0).optional(),
+  })
+  .refine((img) => Boolean(img.url?.trim() || img.publicId?.trim()), {
+    message: "Each photo needs an upload reference",
+  });
+
+const propertyVideoInputSchema = z
+  .object({
+    url: z.string().min(1, "Video URL is required").optional(),
+    publicId: z.string().min(1).optional().nullable(),
+    title: z.string().max(120).optional().nullable(),
+    thumbnail: z.string().optional().nullable(),
+  })
+  .refine((video) => Boolean(video.url?.trim() || video.publicId?.trim()), {
+    message: "Each video needs a link",
+  });
 
 const propertyBaseSchema = z.object({
   title: z
@@ -128,35 +193,12 @@ const propertyBaseSchema = z.object({
   latitude: optionalCoord(-90, 90),
   longitude: optionalCoord(-180, 180),
   images: z
-    .array(
-      z
-        .object({
-          url: z.string().min(1, "Image URL is required").optional(),
-          publicId: z.string().min(1).optional().nullable(),
-          alt: z.string().max(200).optional().nullable(),
-          isPrimary: z.boolean().optional(),
-          order: z.coerce.number().int().min(0).optional(),
-        })
-        .refine((img) => Boolean(img.url?.trim() || img.publicId?.trim()), {
-          message: "Each photo needs an upload reference",
-        }),
-    )
+    .array(propertyImageInputSchema)
     .max(MAX_LISTING_IMAGES, `You can upload up to ${MAX_LISTING_IMAGES} photos`)
     .optional()
     .default([]),
   videos: z
-    .array(
-      z
-        .object({
-          url: z.string().min(1, "Video URL is required").optional(),
-          publicId: z.string().min(1).optional().nullable(),
-          title: z.string().max(120).optional().nullable(),
-          thumbnail: z.string().optional().nullable(),
-        })
-        .refine((video) => Boolean(video.url?.trim() || video.publicId?.trim()), {
-          message: "Each video needs a link",
-        }),
-    )
+    .array(propertyVideoInputSchema)
     .max(MAX_LISTING_VIDEOS, `You can upload up to ${MAX_LISTING_VIDEOS} videos`)
     .optional()
     .default([]),
@@ -189,10 +231,50 @@ export const createPropertySchema = propertyBaseSchema.superRefine(
   },
 );
 
-export const updatePropertySchema = propertyBaseSchema
-  .partial()
-  .extend({
+/**
+ * PATCH must not invent missing fields. Zod `.partial()` keeps `.default()`,
+ * which was wiping photos/features/parking on every partial update.
+ */
+export const updatePropertySchema = z
+  .object({
     id: z.string().min(1, "Invalid property ID"),
+    title: propertyBaseSchema.shape.title.optional(),
+    description: propertyBaseSchema.shape.description.optional(),
+    listingType: listingTypeSchema.optional(),
+    propertyType: propertyTypeSchema.optional(),
+    price: propertyBaseSchema.shape.price.optional(),
+    currency: z.enum(LISTING_CURRENCY_CODES).optional(),
+    bedrooms: optionalIntPatch,
+    bathrooms: optionalIntPatch,
+    county: propertyBaseSchema.shape.county.optional(),
+    country: z.enum(AFRICAN_COUNTRY_NAMES).optional(),
+    town: propertyBaseSchema.shape.town.optional(),
+    estate: propertyBaseSchema.shape.estate.optional(),
+    parking: z.boolean().optional(),
+    parkingSpaces: z.coerce.number().int().min(0).max(50).optional(),
+    swimmingPool: z.boolean().optional(),
+    furnished: z.boolean().optional(),
+    security: z.boolean().optional(),
+    features: z.array(z.enum(LISTING_FEATURE_SLUGS)).max(60).optional(),
+    floorArea: optionalPositivePatch,
+    plotSize: optionalPositivePatch,
+    yearBuilt: optionalYearPatch,
+    address: propertyBaseSchema.shape.address.optional(),
+    latitude: optionalCoordPatch(-90, 90),
+    longitude: optionalCoordPatch(-180, 180),
+    images: z
+      .array(propertyImageInputSchema)
+      .max(MAX_LISTING_IMAGES, `You can upload up to ${MAX_LISTING_IMAGES} photos`)
+      .optional(),
+    videos: z
+      .array(propertyVideoInputSchema)
+      .max(MAX_LISTING_VIDEOS, `You can upload up to ${MAX_LISTING_VIDEOS} videos`)
+      .optional(),
+    rentalRoomsCount: z.preprocess(
+      emptyToNullKeepMissing,
+      z.coerce.number().int().min(1).max(40).nullable().optional(),
+    ),
+    rentalRooms: propertyBaseSchema.shape.rentalRooms.optional(),
     status: z
       .enum([
         "DRAFT",
@@ -236,7 +318,7 @@ export const propertySearchSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
-export { amenityFlagsSchema };
+export { amenityFlagsSchema, DEFAULT_LISTING_COUNTRY, DEFAULT_LISTING_CURRENCY };
 
 export type CreatePropertyInput = z.infer<typeof createPropertySchema>;
 export type UpdatePropertyInput = z.infer<typeof updatePropertySchema>;

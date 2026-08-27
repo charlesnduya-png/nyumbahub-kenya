@@ -7,6 +7,7 @@ import { resolveListingImagesForStorage, resolveListingVideosForStorage } from "
 import { resolveProfessionalActingContext } from "@/lib/account-team";
 import { flagsFromListingFeatures } from "@/lib/listing-features";
 import { syncPropertyListingFeatures } from "@/lib/listing-features-db";
+import { revalidatePropertySlug } from "@/lib/properties";
 import {
   createPropertySchema,
   propertySearchSchema,
@@ -313,6 +314,8 @@ export async function POST(request: Request) {
     });
 
     await syncPropertyListingFeatures(prisma, property.id, data.features);
+
+    revalidatePropertySlug(property.slug);
 
     return NextResponse.json(
       {

@@ -5,6 +5,7 @@ import { resolveListingImagesForStorage, resolveListingVideosForStorage } from "
 import { resolveProfessionalActingContext } from "@/lib/account-team";
 import { flagsFromListingFeatures } from "@/lib/listing-features";
 import { syncPropertyListingFeatures } from "@/lib/listing-features-db";
+import { revalidatePropertySlug } from "@/lib/properties";
 import { updatePropertySchema } from "@/lib/validations/property";
 
 interface RouteParams {
@@ -80,11 +81,13 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     const parsed = updatePropertySchema.safeParse({ ...body, id });
 
     if (!parsed.success) {
+      const flat = parsed.error.flatten();
+      const firstFieldError = Object.values(flat.fieldErrors).flat()[0];
       return NextResponse.json(
         {
           success: false,
-          error: "Validation failed",
-          details: parsed.error.flatten(),
+          error: firstFieldError ?? flat.formErrors[0] ?? "Validation failed",
+          details: flat,
         },
         { status: 400 },
       );
@@ -280,8 +283,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       }
     }
 
+    revalidatePropertySlug(property.slug);
+    if (existing.slug !== property.slug) {
+      revalidatePropertySlug(existing.slug);
+    }
+
     return NextResponse.json({ success: true, data: property });
   } catch (error) {
+    console.error("Update property failed:", error);
     return NextResponse.json(
       {
         success: false,
@@ -329,6 +338,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
     }
 
     await prisma.property.delete({ where: { id } });
+    revalidatePropertySlug(existing.slug);
     return NextResponse.json({ success: true, data: { id } });
   } catch {
     return NextResponse.json(
