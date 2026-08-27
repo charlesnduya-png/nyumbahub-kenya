@@ -32,6 +32,14 @@ export async function getMediaAssetByPublicId(publicId: string) {
   });
 }
 
+export async function mediaAssetExists(publicId: string) {
+  const row = await prisma.mediaAsset.findUnique({
+    where: { publicId },
+    select: { publicId: true },
+  });
+  return Boolean(row);
+}
+
 function publicIdFromServePath(url: string) {
   const prefix = "/api/media/";
   if (!url.startsWith(prefix)) return null;
@@ -56,8 +64,8 @@ export async function resolveListingImageForStorage(input: {
     null;
 
   if (publicId) {
-    const asset = await getMediaAssetByPublicId(publicId);
-    if (asset) {
+    // Only check existence — never load MediaAsset.url (can be a multi‑MB data URL).
+    if (await mediaAssetExists(publicId)) {
       return {
         url: mediaAssetServePath(publicId),
         publicId,

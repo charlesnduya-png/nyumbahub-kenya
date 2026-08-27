@@ -175,104 +175,144 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       );
     }
 
-    const property = await prisma.$transaction(async (tx) => {
-      if (images !== undefined) {
-        await tx.propertyImage.deleteMany({ where: { propertyId: id } });
+    // Resolve media outside the DB transaction. MediaAsset lookups can exceed
+    // Prisma's default 5s interactive transaction timeout on Neon.
+    const resolvedImages =
+      images === undefined
+        ? null
+        : images.length > 0
+          ? await resolveListingImagesForStorage(images)
+          : [];
+    const resolvedVideos =
+      videos === undefined
+        ? null
+        : videos.length > 0
+          ? await resolveListingVideosForStorage(videos)
+          : [];
 
-        if (images.length > 0) {
-          const resolvedImages = await resolveListingImagesForStorage(images);
-          const hasPrimary = resolvedImages.some((img) => img.isPrimary);
-          await tx.propertyImage.createMany({
-            data: resolvedImages.map((img, index) => ({
-              propertyId: id,
-              url: img.url,
-              publicId: img.publicId ?? null,
-              alt: img.alt ?? existing.title,
-              order: img.order ?? index,
-              isPrimary: hasPrimary ? Boolean(img.isPrimary) : index === 0,
-            })),
-          });
-        }
-      }
-
-      if (videos !== undefined) {
-        await tx.propertyVideo.deleteMany({ where: { propertyId: id } });
-
-        if (videos.length > 0) {
-          const resolvedVideos = await resolveListingVideosForStorage(videos);
-          await tx.propertyVideo.createMany({
-            data: resolvedVideos.map((video) => ({
-              propertyId: id,
-              url: video.url,
-              publicId: video.publicId ?? null,
-              title: video.title,
-              thumbnail: video.thumbnail,
-            })),
-          });
-        }
-      }
-
-      const nextListingType = updateData.listingType ?? existing.listingType;
-      const shouldReplaceRooms =
-        nextListingType === "RENT" &&
-        (rentalRooms !== undefined || rentalRoomsCount !== undefined);
-
-      if (shouldReplaceRooms) {
-        const rentedCount = await tx.propertyRentalRoom.count({
-          where: { propertyId: id, status: "RENTED" },
-        });
-        if (rentedCount > 0) {
-          throw new Error(
-            "Cannot change room inventory while some rooms are already rented",
+    if (resolvedImages) {
+      for (const img of resolvedImages) {
+        if (!img.url?.trim()) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: "One or more photos could not be saved. Re-upload and try again.",
+            },
+            { status: 400 },
           );
         }
-
-        await tx.propertyRentalRoom.deleteMany({ where: { propertyId: id } });
-
-        const roomRows =
-          rentalRooms && rentalRooms.length > 0
-            ? rentalRooms.map((room, index) => ({
-                propertyId: id,
-                label: room.label,
-                floor: room.floor ?? null,
-                price: room.price ?? null,
-                sortOrder: index,
-              }))
-            : rentalRoomsCount && rentalRoomsCount > 1
-              ? Array.from({ length: rentalRoomsCount }, (_, index) => ({
-                  propertyId: id,
-                  label: `Room ${index + 1}`,
-                  floor: null as string | null,
-                  price: null as number | null,
-                  sortOrder: index,
-                }))
-              : [];
-
-        if (roomRows.length > 0) {
-          await tx.propertyRentalRoom.createMany({ data: roomRows });
+        if (img.url.startsWith("data:")) {
+          return NextResponse.json(
+            {
+              success: false,
+              error:
+                "A photo is still a temporary upload. Re-upload that photo and save again.",
+            },
+            { status: 400 },
+          );
         }
       }
+    }
 
-      if (features !== undefined) {
-        await syncPropertyListingFeatures(tx, id, features);
-      }
+    const property = await prisma.$transaction(
+      async (tx) => {
+        if (resolvedImages !== null) {
+          await tx.propertyImage.deleteMany({ where: { propertyId: id } });
 
-      return tx.property.update({
-        where: { id },
-        data: {
-          ...updateData,
-          ...(updateData.status === "ACTIVE"
-            ? { publishedAt: new Date(), isVerified: true }
-            : {}),
-        },
-        include: {
-          images: { orderBy: { order: "asc" } },
-          videos: true,
-          rentalRooms: { orderBy: { sortOrder: "asc" } },
-          amenities: { include: { amenity: true } },
-        },
-      });
-    });
+          if (resolvedImages.length > 0) {
+            const hasPrimary = resolvedImages.some((img) => img.isPrimary);
+            await tx.propertyImage.createMany({
+              data: resolvedImages.map((img, index) => ({
+                propertyId: id,
+                url: img.url,
+                publicId: img.publicId ?? null,
+                alt: img.alt ?? existing.title,
+                order: img.order ?? index,
+                isPrimary: hasPrimary ? Boolean(img.isPrimary) : index === 0,
+              })),
+            });
+          }
+        }
+
+        if (resolvedVideos !== null) {
+          await tx.propertyVideo.deleteMany({ where: { propertyId: id } });
+
+          if (resolvedVideos.length > 0) {
+            await tx.propertyVideo.createMany({
+              data: resolvedVideos.map((video) => ({
+                propertyId: id,
+                url: video.url,
+                publicId: video.publicId ?? null,
+                title: video.title ?? null,
+                thumbnail: video.thumbnail ?? null,
+              })),
+            });
+          }
+        }
+
+        const nextListingType = updateData.listingType ?? existing.listingType;
+        const shouldReplaceRooms =
+          nextListingType === "RENT" &&
+          (rentalRooms !== undefined || rentalRoomsCount !== undefined);
+
+        if (shouldReplaceRooms) {
+          const rentedCount = await tx.propertyRentalRoom.count({
+            where: { propertyId: id, status: "RENTED" },
+          });
+          if (rentedCount > 0) {
+            throw new Error(
+              "Cannot change room inventory while some rooms are already rented",
+            );
+          }
+
+          await tx.propertyRentalRoom.deleteMany({ where: { propertyId: id } });
+
+          const roomRows =
+            rentalRooms && rentalRooms.length > 0
+              ? rentalRooms.map((room, index) => ({
+                  propertyId: id,
+                  label: room.label,
+                  floor: room.floor ?? null,
+                  price: room.price ?? null,
+                  sortOrder: index,
+                }))
+              : rentalRoomsCount && rentalRoomsCount > 1
+                ? Array.from({ length: rentalRoomsCount }, (_, index) => ({
+                    propertyId: id,
+                    label: `Room ${index + 1}`,
+                    floor: null as string | null,
+                    price: null as number | null,
+                    sortOrder: index,
+                  }))
+                : [];
+
+          if (roomRows.length > 0) {
+            await tx.propertyRentalRoom.createMany({ data: roomRows });
+          }
+        }
+
+        if (features !== undefined) {
+          await syncPropertyListingFeatures(tx, id, features);
+        }
+
+        return tx.property.update({
+          where: { id },
+          data: {
+            ...updateData,
+            ...(updateData.status === "ACTIVE"
+              ? { publishedAt: new Date(), isVerified: true }
+              : {}),
+          },
+          include: {
+            images: { orderBy: { order: "asc" } },
+            videos: true,
+            rentalRooms: { orderBy: { sortOrder: "asc" } },
+            amenities: { include: { amenity: true } },
+          },
+        });
+      },
+      { timeout: 20000, maxWait: 10000 },
+    );
 
     if (property.status === "SOLD") {
       try {
@@ -291,11 +331,19 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     return NextResponse.json({ success: true, data: property });
   } catch (error) {
     console.error("Update property failed:", error);
+    const message =
+      error instanceof Error ? error.message : "Unable to update property";
+    const timedOut =
+      typeof message === "string" &&
+      (message.includes("expired transaction") ||
+        message.includes("Transaction already closed") ||
+        message.includes("P2028"));
     return NextResponse.json(
       {
         success: false,
-        error:
-          error instanceof Error ? error.message : "Unable to update property",
+        error: timedOut
+          ? "Saving took too long. Try again, or save with fewer photos first."
+          : message,
       },
       { status: 500 },
     );
