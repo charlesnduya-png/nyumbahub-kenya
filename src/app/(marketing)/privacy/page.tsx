@@ -5,7 +5,7 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "Privacy Policy",
   description:
-    "How Your Home (yourhome.co.ke) collects, uses, and protects your personal information when you browse, list, or book property in Kenya.",
+    "How Your Home (yourhome.co.ke and yourhome.africa) collects, uses, and protects your personal information when you browse, list, or book property in Kenya.",
   path: "/privacy",
 });
 
@@ -21,7 +21,8 @@ export default function PrivacyPage() {
 
       <div className="prose prose-neutral mt-10 max-w-none dark:prose-invert">
         <p>
-          Your Home (&quot;we&quot;, &quot;us&quot;, yourhome.co.ke) respects
+          Your Home (&quot;we&quot;, &quot;us&quot;, yourhome.co.ke and
+          yourhome.africa) respects
           your privacy. This policy explains what information we collect and how
           we use it when you use our Kenya real estate marketplace.
         </p>

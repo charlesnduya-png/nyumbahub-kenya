@@ -63,7 +63,9 @@ export default function OpenGraphImage() {
             Kenya to Lagos, Accra, Cape Town & beyond
           </div>
         </div>
-        <div style={{ fontSize: 24, opacity: 0.85 }}>yourhome.co.ke</div>
+        <div style={{ fontSize: 24, opacity: 0.85 }}>
+          yourhome.co.ke · yourhome.africa
+        </div>
       </div>
     ),
     { ...size },

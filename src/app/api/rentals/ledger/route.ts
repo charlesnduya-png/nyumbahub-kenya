@@ -7,6 +7,7 @@ import {
   resolveProfessionalActingContext,
 } from "@/lib/account-team";
 import { kenyaYearMonth } from "@/lib/kenya-calendar";
+import { listingSalePrice } from "@/lib/listing-discount";
 import { prisma } from "@/lib/prisma";
 
 const patchSchema = z.object({
@@ -55,9 +56,10 @@ async function ownedRentalProperty(propertyId: string, ownerId: string) {
       OR: [{ ownerId }, ...(agent ? [{ agentId: agent.id }] : [])],
     },
     select: {
-      id: true,
-      price: true,
-      rentalReservations: {
+        id: true,
+        price: true,
+        discountPercent: true,
+        rentalReservations: {
         where: { status: { in: ["APPROVED", "RENTED"] } },
         orderBy: { createdAt: "desc" },
         take: 1,
@@ -110,6 +112,7 @@ export async function GET(request: Request) {
         unitLabel: true,
         unitFloor: true,
         price: true,
+        discountPercent: true,
         currency: true,
         town: true,
         estate: true,
@@ -143,7 +146,8 @@ export async function GET(request: Request) {
       const tenant =
         payment?.tenant ?? house.rentalReservations[0]?.tenant ?? null;
       const paid = payment?.status === "PAID";
-      const amountDue = payment?.amountDue ?? house.price;
+      const amountDue =
+        payment?.amountDue ?? listingSalePrice(house.price, house.discountPercent);
       const amountPaid = paid ? (payment?.amountPaid ?? amountDue) : 0;
 
       return {
@@ -221,10 +225,11 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: false, error: "House not found" }, { status: 404 });
     }
 
+    const due = listingSalePrice(property.price, property.discountPercent);
     const tenantId = property.rentalReservations[0]?.tenantId ?? null;
     const paid = parsed.data.status === "PAID";
     const amountPaid = paid
-      ? parsed.data.amountPaid ?? property.price
+      ? parsed.data.amountPaid ?? due
       : 0;
 
     const payment = await prisma.rentalRentPayment.upsert({
@@ -240,7 +245,7 @@ export async function PATCH(request: Request) {
         tenantId,
         year,
         month,
-        amountDue: property.price,
+        amountDue: due,
         amountPaid,
         status: parsed.data.status,
         paidAt: paid ? new Date() : null,
@@ -249,7 +254,7 @@ export async function PATCH(request: Request) {
       },
       update: {
         tenantId,
-        amountDue: property.price,
+        amountDue: due,
         amountPaid,
         status: parsed.data.status,
         paidAt: paid ? new Date() : null,

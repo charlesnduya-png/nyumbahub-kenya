@@ -8,6 +8,11 @@ import {
 import { canViewWith, resolveProfessionalActingContext } from "@/lib/account-team";
 import { isStayListing, stayLabel } from "@/lib/listing-kinds";
 import { isSiteOwnerEmail } from "@/lib/site-owner";
+import {
+  clampListingDiscountPercent,
+  listingDiscountAmount,
+  listingSalePrice,
+} from "@/lib/listing-discount";
 
 function inboxPathForRole(role: string, peerId: string, propertyId: string) {
   const params = new URLSearchParams({ peer: peerId, property: propertyId });
@@ -187,6 +192,7 @@ export async function POST(request: Request) {
         id: true,
         title: true,
         price: true,
+        discountPercent: true,
         currency: true,
         ownerId: true,
         slug: true,
@@ -210,7 +216,10 @@ export async function POST(request: Request) {
     }
 
     const nights = nightsBetween(checkInDate, checkOutDate);
-    const listAmount = property.price * nights;
+    const hostPct = clampListingDiscountPercent(property.discountPercent);
+    const originalAmount = property.price * nights;
+    const hostDiscountAmount = listingDiscountAmount(property.price, hostPct) * nights;
+    const listAmount = listingSalePrice(property.price, hostPct) * nights;
     const { getCustomerMembership } = await import("@/lib/customer-membership");
     const { applyMemberPrice } = await import("@/lib/membership");
     const membership = await getCustomerMembership(session.user.id);
@@ -231,7 +240,11 @@ export async function POST(request: Request) {
       `Check-out: ${checkOutDate.toLocaleDateString("en-KE")}`,
       `Guests: ${guests}`,
       `Nights: ${nights}`,
-      `List price: ${property.currency} ${listAmount.toLocaleString()}`,
+      `List price: ${property.currency} ${originalAmount.toLocaleString()}`,
+      hostPct > 0
+        ? `Listing discount (${hostPct}%): ${property.currency} ${hostDiscountAmount.toLocaleString()}`
+        : "",
+      `After listing discount: ${property.currency} ${listAmount.toLocaleString()}`,
       `Member save (${memberPrice.discountPercent}% · Level ${membership.level}): ${property.currency} ${memberPrice.discountAmount.toLocaleString()}`,
       `Guest total: ${property.currency} ${totalAmount.toLocaleString()}`,
       `Platform fee (${commissionPct}%): ${property.currency} ${split.commissionAmount.toLocaleString()}`,

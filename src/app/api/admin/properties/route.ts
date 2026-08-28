@@ -38,6 +38,7 @@ export async function GET() {
         title: p.title,
         slug: p.slug,
         price: p.price,
+        discountPercent: p.discountPercent,
         currency: p.currency,
         listingType: p.listingType,
         propertyType: p.propertyType,

@@ -156,6 +156,8 @@ Railway → your web service → **Settings** → **Networking** → **Generate 
 
 Then update `AUTH_URL`, `NEXTAUTH_URL`, and `NEXT_PUBLIC_APP_URL` to that HTTPS URL and redeploy.
 
+On Vercel the app serves **yourhome.co.ke** and **yourhome.africa**. Add both (and `www.yourhome.africa`) in Project → Settings → Domains. Keep `NEXT_PUBLIC_APP_URL` as `https://yourhome.co.ke` for sitemaps and M-Pesa.
+
 ### 5. Seed demo accounts (once)
 
 ```bash

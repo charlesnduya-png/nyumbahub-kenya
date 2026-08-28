@@ -5,7 +5,7 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "Terms of Service",
   description:
-    "Terms of use for Your Home (yourhome.co.ke) — Kenya's marketplace for property listings, rentals, and BnB stays.",
+    "Terms of use for Your Home (yourhome.co.ke and yourhome.africa) — Africa's marketplace for property listings, rentals, and BnB stays.",
   path: "/terms",
 });
 
@@ -21,7 +21,7 @@ export default function TermsPage() {
 
       <div className="prose prose-neutral mt-10 max-w-none dark:prose-invert">
         <p>
-          By using Your Home (yourhome.co.ke), you agree to these terms. If you
+          By using Your Home (yourhome.co.ke or yourhome.africa), you agree to these terms. If you
           do not agree, please do not use the platform.
         </p>
 

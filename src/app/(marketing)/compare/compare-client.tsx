@@ -7,6 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
 import { getListingTypeLabel, getPropertyTypeLabel } from "@/lib/kenya";
+import {
+  clampListingDiscountPercent,
+  listingSalePrice,
+} from "@/lib/listing-discount";
 import type { PropertyCard } from "@/types";
 
 interface ComparePageClientProps {
@@ -70,9 +74,12 @@ export default function ComparePageClient({ compared }: ComparePageClientProps) 
                   {[
                     {
                       label: "Price",
-                      values: compared.map((p) =>
-                        formatPrice(p.price, { currency: p.currency }),
-                      ),
+                      values: compared.map((p) => {
+                        const pct = clampListingDiscountPercent(p.discountPercent);
+                        const sale = listingSalePrice(p.price, pct);
+                        const label = formatPrice(sale, { currency: p.currency });
+                        return pct > 0 ? `${label} (${pct}% off)` : label;
+                      }),
                     },
                     {
                       label: "Type",

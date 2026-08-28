@@ -40,38 +40,62 @@ export function PaymentCheckout({
     );
   }
 
-  async function activateMonthlyIfNeeded(payment: {
+  async function syncAndFulfill(payment: {
     id: string;
     reference?: string;
     productId?: string;
     amount?: number;
     status?: string;
   }) {
-    if (!isMonthlyListingProduct(String(productId))) {
+    let status = payment.status ?? "PENDING";
+
+    if (status !== "COMPLETED") {
+      toast.message("Check your phone to complete M-Pesa payment");
+      for (let attempt = 0; attempt < 40; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        const res = await fetch(`/api/payments/${payment.id}/sync`, {
+          method: "POST",
+        });
+        const json = await res.json();
+        if (!res.ok || !json.success) continue;
+        status = json.data?.status ?? status;
+        if (status === "COMPLETED") break;
+        if (status === "FAILED") {
+          toast.error("Payment failed or was cancelled");
+          return;
+        }
+      }
+    }
+
+    if (status !== "COMPLETED") {
       onPaid?.({
         id: payment.id,
         reference: payment.reference ?? payment.id,
         productId: String(productId),
         amount: payment.amount ?? product!.price,
-        status: payment.status ?? "COMPLETED",
+        status: "PENDING",
       });
       return;
     }
 
-    const res = await fetch("/api/subscriptions/activate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ paymentId: payment.id, productId }),
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      toast.error(json.error ?? "Could not activate monthly plan");
-      return;
+    if (isMonthlyListingProduct(String(productId))) {
+      const res = await fetch("/api/subscriptions/activate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentId: payment.id, productId }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        toast.error(json.error ?? "Could not activate monthly plan");
+        return;
+      }
+      toast.success(
+        json.message ?? "Monthly listing plan active — list unlimited properties",
+      );
+    } else {
+      toast.success("Payment received — your purchase is now active");
     }
 
-    toast.success(
-      json.message ?? "Monthly listing plan active — list unlimited properties",
-    );
     onPaid?.({
       id: payment.id,
       reference: payment.reference ?? payment.id,
@@ -79,6 +103,16 @@ export function PaymentCheckout({
       amount: payment.amount ?? product!.price,
       status: "COMPLETED",
     });
+  }
+
+  async function activateMonthlyIfNeeded(payment: {
+    id: string;
+    reference?: string;
+    productId?: string;
+    amount?: number;
+    status?: string;
+  }) {
+    await syncAndFulfill(payment);
   }
 
   async function startCheckout(method: "MPESA" | "CARD") {

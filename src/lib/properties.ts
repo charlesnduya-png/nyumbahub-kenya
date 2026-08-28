@@ -150,6 +150,7 @@ export function toPropertyCard(property: PropertyWithImages): PropertyCard {
     title: property.title,
     slug: property.slug,
     price: property.price,
+    discountPercent: property.discountPercent ?? 0,
     currency: property.currency,
     listingType: property.listingType,
     propertyType: property.propertyType,

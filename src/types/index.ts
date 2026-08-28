@@ -71,6 +71,8 @@ export interface PropertyCard {
   title: string;
   slug: string;
   price: number;
+  /** Host-set percent off `price`. 0 or omitted means no discount. */
+  discountPercent?: number;
   currency: string;
   listingType: ListingType;
   propertyType: PropertyType;

@@ -8,13 +8,14 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "About Your Home — Africa Real Estate Marketplace",
   description:
-    "Your Home (yourhome.co.ke) is Africa's marketplace for verified homes, land, plots, rentals, and BnB stays. We connect buyers, tenants, sellers, and agents across Kenya and all 54 African countries.",
+    "Your Home (yourhome.co.ke and yourhome.africa) is Africa's marketplace for verified homes, land, plots, rentals, and BnB stays. We connect buyers, tenants, sellers, and agents across Kenya and all 54 African countries.",
   path: "/about",
   keywords: [
     "Your Home Kenya",
     "Africa real estate platform",
     "verified property listings Africa",
     "yourhome.co.ke",
+    "yourhome.africa",
   ],
 });
 

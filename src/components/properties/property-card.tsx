@@ -12,7 +12,7 @@ import { PropertyMediaImage } from "@/components/property/property-media-image";
 import { PropertyVideoPlayer } from "@/components/property/property-video-player";
 import { getListingTypeLabel, getPropertyTypeLabel } from "@/lib/kenya";
 import { isStayListing } from "@/lib/listing-kinds";
-import { formatPrice } from "@/lib/utils";
+import { ListingDiscountBadge, ListingPrice } from "@/components/property/listing-price";
 import type { PropertyCard } from "@/types";
 
 interface PropertyCardItemProps {
@@ -53,6 +53,7 @@ export function PropertyCardItem({ property }: PropertyCardItemProps) {
             {property.isVerified && (
               <Badge className="bg-primary">Verified</Badge>
             )}
+            <ListingDiscountBadge discountPercent={property.discountPercent} />
             {property.videos && property.videos.length > 0 && (
               <Badge variant="outline" className="gap-1">
                 <Video className="h-3.5 w-3.5" />
@@ -77,21 +78,29 @@ export function PropertyCardItem({ property }: PropertyCardItemProps) {
           ) : null}
         </div>
         <CardContent className="p-4">
-          <p className="text-lg font-semibold text-primary">
-            {formatPrice(property.price, { currency: property.currency })}
-            {property.listingType === "RENT" && (
-              <span className="text-sm font-normal text-muted-foreground">
-                {" "}
-                / month
-              </span>
-            )}
-            {isStayListing(property.listingType) && (
-              <span className="text-sm font-normal text-muted-foreground">
-                {" "}
-                / night
-              </span>
-            )}
-          </p>
+          <ListingPrice
+            listPrice={property.price}
+            discountPercent={property.discountPercent}
+            currency={property.currency}
+            size="sm"
+            className="text-lg font-semibold"
+            suffix={
+              <>
+                {property.listingType === "RENT" && (
+                  <span className="text-sm font-normal text-muted-foreground">
+                    {" "}
+                    / month
+                  </span>
+                )}
+                {isStayListing(property.listingType) && (
+                  <span className="text-sm font-normal text-muted-foreground">
+                    {" "}
+                    / night
+                  </span>
+                )}
+              </>
+            }
+          />
           <h3 className="mt-1 line-clamp-2 font-medium">{property.title}</h3>
           {property.listingType === "RENT" &&
           property.rentalRoomsTotal != null &&

@@ -116,24 +116,11 @@ export function VerifiedSellerBadgeCard() {
           showCard={false}
           ctaLabel={`Pay ${formatProductPrice(product)} with M-Pesa`}
           onPaid={async (payment) => {
-            if (payment.status !== "COMPLETED") {
-              toast.message("Check your phone to complete M-Pesa payment");
-              return;
+            if (payment.status === "COMPLETED") {
+              setPaid(true);
+              toast.success("Verified seller badge activated");
+              void load();
             }
-
-            const res = await fetch("/api/verification-badge", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ paymentId: payment.id }),
-            });
-            const json = await res.json();
-            if (!res.ok || !json.success) {
-              toast.error(json.error ?? "Could not activate verified badge");
-              return;
-            }
-            setPaid(true);
-            toast.success(json.message ?? "Verified seller badge activated");
-            void load();
           }}
         />
       </CardContent>

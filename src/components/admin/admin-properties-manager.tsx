@@ -23,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatPrice } from "@/lib/utils";
+import { ListingPrice } from "@/components/property/listing-price";
 import { DEFAULT_LISTING_COUNTRY } from "@/lib/african-countries";
 import { buildCountryListingsReport } from "@/lib/admin-country-report";
 import { CountryListingsReportPanel } from "@/components/admin/country-listings-report";
@@ -46,6 +46,7 @@ interface AdminProperty {
   title: string;
   slug: string;
   price: number;
+  discountPercent?: number;
   currency: string;
   listingType: string;
   country?: string | null;
@@ -272,7 +273,12 @@ export function AdminPropertiesManager({
                       {p.title}
                     </td>
                     <td className="py-3 pr-4">
-                      {formatPrice(p.price, { currency: p.currency })}
+                      <ListingPrice
+                        listPrice={p.price}
+                        discountPercent={p.discountPercent}
+                        currency={p.currency}
+                        size="sm"
+                      />
                     </td>
                     <td className="py-3 pr-4 text-muted-foreground">
                       {[p.town, p.county, p.country || DEFAULT_LISTING_COUNTRY]

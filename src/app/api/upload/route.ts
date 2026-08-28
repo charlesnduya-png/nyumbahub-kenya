@@ -76,6 +76,7 @@ async function persistHostedUpload(
 function imageFolderFor(type: string) {
   if (type === "profile") return "your-home/profiles";
   if (type === "blog") return "your-home/blog";
+  if (type === "ad") return "your-home/ads";
   return "your-home/properties";
 }
 

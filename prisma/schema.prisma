@@ -500,6 +500,8 @@ model Property {
   status            PropertyStatus @default(DRAFT)
   price             Float
   currency          String         @default("KES")
+  /// Host-set percent off `price`. 0 means no discount. Sale price is derived at display/checkout.
+  discountPercent   Int            @default(0)
   pricePerSqft      Float?
   bedrooms          Int?
   bathrooms         Int?

@@ -29,9 +29,14 @@ import {
   propertyJsonLd,
 } from "@/lib/seo";
 import { toWhatsAppNumber, telHref } from "@/lib/phone";
-import { formatPrice } from "@/lib/utils";
 import { getListingTypeLabel, getPropertyTypeLabel } from "@/lib/kenya";
 import { isStayListing, stayLabel } from "@/lib/listing-kinds";
+import {
+  clampListingDiscountPercent,
+  listingSalePrice,
+} from "@/lib/listing-discount";
+import { ListingDiscountBadge, ListingPrice } from "@/components/property/listing-price";
+import { SiteAdSlot } from "@/components/ads/site-ad-slot";
 import { getPropertyReviews } from "@/lib/reviews";
 import { getCustomerMembership } from "@/lib/customer-membership";
 import { PropertyReviews } from "@/components/reviews/property-reviews";
@@ -141,13 +146,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const { property } = result;
+  const discountPercent = clampListingDiscountPercent(
+    "discountPercent" in property ? property.discountPercent : 0,
+  );
+  const salePrice = listingSalePrice(property.price, discountPercent);
   const imageUrl = property.images?.[0]?.url ?? null;
 
   return generatePropertyMetadata({
     title: property.title,
     description: getPropertyDescription(property),
     slug: property.slug,
-    price: property.price,
+    price: salePrice,
     currency: property.currency,
     county: property.county,
     town: property.town,
@@ -189,6 +198,10 @@ export default async function PropertyDetailPage({ params }: PageProps) {
   }
   const signedIn = Boolean(session?.user);
   const callbackPath = `/properties/${property.slug}`;
+  const discountPercent = clampListingDiscountPercent(
+    "discountPercent" in property ? property.discountPercent : 0,
+  );
+  const salePrice = listingSalePrice(property.price, discountPercent);
   const images = property.images ?? [];
   const propertyVideos =
     "videos" in property && Array.isArray(property.videos)
@@ -202,7 +215,10 @@ export default async function PropertyDetailPage({ params }: PageProps) {
     id: room.id,
     label: room.label,
     floor: room.floor,
-    price: room.price,
+    price:
+      room.price != null
+        ? listingSalePrice(room.price, discountPercent)
+        : room.price,
     status: room.status as "AVAILABLE" | "RENTED",
   }));
   const roomsAvailable = rentalRooms.filter((r) => r.status === "AVAILABLE")
@@ -238,7 +254,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
     title: property.title,
     description,
     slug: property.slug,
-    price: property.price,
+    price: salePrice,
     currency: property.currency,
     county: property.county,
     town: property.town,
@@ -283,6 +299,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                 {property.isVerified && (
                   <Badge className="bg-primary">Verified listing</Badge>
                 )}
+                <ListingDiscountBadge discountPercent={discountPercent} />
               </div>
               <h1 className="break-words text-2xl font-bold sm:text-3xl">
                 {property.title}
@@ -304,21 +321,28 @@ export default async function PropertyDetailPage({ params }: PageProps) {
               </p>
             </div>
             <div className="sm:text-right">
-              <p className="text-2xl font-bold tabular-nums text-primary sm:text-3xl">
-                {formatPrice(property.price, { currency: property.currency })}
-                {property.listingType === "RENT" && (
-                  <span className="text-base font-normal text-muted-foreground">
-                    {" "}
-                    / month
-                  </span>
-                )}
-                {isStayListing(property.listingType) && (
-                  <span className="text-base font-normal text-muted-foreground">
-                    {" "}
-                    / night
-                  </span>
-                )}
-              </p>
+              <ListingPrice
+                listPrice={property.price}
+                discountPercent={discountPercent}
+                currency={property.currency}
+                size="lg"
+                suffix={
+                  <>
+                    {property.listingType === "RENT" && (
+                      <span className="text-base font-normal text-muted-foreground">
+                        {" "}
+                        / month
+                      </span>
+                    )}
+                    {isStayListing(property.listingType) && (
+                      <span className="text-base font-normal text-muted-foreground">
+                        {" "}
+                        / night
+                      </span>
+                    )}
+                  </>
+                }
+              />
               <div className="mt-2 flex flex-wrap gap-2 sm:justify-end">
                 {guestReviews.count > 0 ? (
                   <Badge className="bg-primary text-primary-foreground">
@@ -549,7 +573,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
               </div>
 
               {property.listingType === "BUY" && (
-                <MortgageCalculator propertyPrice={property.price} />
+                <MortgageCalculator propertyPrice={salePrice} />
               )}
 
               <PropertyReviews reviews={guestReviews} />
@@ -591,6 +615,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                       propertySlug={property.slug}
                       propertyTitle={property.title}
                       pricePerNight={property.price}
+                      discountPercent={discountPercent}
                       currency={property.currency}
                       hostUserId={hostUserId}
                       memberDiscountRate={membership?.discountRate ?? 0.1}
@@ -600,7 +625,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                       propertyId={property.id}
                       propertySlug={property.slug}
                       propertyTitle={property.title}
-                      price={property.price}
+                      price={salePrice}
                       currency={property.currency}
                       hostUserId={hostUserId}
                       whatsappPhone={whatsappPhone}
@@ -618,7 +643,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                       <PropertyOfferForm
                         propertyId={property.id}
                         propertyTitle={property.title}
-                        listedPrice={property.price}
+                        listedPrice={salePrice}
                         currency={property.currency}
                       />
                     </>
@@ -659,6 +684,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                   </p>
                 </CardContent>
               </Card>
+              <SiteAdSlot placement="PROPERTY_DETAIL" variant="sidebar" />
             </aside>
           </div>
         </main>
@@ -669,7 +695,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
           propertyId={property.id}
           propertySlug={property.slug}
           propertyTitle={property.title}
-          price={property.price}
+          price={salePrice}
           currency={property.currency}
           hostUserId={hostUserId}
           whatsappPhone={whatsappPhone}

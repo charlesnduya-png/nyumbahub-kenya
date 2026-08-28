@@ -7,7 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ListingHostRow } from "@/components/properties/listing-host-row";
 import { FavoriteToggle } from "@/components/property/favorite-toggle";
 import { PropertyMediaImage } from "@/components/property/property-media-image";
-import { cn, formatPrice } from "@/lib/utils";
+import { ListingDiscountBadge, ListingPrice } from "@/components/property/listing-price";
+import { cn } from "@/lib/utils";
 import { getListingTypeLabel, getPropertyTypeLabel } from "@/lib/kenya";
 import { isStayListing } from "@/lib/listing-kinds";
 import type { PropertyCard } from "@/types";
@@ -61,15 +62,16 @@ export function PropertyCardComponent({
               Featured
             </Badge>
           )}
-          {property.isVerified && (
-            <Badge
-              variant="secondary"
-              className="gap-1 bg-white/90 text-foreground backdrop-blur-sm dark:bg-black/70 dark:text-white"
-            >
-              <ShieldCheck className="h-3 w-3" aria-hidden="true" />
-              Verified
-            </Badge>
-          )}
+            {property.isVerified && (
+              <Badge
+                variant="secondary"
+                className="gap-1 bg-white/90 text-foreground backdrop-blur-sm dark:bg-black/70 dark:text-white"
+              >
+                <ShieldCheck className="h-3 w-3" aria-hidden="true" />
+                Verified
+              </Badge>
+            )}
+          <ListingDiscountBadge discountPercent={property.discountPercent} />
         </div>
 
         <FavoriteToggle />
@@ -83,19 +85,25 @@ export function PropertyCardComponent({
 
       <div className="p-4">
         <div className="flex items-start justify-between gap-2">
-          <p className="font-display text-xl font-semibold text-primary">
-            {formatPrice(property.price, { currency: property.currency })}
-            {property.listingType === "RENT" && (
-              <span className="text-sm font-normal text-muted-foreground">
-                /mo
-              </span>
-            )}
-            {isStayListing(property.listingType) && (
-              <span className="text-sm font-normal text-muted-foreground">
-                /night
-              </span>
-            )}
-          </p>
+          <ListingPrice
+            listPrice={property.price}
+            discountPercent={property.discountPercent}
+            currency={property.currency}
+            suffix={
+              <>
+                {property.listingType === "RENT" && (
+                  <span className="text-sm font-normal text-muted-foreground">
+                    /mo
+                  </span>
+                )}
+                {isStayListing(property.listingType) && (
+                  <span className="text-sm font-normal text-muted-foreground">
+                    /night
+                  </span>
+                )}
+              </>
+            }
+          />
           <span className="shrink-0 text-xs text-muted-foreground">
             {getPropertyTypeLabel(property.propertyType)}
           </span>

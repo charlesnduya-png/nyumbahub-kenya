@@ -73,6 +73,7 @@ function listingToCard(listing: {
   title: string;
   slug: string;
   price: number;
+  discountPercent?: number;
   currency: string;
   listingType: PropertyCard["listingType"];
   propertyType: PropertyCard["propertyType"];
@@ -101,6 +102,7 @@ function listingToCard(listing: {
     title: listing.title,
     slug: listing.slug,
     price: listing.price,
+    discountPercent: listing.discountPercent ?? 0,
     currency: listing.currency,
     listingType: listing.listingType,
     propertyType: listing.propertyType,

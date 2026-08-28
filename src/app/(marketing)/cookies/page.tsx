@@ -5,7 +5,7 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "Cookie Policy",
   description:
-    "How Your Home (yourhome.co.ke) uses cookies and similar technologies on our Kenya real estate website.",
+    "How Your Home (yourhome.co.ke and yourhome.africa) uses cookies and similar technologies on our real estate website.",
   path: "/cookies",
 });
 
@@ -23,7 +23,7 @@ export default function CookiesPage() {
         <p>
           Your Home uses cookies and similar storage to keep you signed in,
           remember preferences, and understand how visitors use
-          yourhome.co.ke.
+          yourhome.co.ke and yourhome.africa.
         </p>
 
         <h2>Types of cookies we use</h2>

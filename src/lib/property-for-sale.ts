@@ -1118,7 +1118,7 @@ export function salePlaceTitle(place: PropertyForSalePlace) {
 
 export function salePlaceDescription(place: PropertyForSalePlace) {
   const area = placeLocationLabel(place);
-  return `Find verified houses, apartments, and land for sale in ${area}. Compare prices, view photos, and contact sellers on Your Home (yourhome.co.ke) — Africa real estate, BnB, and rentals.`;
+  return `Find verified houses, apartments, and land for sale in ${area}. Compare prices, view photos, and contact sellers on Your Home (yourhome.co.ke and yourhome.africa) — Africa real estate, BnB, and rentals.`;
 }
 
 export function salePlaceFaqs(place: PropertyForSalePlace) {
@@ -1150,5 +1150,6 @@ export function salePlaceKeywords(place: PropertyForSalePlace): string[] {
     `best real estate ${place.country}`,
     "Africa real estate",
     "yourhome.co.ke",
+    "yourhome.africa",
   ];
 }

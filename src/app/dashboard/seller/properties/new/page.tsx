@@ -59,7 +59,11 @@ import {
   type CreatePropertyInput,
 } from "@/lib/validations/property";
 import { listingFeatureBySlug, DEFAULT_HOTEL_FEATURES } from "@/lib/listing-features";
-import { cn } from "@/lib/utils";
+import { cn, formatPrice } from "@/lib/utils";
+import {
+  clampListingDiscountPercent,
+  listingSalePrice,
+} from "@/lib/listing-discount";
 
 export default function NewPropertyPage() {
   const router = useRouter();
@@ -109,6 +113,7 @@ export default function NewPropertyPage() {
       images: [],
       videos: [],
       currency: DEFAULT_LISTING_CURRENCY,
+      discountPercent: 0,
       latitude: null,
       longitude: null,
       rentalRoomsCount: null,
@@ -309,6 +314,7 @@ export default function NewPropertyPage() {
       formErrors.title?.message ||
       formErrors.description?.message ||
       formErrors.price?.message ||
+      formErrors.discountPercent?.message ||
       formErrors.town?.message ||
       formErrors.parkingSpaces?.message ||
       "Please fill in the required fields before submitting.";
@@ -599,7 +605,7 @@ export default function NewPropertyPage() {
             </div>
             )}
 
-            <div className="grid gap-4 sm:grid-cols-[1fr_200px]">
+            <div className="grid gap-4 sm:grid-cols-[1fr_140px_200px]">
               <div className="space-y-2">
                 <Label htmlFor="price">
                   Price{isStay ? " (per night)" : isRentListing ? " (per month)" : ""}
@@ -607,6 +613,22 @@ export default function NewPropertyPage() {
                 <Input id="price" type="number" {...register("price")} />
                 {errors.price && (
                   <p className="text-sm text-destructive">{errors.price.message}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="discountPercent">Discount %</Label>
+                <Input
+                  id="discountPercent"
+                  type="number"
+                  min={0}
+                  max={70}
+                  step={1}
+                  {...register("discountPercent")}
+                />
+                {errors.discountPercent && (
+                  <p className="text-sm text-destructive">
+                    {errors.discountPercent.message}
+                  </p>
                 )}
               </div>
               <div className="space-y-2">
@@ -627,6 +649,24 @@ export default function NewPropertyPage() {
                 )}
               </div>
             </div>
+            {clampListingDiscountPercent(values.discountPercent) > 0 &&
+            Number(values.price) > 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Buyers see{" "}
+                {formatPrice(
+                  listingSalePrice(Number(values.price), values.discountPercent),
+                  { currency: values.currency },
+                )}
+                {isStay ? " / night" : isRentListing ? " / month" : ""} after{" "}
+                {clampListingDiscountPercent(values.discountPercent)}% off. Leave
+                at 0 for no discount.
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Optional: offer a percent off your listed price (up to 70%). 0
+                means no discount.
+              </p>
+            )}
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">

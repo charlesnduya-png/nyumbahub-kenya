@@ -51,6 +51,8 @@ import {
 import { slimListingImagesForSubmit, slimListingVideosForSubmit } from "@/lib/media-assets";
 import { MAX_LISTING_VIDEOS } from "@/lib/listing-media";
 import { formatPrice } from "@/lib/utils";
+import { ListingPrice } from "@/components/property/listing-price";
+import { clampListingDiscountPercent, listingSalePrice } from "@/lib/listing-discount";
 import { CurrencySelect } from "@/components/properties/currency-select";
 import { CountrySelect } from "@/components/properties/country-select";
 import { ListingFeaturesPicker } from "@/components/property/listing-features-picker";
@@ -64,6 +66,7 @@ export type ManagedListing = {
   propertyType?: string;
   description?: string;
   price: number;
+  discountPercent?: number;
   currency: string;
   country?: string | null;
   town: string;
@@ -95,6 +98,7 @@ function mapApiListing(p: {
   propertyType?: string;
   description?: string;
   price: number;
+  discountPercent?: number;
   currency: string;
   country?: string | null;
   town: string;
@@ -128,6 +132,7 @@ function mapApiListing(p: {
     propertyType: p.propertyType,
     description: p.description ?? "",
     price: p.price,
+    discountPercent: p.discountPercent ?? 0,
     currency: p.currency,
     country: p.country ?? DEFAULT_LISTING_COUNTRY,
     town: p.town,
@@ -275,6 +280,8 @@ export function ListingsManager({
             ...d,
             features,
             parkingSpaces: json.data.parkingSpaces ?? d.parkingSpaces,
+            discountPercent: json.data.discountPercent ?? d.discountPercent ?? 0,
+            price: json.data.price ?? d.price,
           }));
         }
       } catch {
@@ -294,6 +301,7 @@ export function ListingsManager({
         id: editing.id,
         title: draft.title,
         price: Number(draft.price),
+        discountPercent: clampListingDiscountPercent(draft.discountPercent),
         currency: draft.currency || DEFAULT_LISTING_CURRENCY,
         country: draft.country || DEFAULT_LISTING_COUNTRY,
         county: draft.county,
@@ -369,6 +377,7 @@ export function ListingsManager({
                 title: String(draft.title),
                 description: draft.description ?? p.description,
                 price: Number(draft.price),
+                discountPercent: clampListingDiscountPercent(draft.discountPercent),
                 currency: draft.currency || p.currency,
                 country: draft.country || p.country,
                 county: String(draft.county ?? p.county),
@@ -422,6 +431,7 @@ export function ListingsManager({
   }
 
   function archiveListing(listing: ManagedListing) {
+    const previousStatus = listing.status;
     setListings((prev) =>
       prev.map((p) =>
         p.id === listing.id ? { ...p, status: "ARCHIVED" } : p,
@@ -431,7 +441,16 @@ export function ListingsManager({
     void fetch(`/api/properties/${listing.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: listing.id, status: "DRAFT" }),
+      body: JSON.stringify({ id: listing.id, status: "ARCHIVED" }),
+    }).then(async (res) => {
+      if (res.ok) return;
+      const json = await res.json().catch(() => ({}));
+      setListings((prev) =>
+        prev.map((p) =>
+          p.id === listing.id ? { ...p, status: previousStatus } : p,
+        ),
+      );
+      toast.error(json.error ?? "Could not archive listing");
     });
   }
 
@@ -517,10 +536,17 @@ export function ListingsManager({
                       </td>
                     )}
                     <td className="py-3 pr-4">
-                      {formatPrice(p.price, { currency: p.currency })}
-                      {p.listingType === "HOTEL" || p.listingType === "HOLIDAY"
-                        ? " /night"
-                        : ""}
+                      <ListingPrice
+                        listPrice={p.price}
+                        discountPercent={p.discountPercent}
+                        currency={p.currency}
+                        size="sm"
+                        suffix={
+                          p.listingType === "HOTEL" || p.listingType === "HOLIDAY"
+                            ? " /night"
+                            : ""
+                        }
+                      />
                     </td>
                     <td className="py-3 pr-4 text-muted-foreground">
                       {p.town}, {p.county}
@@ -623,7 +649,7 @@ export function ListingsManager({
                 }
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="edit-price">Price</Label>
                 <Input
@@ -632,6 +658,22 @@ export function ListingsManager({
                   value={draft.price ?? ""}
                   onChange={(e) =>
                     setDraft((d) => ({ ...d, price: Number(e.target.value) }))
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-discount">Discount %</Label>
+                <Input
+                  id="edit-discount"
+                  type="number"
+                  min={0}
+                  max={70}
+                  value={draft.discountPercent ?? 0}
+                  onChange={(e) =>
+                    setDraft((d) => ({
+                      ...d,
+                      discountPercent: Number(e.target.value),
+                    }))
                   }
                 />
               </div>
@@ -646,6 +688,21 @@ export function ListingsManager({
                 />
               </div>
             </div>
+            {clampListingDiscountPercent(draft.discountPercent) > 0 &&
+            Number(draft.price) > 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Buyers see{" "}
+                {formatPrice(
+                  listingSalePrice(Number(draft.price), draft.discountPercent),
+                  { currency: draft.currency ?? DEFAULT_LISTING_CURRENCY },
+                )}{" "}
+                after {clampListingDiscountPercent(draft.discountPercent)}% off.
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Optional listing discount (0–70%). Leave at 0 for no discount.
+              </p>
+            )}
             <div className="space-y-2">
               <Label htmlFor="edit-country">Country</Label>
               <CountrySelect

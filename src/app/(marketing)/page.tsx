@@ -8,6 +8,7 @@ import { LatestBlog } from "@/components/home/latest-blog";
 import { LatestProperties } from "@/components/home/latest-properties";
 import { LazyMortgageCalculator } from "@/components/home/lazy-mortgage-calculator";
 import { TopLocations } from "@/components/home/top-locations";
+import { SiteAdSlot } from "@/components/ads/site-ad-slot";
 import { getPublishedBlogPosts } from "@/lib/blog";
 import { getFeaturedAgentsForHome } from "@/lib/featured-agents";
 import { getBrowseCategories, getTopLocations } from "@/lib/marketing";
@@ -23,7 +24,7 @@ import { buildPageMetadata, homeFaqJsonLd } from "@/lib/seo";
 export const metadata = buildPageMetadata({
   title: "Africa Real Estate — Houses for Sale, Rent, Land & BnB",
   description:
-    "Your Home (yourhome.co.ke) — search verified houses, apartments, land, plots, rentals, and BnB stays in Kenya, Nigeria, Ghana, South Africa, and all 54 African countries. Free listings for sellers and agents.",
+    "Your Home (yourhome.co.ke) — search verified houses, apartments, land, plots, rentals, and BnB stays in Kenya, Nigeria, Ghana, South Africa, and all 54 African countries. Also at yourhome.africa. Free listings for sellers and agents.",
   path: "/",
   keywords: [
     "Africa real estate website",
@@ -70,6 +71,9 @@ export default async function HomePage() {
         }}
       />
       <AnimatedHero />
+      <div className="mx-auto w-full max-w-7xl px-3 pt-6 sm:px-6 lg:px-8">
+        <SiteAdSlot placement="HOME_BANNER" variant="banner" />
+      </div>
 
       <div className="gradient-mesh">
         <FeaturedProperties properties={featuredProperties} />

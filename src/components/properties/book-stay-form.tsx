@@ -13,12 +13,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { formatPrice } from "@/lib/utils";
 import { nightsBetween } from "@/lib/validations/booking";
 import { applyMemberPrice } from "@/lib/membership";
+import {
+  clampListingDiscountPercent,
+  listingSalePrice,
+} from "@/lib/listing-discount";
 
 interface BookStayFormProps {
   propertyId: string;
   propertySlug: string;
   propertyTitle: string;
   pricePerNight: number;
+  discountPercent?: number;
   currency?: string;
   hostUserId?: string;
   memberDiscountRate?: number;
@@ -33,6 +38,7 @@ export function BookStayForm({
   propertySlug,
   propertyTitle,
   pricePerNight,
+  discountPercent = 0,
   currency = "KES",
   hostUserId,
   memberDiscountRate = 0.1,
@@ -56,7 +62,10 @@ export function BookStayForm({
     return nightsBetween(start, end);
   }, [checkIn, checkOut]);
 
-  const listTotal = nights * pricePerNight;
+  const hostPct = clampListingDiscountPercent(discountPercent);
+  const salePerNight = listingSalePrice(pricePerNight, hostPct);
+  const originalTotal = nights * pricePerNight;
+  const listTotal = nights * salePerNight;
   const memberLevel =
     memberDiscountRate >= 0.15 ? 3 : memberDiscountRate >= 0.12 ? 2 : 1;
   const memberPrice = applyMemberPrice(listTotal, memberLevel);
@@ -148,8 +157,14 @@ export function BookStayForm({
       <div>
         <p className="text-sm font-medium">Book stay · {propertyTitle}</p>
         <p className="text-xs text-muted-foreground">
-          {formatPrice(pricePerNight, { currency })} / night · members save{" "}
-          {memberPrice.discountPercent}%
+          {formatPrice(salePerNight, { currency })} / night
+          {hostPct > 0 ? (
+            <>
+              {" "}
+              · was {formatPrice(pricePerNight, { currency })} · {hostPct}% off
+            </>
+          ) : null}{" "}
+          · members save {memberPrice.discountPercent}%
         </p>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -200,12 +215,19 @@ export function BookStayForm({
       {nights > 0 ? (
         <p className="text-sm text-muted-foreground">
           {nights} night{nights === 1 ? "" : "s"} ·{" "}
-          <span className="mr-1 line-through">
-            {formatPrice(memberPrice.listAmount, { currency })}
-          </span>
+          {total < originalTotal ? (
+            <span className="mr-1 line-through">
+              {formatPrice(originalTotal, { currency })}
+            </span>
+          ) : null}
           <span className="font-semibold text-foreground">
             {formatPrice(total, { currency })}
           </span>
+          {hostPct > 0 ? (
+            <span className="ml-1 text-emerald-700 dark:text-emerald-300">
+              listing {hostPct}% off
+            </span>
+          ) : null}
           <span className="ml-1 text-emerald-700 dark:text-emerald-300">
             member save {memberPrice.discountPercent}%
           </span>

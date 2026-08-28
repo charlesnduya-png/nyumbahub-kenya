@@ -89,6 +89,7 @@ function property(
     isFeatured: false,
     isPremium: false,
     isVerified: false,
+    discountPercent: 0,
     ...partial,
     primaryImage: partial.primaryImage ?? {
       id: `${partial.id}-img`,

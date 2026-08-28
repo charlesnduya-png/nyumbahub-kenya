@@ -47,7 +47,7 @@ export function intentDescription(
     return `Find verified apartments, bedsitters, maisonettes, and family houses for rent in ${area}. Compare prices, photos, and contact landlords on Your Home — Africa's rental marketplace.`;
   }
   if (intent === "bnb") {
-    return `Book BnB stays, Airbnb-style apartments, beach villas, and short-stay homes in ${area}. Nightly holiday rentals on Your Home (yourhome.co.ke).`;
+    return `Book BnB stays, Airbnb-style apartments, beach villas, and short-stay homes in ${area}. Nightly holiday rentals on Your Home (yourhome.co.ke and yourhome.africa).`;
   }
   return `Find verified houses, apartments, and land for sale in ${area}. Compare prices, view photos, and contact sellers on Your Home — Africa real estate.`;
 }
@@ -84,6 +84,7 @@ export function intentKeywords(
     `${place.country} property`,
     "Africa real estate",
     "yourhome.co.ke",
+    "yourhome.africa",
   ];
 }
 
@@ -104,7 +105,7 @@ export function intentFaqs(
       },
       {
         question: `Does Your Home cover rentals across Africa?`,
-        answer: `Yes. Search monthly rentals in ${place.country} and other African countries, plus Kenya counties, on yourhome.co.ke.`,
+        answer: `Yes. Search monthly rentals in ${place.country} and other African countries, plus Kenya counties, on yourhome.co.ke and yourhome.africa.`,
       },
     ];
   }
