@@ -28,10 +28,7 @@ import {
 } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 
-const PROMOTE_OPTIONS = [
-  ...PUBLIC_BOOST_PRODUCTS,
-  ...BOOST_PRODUCTS.filter((p) => p.id === "mpesa_test"),
-];
+const PROMOTE_OPTIONS = [...PUBLIC_BOOST_PRODUCTS];
 
 type ListingOption = {
   id: string;

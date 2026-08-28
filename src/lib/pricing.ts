@@ -2,7 +2,6 @@ import { formatPrice } from "@/lib/utils";
 
 export type ListingProductId = "standard" | "featured" | "premium";
 export type BoostProductId =
-  | "mpesa_test"
   | "tenant_access_24h"
   | "featured_boost"
   | "featured_boost_plus"
@@ -105,16 +104,6 @@ export const LISTING_PRODUCTS: PricingProduct[] = [
 ];
 
 export const BOOST_PRODUCTS: PricingProduct[] = [
-  {
-    id: "mpesa_test",
-    name: "M-Pesa test",
-    price: 50,
-    currency: "KES",
-    durationDays: 1,
-    category: "boost",
-    description: "KES 50 STK test charge — for payment integration checks only.",
-    features: ["Triggers M-Pesa STK prompt", "No listing boost applied"],
-  },
   {
     id: "tenant_access_24h",
     name: "24-hour viewing pass",
@@ -221,7 +210,6 @@ export const BOOST_PRODUCTS: PricingProduct[] = [
 
 export const PUBLIC_BOOST_PRODUCTS = BOOST_PRODUCTS.filter(
   (p) =>
-    p.id !== "mpesa_test" &&
     p.id !== "tenant_access_24h" &&
     p.id !== VERIFIED_BADGE_PRODUCT_ID,
 );
