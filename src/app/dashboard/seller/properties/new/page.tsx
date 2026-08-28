@@ -8,7 +8,7 @@ import { useSession } from "next-auth/react";
 import { useForm, type Resolver } from "react-hook-form";
 import { Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { PaymentCheckout } from "@/components/payments/payment-checkout";
+import { PaymentCheckoutDialog } from "@/components/payments/payment-checkout-dialog";
 import {
   ImageUploader,
   type UploadedImage,
@@ -460,8 +460,12 @@ export default function NewPropertyPage() {
                   Higher listing limit unlocked.
                 </div>
               ) : (
-                <PaymentCheckout
+                <PaymentCheckoutDialog
                   productId={productId}
+                  triggerLabel="Upgrade monthly listing plan"
+                  title="Monthly listing plan"
+                  description="Pay with M-Pesa to list more properties this month."
+                  ctaLabel="Upgrade monthly listing plan"
                   onPaid={(payment) => {
                     setPaymentId(payment.id);
                     setPaymentRef(payment.reference);
@@ -471,7 +475,6 @@ export default function NewPropertyPage() {
                     end.setDate(end.getDate() + 30);
                     setMonthlyEndDate(end.toISOString());
                   }}
-                  ctaLabel="Upgrade monthly listing plan"
                 />
               )}
             </CardContent>

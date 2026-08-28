@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { PaymentCheckout } from "@/components/payments/payment-checkout";
+import { PaymentCheckoutDialog } from "@/components/payments/payment-checkout-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -133,8 +133,11 @@ export default function AgentSubscriptionPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <PaymentCheckout
+            <PaymentCheckoutDialog
               productId={selected}
+              triggerLabel="Subscribe with M-Pesa"
+              title={`Pay for ${product.name}`}
+              description={`${formatProductPrice(product)} billed every ${product.durationDays} days via M-Pesa.`}
               ctaLabel="Subscribe with M-Pesa"
               onPaid={(payment) => {
                 setActivePlan(product.name);

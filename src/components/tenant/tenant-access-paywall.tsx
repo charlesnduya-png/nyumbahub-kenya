@@ -130,6 +130,7 @@ export function TenantAccessPaywall({
               </p>
             </div>
             <PaymentCheckout
+              embedded
               productId={TENANT_ACCESS_PRODUCT_ID}
               ctaLabel={`Pay KES ${TENANT_ACCESS_PRICE} with M-Pesa`}
               showCard={false}

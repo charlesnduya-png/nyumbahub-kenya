@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { BadgeCheck, Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
-import { PaymentCheckout } from "@/components/payments/payment-checkout";
+import { PaymentCheckoutDialog } from "@/components/payments/payment-checkout-dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -111,9 +111,12 @@ export function VerifiedSellerBadgeCard() {
           </ul>
         </div>
 
-        <PaymentCheckout
+        <PaymentCheckoutDialog
           productId={VERIFIED_BADGE_PRODUCT_ID}
           showCard={false}
+          triggerLabel={`Get verified · ${formatProductPrice(product)}`}
+          title="Verified seller badge"
+          description={`Build trust on your profile for ${product.durationDays} days after payment.`}
           ctaLabel={`Pay ${formatProductPrice(product)} with M-Pesa`}
           onPaid={async (payment) => {
             if (payment.status === "COMPLETED") {

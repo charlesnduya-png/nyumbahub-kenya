@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import { isMonthlyListingProduct } from "@/lib/listing-subscription";
 import { formatProductPrice, getProduct, type ProductId } from "@/lib/pricing";
 
@@ -21,6 +22,8 @@ interface CheckoutProps {
   }) => void;
   ctaLabel?: string;
   showCard?: boolean;
+  /** Drop outer card chrome — use inside dialogs. */
+  embedded?: boolean;
 }
 
 export function PaymentCheckout({
@@ -29,6 +32,7 @@ export function PaymentCheckout({
   onPaid,
   ctaLabel,
   showCard = true,
+  embedded = false,
 }: CheckoutProps) {
   const product = getProduct(productId);
   const [phone, setPhone] = useState("");
@@ -168,7 +172,12 @@ export function PaymentCheckout({
       : `/ ${product.durationDays} days`;
 
   return (
-    <div className="space-y-4 rounded-2xl border bg-card p-4">
+    <div
+      className={cn(
+        "space-y-4",
+        !embedded && "rounded-2xl border bg-card p-4",
+      )}
+    >
       <div>
         <p className="text-sm text-muted-foreground">{product.name}</p>
         <p className="text-2xl font-bold text-primary">

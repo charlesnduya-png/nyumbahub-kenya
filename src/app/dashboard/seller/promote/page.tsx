@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Megaphone } from "lucide-react";
 import { toast } from "sonner";
-import { PaymentCheckout } from "@/components/payments/payment-checkout";
+import { PaymentCheckoutDialog } from "@/components/payments/payment-checkout-dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -124,7 +124,7 @@ export default function SellerPromotePage() {
           <CardHeader>
             <CardTitle>Checkout</CardTitle>
             <CardDescription>
-              Selected: {product.name}. Enter your M-Pesa number to pay.
+              Selected: {product.name}. Tap pay to open M-Pesa checkout.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -162,9 +162,12 @@ export default function SellerPromotePage() {
               </p>
             )}
 
-            <PaymentCheckout
+            <PaymentCheckoutDialog
               productId={selected}
               propertyId={propertyId === "all" ? undefined : propertyId}
+              triggerLabel={`Pay ${formatProductPrice(product)} with M-Pesa`}
+              title={`Pay for ${product.name}`}
+              description="Complete M-Pesa payment to activate this boost on your listing."
               onPaid={(payment) => {
                 if (payment.status === "COMPLETED") {
                   setLastPayment(payment.reference);
