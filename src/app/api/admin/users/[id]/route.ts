@@ -103,9 +103,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
           ...(nextStatus
             ? {
                 verificationStatus: nextStatus,
-                ...(nextStatus === "VERIFIED"
-                  ? { nationalIdVerified: "VERIFIED" as const }
-                  : {}),
+                nationalIdVerified:
+                  nextStatus === "VERIFIED"
+                    ? "VERIFIED"
+                    : nationalIdVerified ?? nextStatus,
               }
             : {}),
         },
