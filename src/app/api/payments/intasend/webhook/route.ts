@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 
 import {
   validateIntaSendWebhookChallenge,
@@ -10,6 +11,13 @@ import { prisma } from "@/lib/prisma";
 type WebhookPayload = IntaSendInvoice & {
   challenge?: string;
 };
+
+function jsonMeta(
+  base: Record<string, unknown>,
+  patch: Record<string, unknown>,
+): Prisma.InputJsonObject {
+  return { ...base, ...patch } as Prisma.InputJsonObject;
+}
 
 async function findPayment(payload: WebhookPayload) {
   const apiRef = payload.api_ref?.trim();
@@ -63,14 +71,18 @@ export async function POST(request: Request) {
         data: {
           status: "COMPLETED",
           mpesaReceipt: body.mpesa_reference ?? payment.mpesaReceipt ?? undefined,
-          metadata: {
-            ...existingMeta,
+          metadata: jsonMeta(existingMeta, {
             intasendInvoiceId: body.invoice_id,
             intasendState: state,
-            intasendProvider: body.provider,
-            amountPaid: body.value ?? existingMeta.amountPaid,
+            intasendProvider: body.provider ?? null,
+            amountPaid:
+              body.value != null
+                ? String(body.value)
+                : existingMeta.amountPaid != null
+                  ? String(existingMeta.amountPaid)
+                  : null,
             callbackAt: new Date().toISOString(),
-          },
+          }),
         },
       });
 
@@ -89,25 +101,23 @@ export async function POST(request: Request) {
         where: { id: payment.id },
         data: {
           status: "FAILED",
-          metadata: {
-            ...existingMeta,
+          metadata: jsonMeta(existingMeta, {
             intasendInvoiceId: body.invoice_id,
             intasendState: state,
-            failedReason: body.failed_reason,
+            failedReason: body.failed_reason ?? null,
             callbackAt: new Date().toISOString(),
-          },
+          }),
         },
       });
     } else {
       await prisma.payment.update({
         where: { id: payment.id },
         data: {
-          metadata: {
-            ...existingMeta,
+          metadata: jsonMeta(existingMeta, {
             intasendInvoiceId: body.invoice_id,
             intasendState: state,
             callbackAt: new Date().toISOString(),
-          },
+          }),
         },
       });
     }

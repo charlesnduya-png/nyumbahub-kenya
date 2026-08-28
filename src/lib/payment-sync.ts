@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { intaSendPaymentStatus } from "@/lib/intasend";
 import { fulfillCompletedPayment } from "@/lib/payment-fulfillment";
 
@@ -7,7 +8,15 @@ type PaymentMeta = {
   propertyId?: string | null;
   intasendInvoiceId?: string;
   fulfilledAt?: string;
+  intasendState?: string;
+  amountPaid?: string;
+  syncedAt?: string;
+  failedReason?: string | null;
 };
+
+function jsonMeta(meta: PaymentMeta): Prisma.InputJsonObject {
+  return meta as Prisma.InputJsonObject;
+}
 
 export async function syncPaymentStatus(paymentId: string, userId?: string) {
   let payment = await prisma.payment.findUnique({
@@ -43,7 +52,7 @@ export async function syncPaymentStatus(paymentId: string, userId?: string) {
             status: "COMPLETED",
             mpesaReceipt:
               remote.invoice.mpesa_reference ?? payment.mpesaReceipt ?? undefined,
-            metadata: meta,
+            metadata: jsonMeta(meta),
           },
         });
       } else if (state === "FAILED" || state === "CANCELED") {
@@ -51,12 +60,12 @@ export async function syncPaymentStatus(paymentId: string, userId?: string) {
           where: { id: payment.id },
           data: {
             status: "FAILED",
-            metadata: {
+            metadata: jsonMeta({
               ...meta,
               intasendState: state,
-              failedReason: remote.invoice.failed_reason,
+              failedReason: remote.invoice.failed_reason ?? null,
               syncedAt: new Date().toISOString(),
-            },
+            }),
           },
         });
 

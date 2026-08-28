@@ -155,6 +155,7 @@ const propertyBaseSchema = z.object({
     .number()
     .positive("Price must be greater than zero")
     .max(10_000_000_000, "Price is too high"),
+  discountPercent: z.coerce.number().int().min(0).max(70).default(0),
   currency: listingCurrencySchema,
   bedrooms: optionalInt,
   bathrooms: optionalInt,
@@ -243,6 +244,7 @@ export const updatePropertySchema = z
     listingType: listingTypeSchema.optional(),
     propertyType: propertyTypeSchema.optional(),
     price: propertyBaseSchema.shape.price.optional(),
+    discountPercent: z.coerce.number().int().min(0).max(70).optional(),
     currency: z.enum(LISTING_CURRENCY_CODES).optional(),
     bedrooms: optionalIntPatch,
     bathrooms: optionalIntPatch,
