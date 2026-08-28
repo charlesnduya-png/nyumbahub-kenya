@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ComponentProps } from "react";
+import { useState, type ComponentProps, type ReactNode } from "react";
 import { Smartphone } from "lucide-react";
 
 import { PaymentCheckout } from "@/components/payments/payment-checkout";
@@ -27,7 +27,7 @@ interface PaymentCheckoutDialogProps {
   propertyId?: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  /** Hide the default pay button (controlled dialog only). */
+  /** Hide the default pay button (use with controlled open + your own trigger). */
   hideTrigger?: boolean;
   triggerLabel?: string;
   triggerClassName?: string;
@@ -37,6 +37,8 @@ interface PaymentCheckoutDialogProps {
   description?: string;
   ctaLabel?: string;
   showCard?: boolean;
+  /** Extra fields shown above checkout inside the popup (e.g. listing picker). */
+  dialogExtra?: ReactNode;
   onPaid?: (payment: PaidPayload) => void;
 }
 
@@ -54,6 +56,7 @@ export function PaymentCheckoutDialog({
   description,
   ctaLabel,
   showCard = false,
+  dialogExtra,
   onPaid,
 }: PaymentCheckoutDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
@@ -93,21 +96,24 @@ export function PaymentCheckoutDialog({
                 `Enter your M-Pesa number. You'll get a prompt on your phone to complete payment.`}
             </DialogDescription>
           </DialogHeader>
-          <div className="px-6 py-5">
-            <PaymentCheckout
-              embedded
-              productId={productId}
-              propertyId={propertyId}
-              showCard={showCard}
-              ctaLabel={ctaLabel ?? defaultTrigger}
-              onPaid={(payment) => {
-                onPaid?.(payment);
-                if (payment.status === "COMPLETED") {
-                  setOpen(false);
-                }
-              }}
-            />
-          </div>
+          {open ? (
+            <div className="space-y-4 px-6 py-5">
+              {dialogExtra}
+              <PaymentCheckout
+                embedded
+                productId={productId}
+                propertyId={propertyId}
+                showCard={showCard}
+                ctaLabel={ctaLabel ?? defaultTrigger}
+                onPaid={(payment) => {
+                  onPaid?.(payment);
+                  if (payment.status === "COMPLETED") {
+                    setOpen(false);
+                  }
+                }}
+              />
+            </div>
+          ) : null}
         </DialogContent>
       </Dialog>
     </>

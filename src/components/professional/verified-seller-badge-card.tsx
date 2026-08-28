@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { BadgeCheck, Loader2, ShieldCheck } from "lucide-react";
+import { BadgeCheck, Loader2, ShieldCheck, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 
 import { PaymentCheckoutDialog } from "@/components/payments/payment-checkout-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -29,6 +30,7 @@ export function VerifiedSellerBadgeCard() {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<ProfileSnapshot | null>(null);
   const [paid, setPaid] = useState(false);
+  const [payOpen, setPayOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -85,48 +87,50 @@ export function VerifiedSellerBadgeCard() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="h-5 w-5 text-primary" />
-          <CardTitle className="text-lg">Verified seller badge</CardTitle>
-        </div>
-        <CardDescription>
-          Build trust with a verified mark on your profile and listings for{" "}
-          {product.durationDays} days.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="rounded-xl border bg-muted/40 px-4 py-3 text-sm">
-          <p className="font-semibold">
-            {formatProductPrice(product)}{" "}
-            <span className="font-normal text-muted-foreground">
-              / {product.durationDays} days
-            </span>
-          </p>
-          <ul className="mt-2 list-inside list-disc text-muted-foreground">
+    <>
+      <Card>
+        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3 space-y-0">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Verified seller badge</CardTitle>
+            </div>
+            <CardDescription>
+              Build trust with a verified mark on your profile and listings for{" "}
+              {product.durationDays} days · {formatProductPrice(product)}.
+            </CardDescription>
+          </div>
+          <Button type="button" onClick={() => setPayOpen(true)}>
+            <Smartphone className="mr-2 h-4 w-4" />
+            Get verified
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <ul className="list-inside list-disc text-sm text-muted-foreground">
             {product.features.map((feature) => (
               <li key={feature}>{feature}</li>
             ))}
           </ul>
-        </div>
+        </CardContent>
+      </Card>
 
-        <PaymentCheckoutDialog
-          productId={VERIFIED_BADGE_PRODUCT_ID}
-          showCard={false}
-          triggerLabel={`Get verified · ${formatProductPrice(product)}`}
-          title="Verified seller badge"
-          description={`Build trust on your profile for ${product.durationDays} days after payment.`}
-          ctaLabel={`Pay ${formatProductPrice(product)} with M-Pesa`}
-          onPaid={async (payment) => {
-            if (payment.status === "COMPLETED") {
-              setPaid(true);
-              toast.success("Verified seller badge activated");
-              void load();
-            }
-          }}
-        />
-      </CardContent>
-    </Card>
+      <PaymentCheckoutDialog
+        hideTrigger
+        open={payOpen}
+        onOpenChange={setPayOpen}
+        productId={VERIFIED_BADGE_PRODUCT_ID}
+        showCard={false}
+        title="Verified seller badge"
+        description={`Build trust on your profile for ${product.durationDays} days after payment.`}
+        ctaLabel={`Pay ${formatProductPrice(product)} with M-Pesa`}
+        onPaid={async (payment) => {
+          if (payment.status === "COMPLETED") {
+            setPaid(true);
+            toast.success("Verified seller badge activated");
+            void load();
+          }
+        }}
+      />
+    </>
   );
 }

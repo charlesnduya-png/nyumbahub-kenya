@@ -1,17 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Megaphone } from "lucide-react";
+import { Megaphone, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import { PaymentCheckoutDialog } from "@/components/payments/payment-checkout-dialog";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -43,6 +37,7 @@ export default function SellerPromotePage() {
   const [lastPayment, setLastPayment] = useState<string | null>(null);
   const [listings, setListings] = useState<ListingOption[]>([]);
   const [propertyId, setPropertyId] = useState<string>("all");
+  const [payOpen, setPayOpen] = useState(false);
 
   const product = useMemo(
     () => BOOST_PRODUCTS.find((p) => p.id === selected)!,
@@ -73,13 +68,38 @@ export default function SellerPromotePage() {
     }
   }, [needsListing, listings, propertyId]);
 
+  const listingPicker =
+    listings.length > 0 ? (
+      <div className="space-y-2">
+        <Label>Apply boost to</Label>
+        <Select value={propertyId} onValueChange={setPropertyId}>
+          <SelectTrigger>
+            <SelectValue placeholder="Choose listing" />
+          </SelectTrigger>
+          <SelectContent>
+            {!needsListing ? (
+              <SelectItem value="all">All active listings</SelectItem>
+            ) : null}
+            {listings.map((listing) => (
+              <SelectItem key={listing.id} value={listing.id}>
+                {listing.title} · {listing.town}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    ) : (
+      <p className="text-sm text-muted-foreground">
+        No active listings yet. Featured boosts apply once a listing is live.
+      </p>
+    );
+
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold">Promote your listings</h1>
         <p className="text-muted-foreground">
-          Featured listings from KES 500 · Property promotions from KES 1,000.
-          Pay with M-Pesa via IntaSend.
+          Choose a boost, then tap Pay — M-Pesa checkout opens in a popup.
         </p>
       </div>
 
@@ -90,94 +110,70 @@ export default function SellerPromotePage() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {PROMOTE_OPTIONS.map((plan) => (
-            <button
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {PROMOTE_OPTIONS.map((plan) => {
+          const isSelected = selected === plan.id;
+          return (
+            <div
               key={plan.id}
-              type="button"
-              onClick={() => setSelected(plan.id as BoostProductId)}
               className={cn(
-                "rounded-2xl border p-4 text-left transition",
-                selected === plan.id
+                "rounded-2xl border p-4 transition",
+                isSelected
                   ? "border-primary bg-primary/5 shadow-md"
                   : "hover:border-primary/40",
               )}
             >
-              <div className="mb-2 flex items-center gap-2">
-                <Megaphone className="h-4 w-4 text-primary" />
-                <span className="font-semibold">{plan.name}</span>
-                {plan.popular && <Badge>Popular</Badge>}
-              </div>
-              <p className="text-sm text-muted-foreground">{plan.description}</p>
-              <p className="mt-3 text-lg font-bold">
-                {formatProductPrice(plan)}
-                <span className="ml-1 text-xs font-normal text-muted-foreground">
-                  / {plan.durationDays}d
-                </span>
-              </p>
-            </button>
-          ))}
-        </div>
+              <button
+                type="button"
+                onClick={() => setSelected(plan.id as BoostProductId)}
+                className="w-full text-left"
+              >
+                <div className="mb-2 flex items-center gap-2">
+                  <Megaphone className="h-4 w-4 text-primary" />
+                  <span className="font-semibold">{plan.name}</span>
+                  {plan.popular && <Badge>Popular</Badge>}
+                </div>
+                <p className="text-sm text-muted-foreground">{plan.description}</p>
+                <p className="mt-3 text-lg font-bold">
+                  {formatProductPrice(plan)}
+                  <span className="ml-1 text-xs font-normal text-muted-foreground">
+                    / {plan.durationDays}d
+                  </span>
+                </p>
+              </button>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Checkout</CardTitle>
-            <CardDescription>
-              Selected: {product.name}. Tap pay to open M-Pesa checkout.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {listings.length > 0 ? (
-              <div className="space-y-2">
-                <Label>Apply boost to</Label>
-                <Select
-                  value={propertyId}
-                  onValueChange={setPropertyId}
+              {isSelected ? (
+                <Button
+                  type="button"
+                  className="mt-4 w-full"
+                  onClick={() => setPayOpen(true)}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose listing" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {!needsListing ? (
-                      <SelectItem value="all">All active listings</SelectItem>
-                    ) : null}
-                    {listings.map((listing) => (
-                      <SelectItem key={listing.id} value={listing.id}>
-                        {listing.title} · {listing.town}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {needsListing && listings.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">
-                    You need at least one active listing to run this promotion.
-                  </p>
-                ) : null}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No active listings yet. Featured boosts apply once a listing is
-                live.
-              </p>
-            )}
-
-            <PaymentCheckoutDialog
-              productId={selected}
-              propertyId={propertyId === "all" ? undefined : propertyId}
-              triggerLabel={`Pay ${formatProductPrice(product)} with M-Pesa`}
-              title={`Pay for ${product.name}`}
-              description="Complete M-Pesa payment to activate this boost on your listing."
-              onPaid={(payment) => {
-                if (payment.status === "COMPLETED") {
-                  setLastPayment(payment.reference);
-                  toast.success("Boost activated on your listing(s)");
-                }
-              }}
-            />
-          </CardContent>
-        </Card>
+                  <Smartphone className="mr-2 h-4 w-4" />
+                  Pay {formatProductPrice(plan)} with M-Pesa
+                </Button>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
+
+      <PaymentCheckoutDialog
+        hideTrigger
+        open={payOpen}
+        onOpenChange={setPayOpen}
+        productId={selected}
+        propertyId={propertyId === "all" ? undefined : propertyId}
+        title={`Pay for ${product.name}`}
+        description="Complete M-Pesa payment to activate this boost."
+        dialogExtra={listingPicker}
+        triggerLabel={`Pay ${formatProductPrice(product)} with M-Pesa`}
+        onPaid={(payment) => {
+          if (payment.status === "COMPLETED") {
+            setLastPayment(payment.reference);
+            toast.success("Boost activated on your listing(s)");
+          }
+        }}
+      />
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useForm, type Resolver } from "react-hook-form";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import { PaymentCheckoutDialog } from "@/components/payments/payment-checkout-dialog";
 import {
@@ -82,6 +82,7 @@ export default function NewPropertyPage() {
   const [listingUsed, setListingUsed] = useState(0);
   const [listingRemaining, setListingRemaining] = useState(FREE_TIER_MAX_LISTINGS);
   const [atLimit, setAtLimit] = useState(false);
+  const [monthlyPayOpen, setMonthlyPayOpen] = useState(false);
 
   const { data: session } = useSession();
   const isAgent = session?.user?.role === "AGENT";
@@ -450,8 +451,14 @@ export default function NewPropertyPage() {
 
         {!monthlyActive ? (
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0">
               <CardTitle>2. Pay monthly with M-Pesa (optional)</CardTitle>
+              {!paymentId ? (
+                <Button type="button" onClick={() => setMonthlyPayOpen(true)}>
+                  <Smartphone className="mr-2 h-4 w-4" />
+                  Upgrade plan
+                </Button>
+              ) : null}
             </CardHeader>
             <CardContent>
               {paymentId ? (
@@ -460,24 +467,30 @@ export default function NewPropertyPage() {
                   Higher listing limit unlocked.
                 </div>
               ) : (
-                <PaymentCheckoutDialog
-                  productId={productId}
-                  triggerLabel="Upgrade monthly listing plan"
-                  title="Monthly listing plan"
-                  description="Pay with M-Pesa to list more properties this month."
-                  ctaLabel="Upgrade monthly listing plan"
-                  onPaid={(payment) => {
-                    setPaymentId(payment.id);
-                    setPaymentRef(payment.reference);
-                    setMonthlyActive(true);
-                    setAtLimit(false);
-                    const end = new Date();
-                    end.setDate(end.getDate() + 30);
-                    setMonthlyEndDate(end.toISOString());
-                  }}
-                />
+                <p className="text-sm text-muted-foreground">
+                  Tap Upgrade plan to pay with M-Pesa in a popup and list more
+                  properties this month.
+                </p>
               )}
             </CardContent>
+            <PaymentCheckoutDialog
+              hideTrigger
+              open={monthlyPayOpen}
+              onOpenChange={setMonthlyPayOpen}
+              productId={productId}
+              title="Monthly listing plan"
+              description="Pay with M-Pesa to list more properties this month."
+              ctaLabel="Upgrade monthly listing plan"
+              onPaid={(payment) => {
+                setPaymentId(payment.id);
+                setPaymentRef(payment.reference);
+                setMonthlyActive(true);
+                setAtLimit(false);
+                const end = new Date();
+                end.setDate(end.getDate() + 30);
+                setMonthlyEndDate(end.toISOString());
+              }}
+            />
           </Card>
         ) : null}
           </>

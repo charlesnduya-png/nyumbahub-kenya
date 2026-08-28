@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import { PaymentCheckoutDialog } from "@/components/payments/payment-checkout-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +25,7 @@ import { cn } from "@/lib/utils";
 export default function AgentSubscriptionPage() {
   const [selected, setSelected] = useState<AgentProductId>("agent_pro");
   const [activePlan, setActivePlan] = useState<string | null>(null);
+  const [payOpen, setPayOpen] = useState(false);
 
   const product = useMemo(
     () => AGENT_PRODUCTS.find((p) => p.id === selected)!,
@@ -90,73 +92,78 @@ export default function AgentSubscriptionPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
-        <div className="grid gap-4 md:grid-cols-3">
-          {AGENT_PRODUCTS.map((plan) => (
-            <button
+      <div className="grid gap-4 md:grid-cols-3">
+        {AGENT_PRODUCTS.map((plan) => {
+          const isSelected = selected === plan.id;
+          return (
+            <div
               key={plan.id}
-              type="button"
-              onClick={() => setSelected(plan.id as AgentProductId)}
               className={cn(
-                "rounded-2xl border p-4 text-left transition",
-                selected === plan.id
+                "rounded-2xl border p-4 transition",
+                isSelected
                   ? "border-primary bg-primary/5"
                   : "hover:border-primary/40",
               )}
             >
-              <div className="mb-1 flex items-center justify-between gap-2">
-                <p className="font-semibold">{plan.name}</p>
-                {plan.popular && <Badge>Popular</Badge>}
-              </div>
-              <p className="text-sm text-muted-foreground">{plan.description}</p>
-              <p className="mt-3 text-xl font-bold">
-                {formatProductPrice(plan)}
-                <span className="text-xs font-normal text-muted-foreground">
-                  /mo
-                </span>
-              </p>
-              <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
-                {plan.features.slice(0, 3).map((f) => (
-                  <li key={f}>✓ {f}</li>
-                ))}
-              </ul>
-            </button>
-          ))}
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Pay for {product.name}</CardTitle>
-            <CardDescription>
-              {formatProductPrice(product)} billed every {product.durationDays}{" "}
-              days via M-Pesa.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <PaymentCheckoutDialog
-              productId={selected}
-              triggerLabel="Subscribe with M-Pesa"
-              title={`Pay for ${product.name}`}
-              description={`${formatProductPrice(product)} billed every ${product.durationDays} days via M-Pesa.`}
-              ctaLabel="Subscribe with M-Pesa"
-              onPaid={(payment) => {
-                setActivePlan(product.name);
-                toast.success(`Subscribed · ${payment.reference}`);
-              }}
-            />
-            <p className="text-xs text-muted-foreground">
-              Prefer to stay free?{" "}
-              <Link
-                href="/dashboard/seller/properties/new"
-                className="underline"
+              <button
+                type="button"
+                onClick={() => setSelected(plan.id as AgentProductId)}
+                className="w-full text-left"
               >
-                List up to {FREE_TIER_MAX_LISTINGS} properties
-              </Link>{" "}
-              without paying.
-            </p>
-          </CardContent>
-        </Card>
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <p className="font-semibold">{plan.name}</p>
+                  {plan.popular && <Badge>Popular</Badge>}
+                </div>
+                <p className="text-sm text-muted-foreground">{plan.description}</p>
+                <p className="mt-3 text-xl font-bold">
+                  {formatProductPrice(plan)}
+                  <span className="text-xs font-normal text-muted-foreground">
+                    /mo
+                  </span>
+                </p>
+                <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
+                  {plan.features.slice(0, 3).map((f) => (
+                    <li key={f}>✓ {f}</li>
+                  ))}
+                </ul>
+              </button>
+
+              {isSelected ? (
+                <Button
+                  type="button"
+                  className="mt-4 w-full"
+                  onClick={() => setPayOpen(true)}
+                >
+                  <Smartphone className="mr-2 h-4 w-4" />
+                  Subscribe with M-Pesa
+                </Button>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
+
+      <p className="text-sm text-muted-foreground">
+        Prefer to stay free?{" "}
+        <Link href="/dashboard/seller/properties/new" className="underline">
+          List up to {FREE_TIER_MAX_LISTINGS} properties
+        </Link>{" "}
+        without paying.
+      </p>
+
+      <PaymentCheckoutDialog
+        hideTrigger
+        open={payOpen}
+        onOpenChange={setPayOpen}
+        productId={selected}
+        title={`Pay for ${product.name}`}
+        description={`${formatProductPrice(product)} billed every ${product.durationDays} days via M-Pesa.`}
+        ctaLabel="Subscribe with M-Pesa"
+        onPaid={(payment) => {
+          setActivePlan(product.name);
+          toast.success(`Subscribed · ${payment.reference}`);
+        }}
+      />
     </div>
   );
 }
