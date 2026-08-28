@@ -6,6 +6,12 @@ import {
   createPayment,
   getPayment,
 } from "@/lib/payments-store";
+import {
+  IntaSendApiError,
+  IntaSendConfigError,
+  intaSendMpesaStkPush,
+  isIntaSendConfigured,
+} from "@/lib/intasend";
 import { isMpesaConfigured, MpesaConfigError, stkPush } from "@/lib/mpesa";
 import { getProduct } from "@/lib/pricing";
 import { createCheckoutSession, isStripeConfigured } from "@/lib/stripe";
@@ -124,18 +130,58 @@ export async function POST(request: Request) {
       });
     }
 
-    // M-Pesa
-    if (!isMpesaConfigured()) {
+    // M-Pesa — IntaSend (preferred) or direct Daraja STK
+    if (!isIntaSendConfigured() && !isMpesaConfigured()) {
       return NextResponse.json(
         {
           success: false,
-          error: "M-Pesa is not configured. Contact support to complete payment.",
+          error:
+            "M-Pesa is not configured. Contact support to complete payment.",
         },
         { status: 503 },
       );
     }
 
     try {
+      if (isIntaSendConfigured()) {
+        const stk = await intaSendMpesaStkPush({
+          phoneNumber: parsed.data.phoneNumber || "0712345678",
+          amount: product.price,
+          apiRef: payment.id,
+          narrative: product.name,
+        });
+
+        try {
+          await prisma.payment.update({
+            where: { id: payment.id },
+            data: {
+              metadata: {
+                productId: product.id,
+                propertyId: parsed.data.propertyId ?? null,
+                intasendInvoiceId: stk.invoice?.invoice_id,
+                intasendSessionId: stk.id,
+                provider: "intasend",
+              },
+            },
+          });
+        } catch {
+          // best effort
+        }
+
+        return NextResponse.json({
+          success: true,
+          data: {
+            id: payment.id,
+            reference: payment.reference,
+            productId: product.id,
+            amount: product.price,
+            status: "PENDING",
+            intasendInvoiceId: stk.invoice?.invoice_id,
+            CustomerMessage: stk.CustomerMessage,
+          },
+        });
+      }
+
       const stk = await stkPush({
         phoneNumber: parsed.data.phoneNumber || "0712345678",
         amount: product.price,
@@ -155,10 +201,19 @@ export async function POST(request: Request) {
         },
       });
     } catch (error) {
-      if (error instanceof MpesaConfigError) {
+      if (
+        error instanceof MpesaConfigError ||
+        error instanceof IntaSendConfigError
+      ) {
         return NextResponse.json(
           { success: false, error: error.message, stub: true },
           { status: 503 },
+        );
+      }
+      if (error instanceof IntaSendApiError) {
+        return NextResponse.json(
+          { success: false, error: error.message },
+          { status: 502 },
         );
       }
       throw error;

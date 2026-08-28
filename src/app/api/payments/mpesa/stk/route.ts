@@ -4,6 +4,12 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { createPayment } from "@/lib/payments-store";
 import {
+  IntaSendApiError,
+  IntaSendConfigError,
+  intaSendMpesaStkPush,
+  isIntaSendConfigured,
+} from "@/lib/intasend";
+import {
   isMpesaConfigured,
   MpesaApiError,
   MpesaConfigError,
@@ -32,12 +38,12 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!isMpesaConfigured()) {
+    if (!isIntaSendConfigured() && !isMpesaConfigured()) {
       return NextResponse.json(
         {
           success: false,
           error:
-            "M-Pesa is not fully configured. Add Consumer Key, Secret, Shortcode, Passkey, and Callback URL.",
+            "M-Pesa is not configured. Add IntaSend keys or Daraja credentials.",
           code: "MPESA_NOT_CONFIGURED",
         },
         { status: 503 },
@@ -102,6 +108,45 @@ export async function POST(request: Request) {
       // ignore persist race
     }
 
+    if (isIntaSendConfigured()) {
+      const stk = await intaSendMpesaStkPush({
+        phoneNumber: parsed.data.phoneNumber,
+        amount,
+        apiRef: payment.id,
+        narrative:
+          parsed.data.description ?? product?.name ?? "Your Home payment",
+      });
+
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          metadata: {
+            productId: product?.id ?? null,
+            propertyId: parsed.data.propertyId ?? null,
+            type: "PAYMENT",
+            intasendInvoiceId: stk.invoice?.invoice_id,
+            intasendSessionId: stk.id,
+            provider: "intasend",
+          },
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          paymentId: payment.id,
+          reference: payment.reference,
+          intasendInvoiceId: stk.invoice?.invoice_id,
+          CustomerMessage:
+            stk.CustomerMessage ||
+            "M-Pesa prompt sent. Enter your PIN on your phone.",
+        },
+        message:
+          stk.CustomerMessage ||
+          "M-Pesa prompt sent. Enter your PIN on your phone.",
+      });
+    }
+
     const stkResponse = await stkPush({
       phoneNumber: parsed.data.phoneNumber,
       amount,
@@ -140,10 +185,16 @@ export async function POST(request: Request) {
         "M-Pesa prompt sent. Enter your PIN on your phone.",
     });
   } catch (error) {
-    if (error instanceof MpesaConfigError) {
+    if (error instanceof MpesaConfigError || error instanceof IntaSendConfigError) {
       return NextResponse.json(
         { success: false, error: error.message, code: "MPESA_NOT_CONFIGURED" },
         { status: 503 },
+      );
+    }
+    if (error instanceof IntaSendApiError) {
+      return NextResponse.json(
+        { success: false, error: error.message, details: error.responseBody },
+        { status: 502 },
       );
     }
     if (error instanceof MpesaApiError) {

@@ -41,6 +41,11 @@ export const TENANT_ACCESS_PRODUCT_ID = "tenant_access_24h" as const;
 export const TENANT_ACCESS_PRICE = 150;
 export const TENANT_ACCESS_HOURS = 24;
 
+/** KES 1,600 verified seller badge for 90 days on professional profiles. */
+export const VERIFIED_BADGE_PRODUCT_ID = "verified_badge" as const;
+export const VERIFIED_BADGE_PRICE = 1600;
+export const VERIFIED_BADGE_DAYS = 90;
+
 export const LISTING_PRODUCTS: PricingProduct[] = [
   {
     id: "standard",
@@ -203,11 +208,11 @@ export const BOOST_PRODUCTS: PricingProduct[] = [
     },
   },
   {
-    id: "verified_badge",
+    id: VERIFIED_BADGE_PRODUCT_ID,
     name: "Verified seller badge",
-    price: 1500,
+    price: VERIFIED_BADGE_PRICE,
     currency: "KES",
-    durationDays: 90,
+    durationDays: VERIFIED_BADGE_DAYS,
     category: "boost",
     description: "Trust badge on your professional profile for 90 days.",
     features: ["Verified mark", "Higher buyer trust", "90 days"],
@@ -215,7 +220,10 @@ export const BOOST_PRODUCTS: PricingProduct[] = [
 ];
 
 export const PUBLIC_BOOST_PRODUCTS = BOOST_PRODUCTS.filter(
-  (p) => p.id !== "mpesa_test" && p.id !== "tenant_access_24h",
+  (p) =>
+    p.id !== "mpesa_test" &&
+    p.id !== "tenant_access_24h" &&
+    p.id !== VERIFIED_BADGE_PRODUCT_ID,
 );
 
 export const AGENT_PRODUCTS: PricingProduct[] = [

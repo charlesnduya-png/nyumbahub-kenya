@@ -10,6 +10,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { ProfilePhotoCard } from "@/components/professional/profile-photo-card";
+import { VerifiedSellerBadgeCard } from "@/components/professional/verified-seller-badge-card";
 import { ViewsChart } from "@/components/professional/views-chart";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { auth } from "@/lib/auth";
 import { resolveProfessionalActingContext } from "@/lib/account-team";
 import { prisma } from "@/lib/prisma";
 import { formatPrice, formatRelativeDate } from "@/lib/utils";
+import { listingSalePrice } from "@/lib/listing-discount";
 import { getWalletSnapshot } from "@/lib/wallet";
 
 export default async function ProfessionalAdminPage() {
@@ -44,6 +46,7 @@ export default async function ProfessionalAdminPage() {
         town: true,
         county: true,
         price: true,
+        discountPercent: true,
         slug: true,
         views: true,
         listingType: true,
@@ -143,7 +146,12 @@ export default async function ProfessionalAdminPage() {
         </div>
       </div>
 
-      {!ctx.isTeamMember ? <ProfilePhotoCard compact /> : null}
+      {!ctx.isTeamMember ? (
+        <div className="space-y-4">
+          <ProfilePhotoCard compact />
+          <VerifiedSellerBadgeCard />
+        </div>
+      ) : null}
 
       {wallet ? (
         <Link href="/dashboard/pro/wallet">
@@ -274,7 +282,9 @@ export default async function ProfessionalAdminPage() {
                   <div className="min-w-0">
                     <p className="truncate font-medium">{p.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      {p.town}, {p.county} · {formatPrice(p.price)}
+                      {p.town}, {p.county} ·{" "}
+                      {formatPrice(listingSalePrice(p.price, p.discountPercent))}
+                      {p.discountPercent > 0 ? ` (${p.discountPercent}% off)` : ""}
                     </p>
                   </div>
                   <Badge

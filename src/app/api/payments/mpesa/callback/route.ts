@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { fulfillCompletedPayment } from "@/lib/payment-fulfillment";
 import { prisma } from "@/lib/prisma";
 
 type CallbackItem = { Name?: string; Value?: string | number };
@@ -83,15 +84,13 @@ export async function POST(request: Request) {
             },
           });
 
-          const meta = payment.metadata as { productId?: string } | null;
-          if (meta?.productId === "tenant_access_24h" && payment.userId) {
-            const { activateTenantAccess } = await import("@/lib/tenant-access");
-            await activateTenantAccess({
-              userId: payment.userId,
-              paymentId: payment.id,
-              amount: amountPaid ? Number(amountPaid) : undefined,
-            }).catch(() => null);
-          }
+          await fulfillCompletedPayment({
+            id: payment.id,
+            userId: payment.userId,
+            metadata: payment.metadata,
+            amount: amountPaid ? Number(amountPaid) : payment.amount,
+            mpesaReceipt: mpesaReceipt ?? undefined,
+          });
         }
       }
 
