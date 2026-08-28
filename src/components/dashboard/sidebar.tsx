@@ -63,6 +63,7 @@ interface NavItem {
 const professionalNav: NavItem[] = [
   { label: "Professional Home", href: "/dashboard/pro", icon: Briefcase },
   { label: "Profile photo", href: "/dashboard/pro/profile", icon: UserCircle },
+  { label: "Promote", href: "/dashboard/seller/promote", icon: Megaphone },
   { label: "The team", href: "/dashboard/pro/team", icon: Users },
   { label: "Notifications", href: "/dashboard/notifications", icon: Bell },
   { label: "Inbox", href: "/dashboard/pro/inbox", icon: Inbox },
@@ -77,7 +78,6 @@ const professionalNav: NavItem[] = [
   { label: "Offers", href: "/dashboard/pro/offers", icon: HandCoins },
   { label: "Rental reservations", href: "/dashboard/pro/rental-reservations", icon: KeyRound },
   { label: "Add Property", href: "/dashboard/seller/properties/new", icon: Home },
-  { label: "Promote", href: "/dashboard/seller/promote", icon: Megaphone },
   { label: "Views & Analytics", href: "/dashboard/seller/analytics", icon: BarChart3 },
 ];
 
