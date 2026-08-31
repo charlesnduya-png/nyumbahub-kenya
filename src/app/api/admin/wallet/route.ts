@@ -110,6 +110,14 @@ export async function PATCH(request: Request) {
 
   try {
     const result = await reviewWalletWithdrawal(prisma, parsed.data);
+    const payee = await prisma.user.findUnique({
+      where: { id: result.userId },
+      select: { role: true },
+    });
+    const walletLink =
+      payee?.role === "JOB_PARTNER"
+        ? "/dashboard/jobs/wallet"
+        : "/dashboard/pro/wallet";
     try {
       await prisma.notification.create({
         data: {
@@ -123,7 +131,7 @@ export async function PATCH(request: Request) {
             parsed.data.action === "approve"
               ? "Your wallet withdrawal was marked as paid."
               : "Your wallet withdrawal was rejected and the money was returned to your balance.",
-          link: "/dashboard/pro/wallet",
+          link: walletLink,
         },
       });
     } catch (error) {

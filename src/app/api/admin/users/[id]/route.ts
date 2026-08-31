@@ -21,7 +21,7 @@ interface RouteParams {
 
 const updateSchema = z.object({
   isActive: z.boolean().optional(),
-  role: z.enum(["BUYER", "SELLER", "AGENT", "ADMIN"]).optional(),
+  role: z.enum(["BUYER", "SELLER", "AGENT", "JOB_PARTNER", "ADMIN"]).optional(),
   nationalIdVerified: z
     .enum(["UNVERIFIED", "PENDING", "VERIFIED", "REJECTED"])
     .optional(),

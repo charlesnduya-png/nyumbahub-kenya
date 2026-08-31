@@ -51,6 +51,11 @@ const ADMIN_SECTIONS = [
     href: "/dashboard/admin/payments",
   },
   {
+    title: "Job partners",
+    description: "Recruitment partners, referrals, commissions, and payouts",
+    href: "/dashboard/admin/job-partners",
+  },
+  {
     title: "Wallets",
     description: "Withdrawals, BnB commission, balances, and rankings",
     href: "/dashboard/admin/wallets",
