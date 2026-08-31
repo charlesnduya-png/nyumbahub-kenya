@@ -16,10 +16,14 @@ export default function PropertyDetailLoading() {
         <div className="grid gap-8 lg:grid-cols-3">
           <div className="space-y-8 lg:col-span-2">
             <Skeleton className="aspect-[16/9] w-full rounded-lg" />
+            <div className="space-y-4 lg:hidden">
+              <Skeleton className="h-36 w-full rounded-lg" />
+              <Skeleton className="h-72 w-full rounded-lg" />
+            </div>
             <Skeleton className="h-40 w-full rounded-lg" />
             <Skeleton className="h-64 w-full rounded-lg" />
           </div>
-          <aside className="space-y-4">
+          <aside className="hidden space-y-4 lg:block">
             <Skeleton className="h-36 w-full rounded-lg" />
             <Skeleton className="h-72 w-full rounded-lg" />
           </aside>

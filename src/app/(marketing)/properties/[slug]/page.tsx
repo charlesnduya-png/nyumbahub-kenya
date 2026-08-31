@@ -9,15 +9,14 @@ import {
   MapPin,
   Share2,
 } from "lucide-react";
-import { ListingAgentSection } from "@/components/properties/listing-agent-section";
 import { PropertyDetailGallery } from "@/components/properties/property-detail-gallery";
+import { PropertyBookingPanel } from "@/components/properties/property-booking-panel";
 import { RelatedPropertiesSection } from "@/components/properties/related-properties-section";
 import { SignInToUnlock } from "@/components/properties/sign-in-to-unlock";
 import { ListingFeaturesDisplay } from "@/components/property/listing-features-display";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { auth } from "@/lib/auth";
@@ -30,7 +29,7 @@ import {
 } from "@/lib/seo";
 import { toWhatsAppNumber, telHref } from "@/lib/phone";
 import { getListingTypeLabel, getPropertyTypeLabel } from "@/lib/kenya";
-import { isStayListing, stayLabel } from "@/lib/listing-kinds";
+import { isStayListing } from "@/lib/listing-kinds";
 import {
   clampListingDiscountPercent,
   listingSalePrice,
@@ -41,12 +40,6 @@ import { getPropertyReviews } from "@/lib/reviews";
 import { getCustomerMembership } from "@/lib/customer-membership";
 import { PropertyReviews } from "@/components/reviews/property-reviews";
 
-const BookStayForm = nextDynamic(
-  () =>
-    import("@/components/properties/book-stay-form").then((m) => m.BookStayForm),
-  { loading: () => <Skeleton className="h-40 w-full rounded-lg" /> },
-);
-
 const RentalListingActions = nextDynamic(
   () =>
     import("@/components/properties/rental-listing-actions").then(
@@ -55,44 +48,12 @@ const RentalListingActions = nextDynamic(
   { loading: () => <Skeleton className="h-32 w-full rounded-lg" /> },
 );
 
-const ContactSellerForm = nextDynamic(
-  () =>
-    import("@/components/properties/contact-seller-form").then(
-      (m) => m.ContactSellerForm,
-    ),
-  { loading: () => <Skeleton className="h-10 w-full rounded-lg" /> },
-);
-
-const PropertyOfferForm = nextDynamic(
-  () =>
-    import("@/components/properties/property-offer-form").then(
-      (m) => m.PropertyOfferForm,
-    ),
-  { loading: () => <Skeleton className="h-36 w-full rounded-lg" /> },
-);
-
-const GatedContactLinks = nextDynamic(
-  () =>
-    import("@/components/properties/gated-contact-links").then(
-      (m) => m.GatedContactLinks,
-    ),
-  { loading: () => <Skeleton className="h-10 w-full rounded-lg" /> },
-);
-
 const MortgageCalculator = nextDynamic(
   () =>
     import("@/components/properties/mortgage-calculator").then(
       (m) => m.MortgageCalculator,
     ),
   { loading: () => <Skeleton className="h-48 w-full rounded-lg" /> },
-);
-
-const ScheduleViewingForm = nextDynamic(
-  () =>
-    import("@/components/properties/schedule-viewing-form").then(
-      (m) => m.ScheduleViewingForm,
-    ),
-  { loading: () => <Skeleton className="h-10 w-full rounded-lg" /> },
 );
 
 const PropertyLocationMap = nextDynamic(
@@ -278,6 +239,30 @@ export default async function PropertyDetailPage({ params }: PageProps) {
     { name: property.title, path: `/properties/${property.slug}` },
   ]);
 
+  const bookingPanelProps = {
+    signedIn,
+    callbackPath,
+    listingHost,
+    property: {
+      id: property.id,
+      slug: property.slug,
+      title: property.title,
+      listingType: property.listingType,
+      price: property.price,
+      currency: property.currency,
+      views: property.views,
+      publishedAt: property.publishedAt,
+    },
+    discountPercent,
+    salePrice,
+    hostUserId,
+    memberDiscountRate: membership?.discountRate ?? 0.1,
+    whatsappPhone,
+    whatsappMessage,
+    callPhone,
+    rentalRooms,
+  };
+
   return (
     <>
       <script
@@ -382,6 +367,8 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                   thumbnail: video.thumbnail,
                 }))}
               />
+
+              <PropertyBookingPanel {...bookingPanelProps} className="lg:hidden" />
 
               {rentalRooms.length > 0 ? (
                 <Card>
@@ -582,108 +569,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
             </div>
 
             <aside className="space-y-4 lg:sticky lg:top-20">
-              {listingHost ? (
-                <ListingAgentSection
-                  host={listingHost}
-                  canViewProfile={signedIn}
-                  profileCallbackPath={callbackPath}
-                />
-              ) : null}
-              <Card>
-                <CardHeader>
-                  <CardTitle>
-                    {isStayListing(property.listingType)
-                      ? `Book this ${stayLabel(property.listingType).toLowerCase()} stay`
-                      : property.listingType === "RENT"
-                        ? "Reserve this rental"
-                        : "Interested in this property?"}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {!signedIn ? (
-                    <SignInToUnlock
-                      title="Sign in to contact the lister"
-                      description="Message, book a viewing, WhatsApp, and call are available after you sign in."
-                      callbackPath={callbackPath}
-                      minHeightClassName="min-h-[160px]"
-                    />
-                  ) : (
-                    <>
-                  {isStayListing(property.listingType) ? (
-                    <BookStayForm
-                      propertyId={property.id}
-                      propertySlug={property.slug}
-                      propertyTitle={property.title}
-                      pricePerNight={property.price}
-                      discountPercent={discountPercent}
-                      currency={property.currency}
-                      hostUserId={hostUserId}
-                      memberDiscountRate={membership?.discountRate ?? 0.1}
-                    />
-                  ) : property.listingType === "RENT" ? (
-                    <RentalListingActions
-                      propertyId={property.id}
-                      propertySlug={property.slug}
-                      propertyTitle={property.title}
-                      price={salePrice}
-                      currency={property.currency}
-                      hostUserId={hostUserId}
-                      whatsappPhone={whatsappPhone}
-                      whatsappMessage={whatsappMessage}
-                      callPhone={callPhone}
-                      rooms={rentalRooms}
-                    />
-                  ) : (
-                    <>
-                      <ContactSellerForm
-                        propertyId={property.id}
-                        propertyTitle={property.title}
-                        hostUserId={hostUserId}
-                      />
-                      <PropertyOfferForm
-                        propertyId={property.id}
-                        propertyTitle={property.title}
-                        listedPrice={salePrice}
-                        currency={property.currency}
-                      />
-                    </>
-                  )}
-                  {property.listingType !== "RENT" ? (
-                    <GatedContactLinks
-                      whatsappPhone={whatsappPhone}
-                      whatsappMessage={whatsappMessage}
-                      callPhone={callPhone}
-                      whatsappLabel="WhatsApp agent"
-                    />
-                  ) : null}
-                  {isStayListing(property.listingType) ? (
-                    <p className="text-center text-xs text-muted-foreground">
-                      Or{" "}
-                      <Link href="/dashboard/tenant/messages" className="text-primary hover:underline">
-                        open your inbox
-                      </Link>{" "}
-                      ·{" "}
-                      <Link href="/dashboard/tenant/bookings" className="text-primary hover:underline">
-                        view bookings
-                      </Link>
-                    </p>
-                  ) : property.listingType === "RENT" ? null : (
-                    <ScheduleViewingForm
-                      propertyId={property.id}
-                      propertyTitle={property.title}
-                    />
-                  )}
-                    </>
-                  )}
-                  <Separator />
-                  <p className="text-sm text-muted-foreground">
-                    {property.views.toLocaleString()} views · Listed{" "}
-                    {property.publishedAt
-                      ? new Date(property.publishedAt).toLocaleDateString("en-KE")
-                      : "recently"}
-                  </p>
-                </CardContent>
-              </Card>
+              <PropertyBookingPanel {...bookingPanelProps} className="hidden lg:block" />
               <SiteAdSlot placement="PROPERTY_DETAIL" variant="sidebar" />
             </aside>
           </div>
