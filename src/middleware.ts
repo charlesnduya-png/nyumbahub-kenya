@@ -101,6 +101,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(home, request.url));
   }
 
+  if (pathname.startsWith("/dashboard/jobs") && role !== "JOB_PARTNER") {
+    return NextResponse.redirect(new URL(home, request.url));
+  }
+
+  if (
+    pathname.startsWith("/dashboard/pro") &&
+    role === "JOB_PARTNER"
+  ) {
+    return NextResponse.redirect(new URL("/dashboard/jobs", request.url));
+  }
+
   if (
     pathname.startsWith("/dashboard/agent") &&
     role !== "AGENT"

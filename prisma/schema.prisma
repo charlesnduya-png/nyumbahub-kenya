@@ -13,6 +13,7 @@ enum Role {
   BUYER
   SELLER
   AGENT
+  JOB_PARTNER
   ADMIN
 }
 
@@ -81,6 +82,7 @@ enum WalletTxType {
   SALE
   PAYOUT
   ADJUSTMENT
+  HOTEL_RECRUITMENT
 }
 
 enum WalletTxStatus {
@@ -228,8 +230,13 @@ model User {
   isActive              Boolean            @default(true)
   /// Admin-set cap on active listings. null = use plan tier; -1 = unlimited.
   listingLimitOverride  Int?
+  referredByJobPartnerUserId String?
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
+
+  referredByJobPartner  User?              @relation("JobPartnerReferrals", fields: [referredByJobPartnerUserId], references: [id], onDelete: SetNull)
+  jobPartnerReferrals   User[]             @relation("JobPartnerReferrals")
+  jobPartnerProfile     JobPartnerProfile?
 
   accounts              Account[]
   sessions              Session[]
@@ -1231,4 +1238,19 @@ model AgencyPlanListingConfig {
   tier        AgencyPlanTier @id
   maxListings Int?
   updatedAt   DateTime       @updatedAt
+}
+
+/// Hotel recruitment partner — earns commission on referred hotel plan payments
+model JobPartnerProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  referralCode   String   @unique
+  hotelsReferred Int      @default(0)
+  bio            String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([referralCode])
 }

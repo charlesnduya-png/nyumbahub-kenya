@@ -2,6 +2,10 @@ import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 
 import { createAndSendEmailOtp } from "@/lib/email-otp";
+import {
+  attachHotelReferral,
+  createJobPartnerProfile,
+} from "@/lib/job-partner";
 import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validations/auth";
 
@@ -31,6 +35,7 @@ export async function POST(request: Request) {
       agencyName,
       licenseNumber,
       county,
+      jobRef,
     } = parsed.data;
     const normalizedEmail = email.toLowerCase();
     const cleanedNationalId = nationalId?.trim().toUpperCase() || null;
@@ -58,6 +63,7 @@ export async function POST(request: Request) {
 
     const passwordHash = await bcrypt.hash(password, 12);
     const isProfessional = role === "SELLER" || role === "AGENT";
+    const isJobPartner = role === "JOB_PARTNER";
 
     const user = await prisma.user.create({
       data: {
@@ -68,7 +74,8 @@ export async function POST(request: Request) {
         role,
         nationalId: cleanedNationalId,
         nationalIdVerified: cleanedNationalId ? "PENDING" : "UNVERIFIED",
-        verificationStatus: isProfessional ? "PENDING" : "UNVERIFIED",
+        verificationStatus:
+          isProfessional || isJobPartner ? "PENDING" : "UNVERIFIED",
       },
       select: {
         id: true,
@@ -93,6 +100,14 @@ export async function POST(request: Request) {
           isVerified: false,
         },
       });
+    }
+
+    if (isJobPartner) {
+      await createJobPartnerProfile(user.id);
+    }
+
+    if (isProfessional && jobRef) {
+      await attachHotelReferral({ hotelUserId: user.id, jobRef });
     }
 
     let otpSent = false;

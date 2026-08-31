@@ -1,4 +1,4 @@
-export type Role = "BUYER" | "SELLER" | "AGENT" | "ADMIN";
+export type Role = "BUYER" | "SELLER" | "AGENT" | "ADMIN" | "JOB_PARTNER";
 
 export type ListingType = "BUY" | "RENT" | "LAND" | "COMMERCIAL" | "HOLIDAY" | "HOTEL";
 

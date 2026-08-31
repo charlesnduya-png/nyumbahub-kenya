@@ -60,6 +60,12 @@ interface NavItem {
   badge?: string;
 }
 
+const jobPartnerNav: NavItem[] = [
+  { label: "Partner home", href: "/dashboard/jobs", icon: Briefcase },
+  { label: "Wallet", href: "/dashboard/jobs/wallet", icon: Banknote },
+  { label: "Notifications", href: "/dashboard/notifications", icon: Bell },
+];
+
 const professionalNav: NavItem[] = [
   { label: "Professional Home", href: "/dashboard/pro", icon: Briefcase },
   { label: "Profile photo", href: "/dashboard/pro/profile", icon: UserCircle },
@@ -139,6 +145,8 @@ function getNavForRole(role: Role): NavItem[] {
       return [...professionalNav, ...agentExtraNav];
     case "ADMIN":
       return adminNav;
+    case "JOB_PARTNER":
+      return jobPartnerNav;
     default:
       return buyerNav;
   }
@@ -164,6 +172,7 @@ export function DashboardSidebar({
     canAccessNavHref(item.href, team),
   );
   const isPro = role === "SELLER" || role === "AGENT";
+  const isJobPartner = role === "JOB_PARTNER";
   const roleLabels = (team?.roles ?? [])
     .map((roleKey: TeamRoleValue) => TEAM_ROLE_LABEL[roleKey] ?? roleKey)
     .join(" · ");
@@ -187,9 +196,11 @@ export function DashboardSidebar({
             ? "Site owner admin"
             : team?.isTeamMember
               ? `On ${team.ownerName}'s team`
-              : isPro
-                ? "Professional admin"
-                : "Tenant account"}
+              : isJobPartner
+                ? "Job partner"
+                : isPro
+                  ? "Professional admin"
+                  : "Tenant account"}
         </p>
         {team?.isTeamMember && roleLabels ? (
           <p className="mt-1 truncate text-xs text-muted-foreground">
@@ -205,6 +216,7 @@ export function DashboardSidebar({
             const active =
               pathname === item.href ||
               (item.href !== "/dashboard/pro" &&
+                item.href !== "/dashboard/jobs" &&
                 item.href !== "/dashboard/agent" &&
                 item.href !== "/dashboard/admin" &&
                 item.href !== "/dashboard/seller" &&

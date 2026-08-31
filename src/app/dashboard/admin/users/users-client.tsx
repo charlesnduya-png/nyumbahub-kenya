@@ -144,7 +144,13 @@ function AccountTeamCell({ team }: { team?: AdminUserTeam | null }) {
   );
 }
 
-type AccountTab = "tenants" | "agents" | "landlords" | "admins" | "all";
+type AccountTab =
+  | "tenants"
+  | "agents"
+  | "landlords"
+  | "job-partners"
+  | "admins"
+  | "all";
 
 const TAB_CONFIG: Array<{
   id: AccountTab;
@@ -154,6 +160,7 @@ const TAB_CONFIG: Array<{
   { id: "tenants", role: "BUYER", label: "Tenants" },
   { id: "agents", role: "AGENT", label: "Agents" },
   { id: "landlords", role: "SELLER", label: "Landlords & owners" },
+  { id: "job-partners", role: "JOB_PARTNER", label: "Job partners" },
   { id: "admins", role: "ADMIN", label: "Admins" },
   { id: "all", role: "ALL", label: "All accounts" },
 ];
@@ -257,7 +264,9 @@ function UsersTable({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {(["BUYER", "SELLER", "AGENT", "ADMIN"] as Role[]).map(
+                  {(
+                    ["BUYER", "SELLER", "AGENT", "JOB_PARTNER", "ADMIN"] as Role[]
+                  ).map(
                     (r) => (
                       <SelectItem key={r} value={r}>
                         {ACCOUNT_TYPE_LABELS[r].label}
@@ -375,7 +384,14 @@ export default function AdminUsersPage() {
   }, [searchParams]);
 
   const counts = useMemo(() => {
-    const base = { BUYER: 0, SELLER: 0, AGENT: 0, ADMIN: 0, total: users.length };
+    const base = {
+      BUYER: 0,
+      SELLER: 0,
+      AGENT: 0,
+      ADMIN: 0,
+      JOB_PARTNER: 0,
+      total: users.length,
+    };
     for (const u of users) {
       base[u.role] += 1;
     }
@@ -516,7 +532,7 @@ export default function AdminUsersPage() {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {(["BUYER", "AGENT", "SELLER", "ADMIN"] as Role[]).map((role) => (
+        {(["BUYER", "AGENT", "SELLER", "JOB_PARTNER", "ADMIN"] as Role[]).map((role) => (
           <Card key={role}>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm text-muted-foreground">

@@ -80,6 +80,19 @@ export async function fulfillCompletedPayment(payment: {
         userId: payment.userId,
         productId,
       }).catch(() => null);
+
+      const { processHotelRecruitmentCommission } = await import(
+        "@/lib/job-partner"
+      );
+      await processHotelRecruitmentCommission({
+        paymentId: payment.id,
+        hotelUserId: payment.userId,
+        grossAmount: amountPaid ?? 0,
+        currency: "KES",
+        productId,
+      }).catch((error) => {
+        console.error("Hotel recruitment commission failed:", error);
+      });
     }
   }
 

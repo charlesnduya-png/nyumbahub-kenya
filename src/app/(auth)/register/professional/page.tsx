@@ -2,11 +2,11 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useForm, type Resolver } from "react-hook-form";
-import { BadgeCheck, Building2, IdCard, UserRound } from "lucide-react";
+import { BadgeCheck, Briefcase, Building2, IdCard, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +32,8 @@ import { registerSchema, type RegisterInput } from "@/lib/validations/auth";
 
 export default function ProfessionalRegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const jobRefFromUrl = searchParams.get("jobRef")?.trim() ?? "";
   const { data: session, status } = useSession();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -54,8 +56,15 @@ export default function ProfessionalRegisterPage() {
       county: "Nairobi",
       nationalId: "",
       agencyName: "",
+      jobRef: jobRefFromUrl || undefined,
     },
   });
+
+  useEffect(() => {
+    if (jobRefFromUrl) {
+      setValue("jobRef", jobRefFromUrl, { shouldValidate: false });
+    }
+  }, [jobRefFromUrl, setValue]);
 
   const role = watch("role");
   const county = watch("county");
@@ -107,7 +116,7 @@ export default function ProfessionalRegisterPage() {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 rounded-2xl bg-white p-3 shadow-sm sm:grid-cols-2">
+      <div className="grid gap-3 rounded-2xl bg-white p-3 shadow-sm sm:grid-cols-3">
         <Link
           href="/register"
           className="rounded-xl border border-slate-200 bg-white p-4 text-slate-900 transition hover:border-primary/50 hover:bg-slate-50"
@@ -130,6 +139,18 @@ export default function ProfessionalRegisterPage() {
             approval.
           </p>
         </div>
+        <Link
+          href="/register/jobs"
+          className="rounded-xl border border-slate-200 bg-white p-4 text-slate-900 transition hover:border-primary/50 hover:bg-slate-50"
+        >
+          <div className="mb-2 flex items-center gap-2">
+            <Briefcase className="h-4 w-4 text-primary" />
+            <span className="text-sm font-semibold">Job partner</span>
+          </div>
+          <p className="text-xs text-slate-600">
+            Earn commission by onboarding hotels.
+          </p>
+        </Link>
       </div>
 
       <Card>
@@ -150,6 +171,16 @@ export default function ProfessionalRegisterPage() {
               Free professional account → Submit up to 5 properties → Admin
               approves each listing → Goes live.
             </div>
+
+            {jobRefFromUrl ? (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+                Referred by job partner{" "}
+                <span className="font-mono font-semibold">{jobRefFromUrl}</span>
+                . Their commission is tracked when you subscribe to a hotel
+                plan.
+                <input type="hidden" {...register("jobRef")} />
+              </div>
+            ) : null}
 
             <div className="space-y-2">
               <Label>Account type</Label>

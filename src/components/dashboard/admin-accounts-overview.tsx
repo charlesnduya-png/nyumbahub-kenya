@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  Briefcase,
   Shield,
   UserCheck,
   UserRound,
@@ -18,9 +19,10 @@ const ROLE_ICONS: Record<Role, React.ComponentType<{ className?: string }>> = {
   AGENT: UserCheck,
   SELLER: Users,
   ADMIN: Shield,
+  JOB_PARTNER: Briefcase,
 };
 
-const ROLE_ORDER: Role[] = ["BUYER", "AGENT", "SELLER", "ADMIN"];
+const ROLE_ORDER: Role[] = ["BUYER", "AGENT", "SELLER", "JOB_PARTNER", "ADMIN"];
 
 export function AdminAccountsOverview({
   accounts,

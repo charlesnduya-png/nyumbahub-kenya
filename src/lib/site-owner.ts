@@ -13,6 +13,7 @@ export function dashboardHomeForRole(
   email?: string | null,
 ): string {
   if (isSiteOwnerEmail(email) || role === "ADMIN") return "/dashboard/admin";
+  if (role === "JOB_PARTNER") return "/dashboard/jobs";
   if (role === "SELLER" || role === "AGENT") return "/dashboard/pro";
   return "/dashboard/tenant";
 }

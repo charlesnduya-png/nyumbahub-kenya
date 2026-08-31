@@ -10,6 +10,9 @@ export default async function TenantLayout({
 }) {
   const session = await auth();
   if (session?.user?.id) {
+    if (session.user.role === "JOB_PARTNER") {
+      redirect("/dashboard/jobs");
+    }
     try {
       const ctx = await resolveProfessionalActingContext(session.user.id);
       if (ctx.isTeamMember) {

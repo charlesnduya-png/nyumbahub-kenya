@@ -21,6 +21,10 @@ export const ACCOUNT_TYPE_LABELS: Record<
     label: "Admins",
     description: "Platform administrators",
   },
+  JOB_PARTNER: {
+    label: "Job partners",
+    description: "Referral partners earning hotel plan commissions",
+  },
 };
 
 export type AccountTypeCounts = Record<Role, number> & { total: number };
@@ -65,6 +69,7 @@ export async function getAccountTypeCounts(
     SELLER: 0,
     AGENT: 0,
     ADMIN: 0,
+    JOB_PARTNER: 0,
     total: 0,
   });
 
@@ -157,6 +162,7 @@ export async function getAdminGrowthSummary(
     SELLER: 0,
     AGENT: 0,
     ADMIN: 0,
+    JOB_PARTNER: 0,
   };
 
   for (const u of recentUsers) {
@@ -187,7 +193,7 @@ export async function getAdminGrowthSummary(
   for (const key of monthKeys) {
     monthlySignupsMap.set(key, {
       total: 0,
-      byRole: { BUYER: 0, SELLER: 0, AGENT: 0, ADMIN: 0 },
+      byRole: { BUYER: 0, SELLER: 0, AGENT: 0, ADMIN: 0, JOB_PARTNER: 0 },
     });
   }
 

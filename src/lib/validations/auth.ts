@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const kenyanPhoneRegex = /^(\+254|254|0)?[17]\d{8}$/;
 
-export const userRoleSchema = z.enum(["BUYER", "SELLER", "AGENT"]);
+export const userRoleSchema = z.enum(["BUYER", "SELLER", "AGENT", "JOB_PARTNER"]);
 
 export const loginSchema = z.object({
   email: z
@@ -77,6 +77,12 @@ export const registerSchema = z
       .max(80)
       .optional()
       .or(z.literal("").transform(() => undefined)),
+    jobRef: z
+      .string()
+      .trim()
+      .max(20)
+      .optional()
+      .or(z.literal("").transform(() => undefined)),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
@@ -98,6 +104,15 @@ export const registerSchema = z
           code: z.ZodIssueCode.custom,
           message: "Agency / company name is required for agents",
           path: ["agencyName"],
+        });
+      }
+    }
+    if (data.role === "JOB_PARTNER") {
+      if (!data.nationalId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "National ID is required for job partner accounts",
+          path: ["nationalId"],
         });
       }
     }

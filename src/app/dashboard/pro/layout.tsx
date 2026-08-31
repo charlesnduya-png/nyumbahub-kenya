@@ -37,6 +37,9 @@ export default async function ProLayout({
   } catch (error) {
     console.error("Professional workspace check failed:", error);
     if (session.user.role !== "SELLER" && session.user.role !== "AGENT") {
+      if (session.user.role === "JOB_PARTNER") {
+        redirect("/dashboard/jobs");
+      }
       redirect("/dashboard/tenant");
     }
   }

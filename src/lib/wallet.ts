@@ -443,6 +443,36 @@ export async function syncWalletFromActivity(db: PrismaClient, userId: string) {
   }
 }
 
+export async function creditHotelRecruitmentCommission(
+  db: Db,
+  input: {
+    partnerUserId: string;
+    hotelUserId: string;
+    paymentId: string;
+    grossAmount: number;
+    currency: string;
+    description: string;
+  },
+) {
+  const commission = roundMoney(input.grossAmount * 0.3);
+  if (commission <= 0) return null;
+
+  await upsertEarning(db, {
+    userId: input.partnerUserId,
+    type: "HOTEL_RECRUITMENT",
+    status: "AVAILABLE",
+    amount: commission,
+    grossAmount: input.grossAmount,
+    feeAmount: roundMoney(input.grossAmount - commission),
+    currency: input.currency,
+    sourceType: "HOTEL_RECRUITMENT",
+    sourceId: input.paymentId,
+    description: input.description,
+  });
+
+  return commission;
+}
+
 export async function recordWalletPayout(
   db: PrismaClient,
   input: { userId: string; amount: number; note?: string },
