@@ -7,7 +7,7 @@ export default function AdminHotelsLayout({
 }) {
   return (
     <div className="space-y-6">
-      <HotelsSectionNav basePath="/dashboard/admin/hotels" />
+      <HotelsSectionNav basePath="/dashboard/admin/hotels" variant="admin" />
       {children}
     </div>
   );

@@ -1,12 +1,10 @@
-import { ListingsManager } from "@/components/professional/listings-manager";
+import { AdminPropertiesManager } from "@/components/admin/admin-properties-manager";
 
 export default function AdminHotelListingsPage() {
   return (
-    <ListingsManager
+    <AdminPropertiesManager
       listingType="HOTEL"
       hideHeader
-      newHref="/dashboard/seller/properties/new?type=HOTEL"
-      newLabel="Add hotel"
       emptyHint="No hotels in the system yet."
     />
   );

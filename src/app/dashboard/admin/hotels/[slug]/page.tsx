@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { HotelServicesPanel } from "@/components/professional/hotel-services-panel";
+import { AdminHotelServicesPanel } from "@/components/admin/admin-hotel-services-panel";
 import { HOTEL_SERVICE_SECTIONS, getHotelSection } from "@/lib/hotel-services";
 
 export function generateStaticParams() {
@@ -12,8 +12,7 @@ export default async function AdminHotelServicePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const section = getHotelSection(slug);
-  if (!section) notFound();
+  if (!getHotelSection(slug)) notFound();
 
-  return <HotelServicesPanel slug={slug} />;
+  return <AdminHotelServicesPanel slug={slug} />;
 }

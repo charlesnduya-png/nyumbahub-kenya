@@ -27,7 +27,7 @@ const ADMIN_SECTIONS = [
   },
   {
     title: "Hotels",
-    description: "Hotel listings, nightly bookings, and guest reviews",
+    description: "Command centre — listings, bookings, plans, packages, and requests",
     href: "/dashboard/admin/hotels",
   },
   {

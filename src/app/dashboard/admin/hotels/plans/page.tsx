@@ -1,5 +1,7 @@
-import { HotelPlansPanel } from "@/components/professional/hotel-plans-panel";
+import { AdminHotelPlansTable } from "@/components/admin/admin-hotel-plans-table";
+import { getAdminHotelPlans } from "@/lib/admin-hotels";
 
-export default function AdminHotelPlansPage() {
-  return <HotelPlansPanel />;
+export default async function AdminHotelPlansPage() {
+  const plans = await getAdminHotelPlans();
+  return <AdminHotelPlansTable plans={plans} />;
 }

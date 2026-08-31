@@ -32,12 +32,14 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const category = searchParams.get("category")?.toUpperCase();
-  const ownerId = ctx.actingOwnerId;
+  const scopeAll =
+    searchParams.get("scope") === "all" && session.user.role === "ADMIN";
+  const ownerId = scopeAll ? undefined : ctx.actingOwnerId;
 
   try {
     const requests = await prisma.hotelServiceRequest.findMany({
       where: {
-        ownerId,
+        ...(ownerId ? { ownerId } : {}),
         ...(category && CATEGORIES.includes(category as (typeof CATEGORIES)[number])
           ? { category: category as (typeof CATEGORIES)[number] }
           : {}),
@@ -46,9 +48,12 @@ export async function GET(req: Request) {
         property: { select: { id: true, title: true, slug: true } },
         package: { select: { id: true, title: true } },
         guest: { select: { id: true, name: true, email: true, phone: true } },
+        owner: scopeAll
+          ? { select: { name: true, email: true } }
+          : undefined,
       },
       orderBy: { createdAt: "desc" },
-      take: 200,
+      take: scopeAll ? 500 : 200,
     });
 
     return NextResponse.json({ success: true, data: requests });

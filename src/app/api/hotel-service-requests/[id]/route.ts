@@ -25,10 +25,11 @@ export async function PATCH(
   }
 
   const { id } = await params;
+  const isAdmin = session.user.role === "ADMIN";
 
   try {
     const existing = await prisma.hotelServiceRequest.findFirst({
-      where: { id, ownerId: ctx.actingOwnerId },
+      where: isAdmin ? { id } : { id, ownerId: ctx.actingOwnerId },
     });
     if (!existing) {
       return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });

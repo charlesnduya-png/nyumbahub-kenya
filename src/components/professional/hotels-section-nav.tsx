@@ -11,9 +11,12 @@ import { cn } from "@/lib/utils";
 
 export function HotelsSectionNav({
   basePath = "/dashboard/pro/hotels",
+  variant = "pro",
 }: {
   basePath?: string;
+  variant?: "pro" | "admin";
 }) {
+  const isAdmin = variant === "admin";
   const pathname = usePathname();
 
   const coreTabs = HOTEL_CORE_TABS.map((tab) => ({
@@ -46,16 +49,19 @@ export function HotelsSectionNav({
             <h1 className="text-2xl font-bold">Hotels</h1>
           </div>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Listings, bookings, group stays, events, sports packages, cooperative rates, and offers
-            — plans from Free through Enterprise for photos, packages, and analysis.
+            {isAdmin
+              ? "Site-wide view of every hotel listing, booking, operator plan, package, and service request on Your Home."
+              : "Listings, bookings, group stays, events, sports packages, cooperative rates, and offers — plans from Free through Enterprise for photos, packages, and analysis."}
           </p>
         </div>
-        <Button asChild>
-          <Link href={addHotelPath()}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add hotel
-          </Link>
-        </Button>
+        {!isAdmin ? (
+          <Button asChild>
+            <Link href={addHotelPath()}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add hotel
+            </Link>
+          </Button>
+        ) : null}
       </div>
 
       <div className="flex w-full gap-1 overflow-x-auto rounded-lg bg-muted p-1">
@@ -92,7 +98,7 @@ export function HotelsSectionNav({
         ))}
       </div>
 
-      <HotelPlansNavStrip basePath={basePath} />
+      {isAdmin ? null : <HotelPlansNavStrip basePath={basePath} />}
     </div>
   );
 }

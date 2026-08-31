@@ -35,18 +35,23 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const category = searchParams.get("category")?.toUpperCase();
-  const ownerId = ctx.actingOwnerId;
+  const scopeAll =
+    searchParams.get("scope") === "all" && session.user.role === "ADMIN";
+  const ownerId = scopeAll ? undefined : ctx.actingOwnerId;
 
   try {
     const packages = await prisma.hotelPackage.findMany({
       where: {
-        ownerId,
+        ...(ownerId ? { ownerId } : {}),
         ...(category && CATEGORIES.includes(category as (typeof CATEGORIES)[number])
           ? { category: category as (typeof CATEGORIES)[number] }
           : {}),
       },
       include: {
         property: { select: { id: true, title: true, slug: true } },
+        owner: scopeAll
+          ? { select: { name: true, email: true } }
+          : undefined,
         _count: { select: { requests: true } },
       },
       orderBy: { updatedAt: "desc" },
