@@ -1,4 +1,5 @@
 import { AnimatedHero } from "@/components/home/animated-hero";
+import { HomeCurrencyBar } from "@/components/home/home-currency-bar";
 import { Categories } from "@/components/home/categories";
 import { CtaSection } from "@/components/home/cta-section";
 import { FeaturedAgents } from "@/components/home/featured-agents";
@@ -71,6 +72,7 @@ export default async function HomePage() {
         }}
       />
       <AnimatedHero />
+      <HomeCurrencyBar />
       <div className="mx-auto w-full max-w-7xl px-3 pt-6 sm:px-6 lg:px-8">
         <SiteAdSlot placement="HOME_BANNER" variant="banner" />
       </div>

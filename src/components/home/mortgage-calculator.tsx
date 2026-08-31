@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { formatPrice } from "@/lib/utils";
+import { useDisplayCurrency } from "@/components/currency/currency-provider";
 
 function calculateMonthlyPayment(
   principal: number,
@@ -28,6 +28,7 @@ export function MortgageCalculator() {
   const [principal, setPrincipal] = React.useState(5000000);
   const [rate, setRate] = React.useState(13.5);
   const [term, setTerm] = React.useState(20);
+  const { formatConvertedPrice, currency } = useDisplayCurrency();
 
   const monthlyPayment = calculateMonthlyPayment(principal, rate, term);
   const totalPayment = monthlyPayment * term * 12;
@@ -44,7 +45,8 @@ export function MortgageCalculator() {
             Mortgage Calculator
           </h2>
           <p className="mt-2 text-muted-foreground">
-            Estimate your monthly home loan payments in Kenyan Shillings
+            Estimate monthly payments — calculator uses KES loan amounts, shown in{" "}
+            {currency}.
           </p>
         </div>
 
@@ -59,7 +61,7 @@ export function MortgageCalculator() {
               <div className="flex items-center justify-between">
                 <Label htmlFor="principal">Loan amount (KES)</Label>
                 <span className="text-sm font-medium text-primary">
-                  {formatPrice(principal)}
+                  {formatConvertedPrice(principal, "KES")}
                 </span>
               </div>
               <Input
@@ -152,19 +154,19 @@ export function MortgageCalculator() {
                 Estimated monthly payment
               </p>
               <p className="font-display mt-1 text-4xl font-semibold text-primary">
-                {formatPrice(Math.round(monthlyPayment))}
+                {formatConvertedPrice(Math.round(monthlyPayment), "KES")}
               </p>
               <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-muted-foreground">Total interest</p>
                   <p className="font-medium">
-                    {formatPrice(Math.round(totalInterest))}
+                    {formatConvertedPrice(Math.round(totalInterest), "KES")}
                   </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Total repayment</p>
                   <p className="font-medium">
-                    {formatPrice(Math.round(totalPayment))}
+                    {formatConvertedPrice(Math.round(totalPayment), "KES")}
                   </p>
                 </div>
               </div>

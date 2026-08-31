@@ -1,10 +1,13 @@
+"use client";
+
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
+import { useDisplayCurrency } from "@/components/currency/currency-provider";
 import {
   clampListingDiscountPercent,
   listingSalePrice,
 } from "@/lib/listing-discount";
-import { cn, formatPrice } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 export function ListingDiscountBadge({
   discountPercent,
@@ -33,6 +36,7 @@ export function ListingPrice({
   className?: string;
   size?: "sm" | "md" | "lg";
 }) {
+  const { formatConvertedPrice } = useDisplayCurrency();
   const pct = clampListingDiscountPercent(discountPercent);
   const sale = listingSalePrice(listPrice, pct);
   const sizeClass =
@@ -52,12 +56,12 @@ export function ListingPrice({
               size === "lg" ? "text-base" : "text-sm",
             )}
           >
-            {formatPrice(listPrice, { currency })}
+            {formatConvertedPrice(listPrice, currency)}
           </span>
-          {formatPrice(sale, { currency })}
+          {formatConvertedPrice(sale, currency)}
         </>
       ) : (
-        formatPrice(listPrice, { currency })
+        formatConvertedPrice(listPrice, currency)
       )}
       {suffix}
     </p>
