@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Building2, Hotel, Search, Sparkles } from "lucide-react";
 import { ListHotelCta } from "@/components/hotels/list-hotel-cta";
+import { HotelPlansShowcase } from "@/components/professional/hotel-plans-showcase";
 import { FeaturedProperties } from "@/components/home/featured-properties";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -106,6 +107,17 @@ export default async function HotelsPage() {
         viewAllHref="/properties?listingType=HOTEL"
         viewAllLabel="View all hotels"
       />
+
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        <HotelPlansShowcase
+          manageHref="/register/professional"
+          planActionLabel="Get"
+          showManageLink={false}
+        />
+        <div className="mt-6 text-center">
+          <ListHotelCta size="lg">Open professional account</ListHotelCta>
+        </div>
+      </section>
 
       <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
         <div className="rounded-3xl border bg-card/80 p-8 text-center backdrop-blur">

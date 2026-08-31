@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Hotel, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { addHotelPath } from "@/lib/hotel-listing";
+import { HotelPlansNavStrip } from "@/components/professional/hotel-plans-showcase";
 import { HOTEL_CORE_TABS, HOTEL_SERVICE_SECTIONS } from "@/lib/hotel-services";
 import { cn } from "@/lib/utils";
 
@@ -90,6 +91,8 @@ export function HotelsSectionNav({
           </Link>
         ))}
       </div>
+
+      <HotelPlansNavStrip basePath={basePath} />
     </div>
   );
 }
