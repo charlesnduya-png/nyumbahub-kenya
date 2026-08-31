@@ -15,5 +15,5 @@ export default async function AdminHotelServicePage({
   const section = getHotelSection(slug);
   if (!section) notFound();
 
-  return <HotelServicesPanel section={section} />;
+  return <HotelServicesPanel slug={slug} />;
 }

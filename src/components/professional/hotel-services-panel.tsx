@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { getHotelSection } from "@/lib/hotel-services";
 import type { HotelServiceSection } from "@/lib/hotel-services";
 import { canCreateHotelPackages, formatHotelPackageCap, isHotelSectionMuted } from "@/lib/hotel-plans";
 import type { HotelPlanUsage } from "@/lib/hotel-plan-server";
@@ -71,7 +72,18 @@ function statusVariant(status: string) {
   return "outline" as const;
 }
 
-export function HotelServicesPanel({ section }: { section: HotelServiceSection }) {
+export function HotelServicesPanel({ slug }: { slug: string }) {
+  const section = getHotelSection(slug);
+  if (!section) {
+    return (
+      <p className="text-sm text-muted-foreground">This hotel service section was not found.</p>
+    );
+  }
+
+  return <HotelServicesPanelInner section={section} />;
+}
+
+function HotelServicesPanelInner({ section }: { section: HotelServiceSection }) {
   const [packages, setPackages] = useState<PackageRow[]>([]);
   const [requests, setRequests] = useState<RequestRow[]>([]);
   const [loading, setLoading] = useState(true);
