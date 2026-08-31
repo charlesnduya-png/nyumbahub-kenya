@@ -1,6 +1,12 @@
 import type { SubscriptionPlan } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
+  getEffectiveAgentProduct,
+  getEffectiveFreeMaxListings,
+  resolveUserListingLimit,
+  UNLIMITED_LISTING_OVERRIDE,
+} from "@/lib/agency-plan-limits";
+import {
   ALL_PRODUCTS,
   getProduct,
   type ProductId,
@@ -11,7 +17,7 @@ import {
   PRICING_MUTED,
 } from "@/lib/listing-flags";
 
-export { FREE_TIER_MAX_LISTINGS, LISTINGS_ARE_FREE, PRICING_MUTED };
+export { FREE_TIER_MAX_LISTINGS, LISTINGS_ARE_FREE, PRICING_MUTED, UNLIMITED_LISTING_OVERRIDE };
 
 export const MONTHLY_LISTING_PRODUCT_IDS = new Set([
   "standard",
@@ -93,7 +99,7 @@ export async function countProfessionalListings(userId: string) {
 
 export async function getFreeTierListingUsage(userId: string) {
   const used = await countProfessionalListings(userId);
-  const limit = FREE_TIER_MAX_LISTINGS;
+  const limit = await getEffectiveFreeMaxListings();
   return {
     used,
     limit,
@@ -126,9 +132,14 @@ async function maxListingsForSubscription(subscription: {
 
   const productId = (payment?.metadata as { productId?: string } | null)?.productId;
   if (productId && isMonthlyListingProduct(productId)) {
-    const product = getProduct(productId);
+    const product = await getEffectiveAgentProduct(productId);
     if (product) {
       if (typeof product.maxListings === "number") return product.maxListings;
+      return null;
+    }
+    const fallback = getProduct(productId);
+    if (fallback) {
+      if (typeof fallback.maxListings === "number") return fallback.maxListings;
       return null;
     }
   }
@@ -136,94 +147,108 @@ async function maxListingsForSubscription(subscription: {
   return maxListingsForPlan(subscription.plan);
 }
 
+type ListingAccessResult =
+  | {
+      ok: true;
+      used: number;
+      limit: number | null;
+      remaining: number | null;
+    }
+  | {
+      ok: false;
+      used: number;
+      limit: number;
+      remaining: 0;
+      error: string;
+      code: "LISTING_LIMIT_REACHED";
+    };
+
+function limitReached(
+  used: number,
+  limit: number,
+  error: string,
+): ListingAccessResult {
+  return {
+    ok: false,
+    used,
+    limit,
+    remaining: 0,
+    error,
+    code: "LISTING_LIMIT_REACHED",
+  };
+}
+
 /**
  * Admins bypass. When LISTINGS_ARE_FREE / payments off, pros list within free cap.
  * Active subscriptions raise the cap via product maxListings.
+ * Admin listingLimitOverride on the user account takes precedence when set.
  */
 export async function assertCanCreateListing(input: {
   userId: string;
   role?: string | null;
-}) {
+}): Promise<ListingAccessResult> {
   if (input.role === "ADMIN") {
     return {
-      ok: true as const,
+      ok: true,
       used: 0,
-      limit: null as number | null,
-      remaining: null as number | null,
+      limit: null,
+      remaining: null,
     };
   }
 
-  const used = await countProfessionalListings(input.userId);
+  const user = await prisma.user.findUnique({
+    where: { id: input.userId },
+    select: { listingLimitOverride: true },
+  });
 
-  // Launch free mode — no paid plan required
-  if (LISTINGS_ARE_FREE) {
-    const limit = FREE_TIER_MAX_LISTINGS;
-    if (used >= limit) {
+  const used = await countProfessionalListings(input.userId);
+  const freeLimit = await getEffectiveFreeMaxListings();
+
+  const applyLimit = async (planLimit: number | null): Promise<ListingAccessResult> => {
+    const effectiveLimit = await resolveUserListingLimit({
+      userId: input.userId,
+      role: input.role,
+      listingLimitOverride: user?.listingLimitOverride,
+      planLimit,
+    });
+
+    if (effectiveLimit == null) {
       return {
-        ok: false as const,
+        ok: true,
         used,
-        limit,
-        remaining: 0,
-        error: `You can list up to ${limit} properties for now. Archive one to add another.`,
-        code: "LISTING_LIMIT_REACHED" as const,
+        limit: null,
+        remaining: null,
       };
     }
+
+    if (used >= effectiveLimit) {
+      return limitReached(
+        used,
+        effectiveLimit,
+        `You can list up to ${effectiveLimit} active properties. Archive one or ask admin to raise your limit.`,
+      );
+    }
+
     return {
-      ok: true as const,
+      ok: true,
       used,
-      limit,
-      remaining: Math.max(0, limit - used),
+      limit: effectiveLimit,
+      remaining: Math.max(0, effectiveLimit - used),
     };
+  };
+
+  if (LISTINGS_ARE_FREE) {
+    return applyLimit(freeLimit);
   }
 
   const subscription = await getActiveListingSubscription(input.userId);
 
   if (subscription) {
     const paidLimit = await maxListingsForSubscription(subscription);
-    if (paidLimit == null) {
-      return {
-        ok: true as const,
-        used,
-        limit: null,
-        remaining: null,
-      };
-    }
-    if (used >= paidLimit) {
-      return {
-        ok: false as const,
-        used,
-        limit: paidLimit,
-        remaining: 0,
-        error: `Your plan allows up to ${paidLimit} active listings. Archive one or upgrade.`,
-        code: "LISTING_LIMIT_REACHED" as const,
-      };
-    }
-    return {
-      ok: true as const,
-      used,
-      limit: paidLimit,
-      remaining: Math.max(0, paidLimit - used),
-    };
+    return applyLimit(paidLimit);
   }
 
-  const limit = FREE_TIER_MAX_LISTINGS;
-  if (used >= limit) {
-    return {
-      ok: false as const,
-      used,
-      limit,
-      remaining: 0,
-      error: `Free accounts can list up to ${limit} properties. Upgrade your plan or archive an existing listing.`,
-      code: "LISTING_LIMIT_REACHED" as const,
-    };
-  }
-
-  return {
-    ok: true as const,
-    used,
-    limit,
-    remaining: Math.max(0, limit - used),
-  };
+  return applyLimit(freeLimit);
 }
 
 export async function activateListingSubscription(input: {
@@ -233,7 +258,9 @@ export async function activateListingSubscription(input: {
   paymentId?: string;
   durationDays?: number;
 }) {
-  const product = getProduct(input.productId);
+  const product =
+    (await getEffectiveAgentProduct(input.productId)) ??
+    getProduct(input.productId);
   const durationDays = input.durationDays ?? product?.durationDays ?? 30;
   const startDate = new Date();
   const plan = productIdToSubscriptionPlan(input.productId);

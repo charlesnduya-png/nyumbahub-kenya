@@ -76,8 +76,8 @@ const ADMIN_SECTIONS = [
     href: "/dashboard/admin/moderation",
   },
   {
-    title: "Featured agents",
-    description: "Homepage featured agents and ratings",
+    title: "Agents",
+    description: "Listing limits, verification, and homepage featured agents",
     href: "/dashboard/admin/agents",
   },
   {

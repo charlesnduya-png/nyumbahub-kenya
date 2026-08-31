@@ -1,23 +1,34 @@
+import { AdminAgencyListingLimits } from "@/components/admin/admin-agency-listing-limits";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { prisma } from "@/lib/prisma";
+import { getEffectiveAgencyPlans } from "@/lib/agency-plan-limits";
 
 export default async function AdminSubscriptionsPage() {
-  const subscriptions = await prisma.subscription.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 100,
-    include: {
-      user: { select: { id: true, name: true } },
-    },
-  });
+  const [subscriptions, agencyPlans] = await Promise.all([
+    prisma.subscription.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 100,
+      include: {
+        user: { select: { id: true, name: true } },
+      },
+    }),
+    getEffectiveAgencyPlans(),
+  ]);
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Subscriptions</h1>
-        <p className="text-muted-foreground">Agent and seller subscription plans.</p>
+        <h1 className="text-2xl font-bold">Subscriptions & listing limits</h1>
+        <p className="text-muted-foreground">
+          Control how many listings agents can post per plan tier, and review active
+          subscriptions.
+        </p>
       </div>
+
+      <AdminAgencyListingLimits initialPlans={agencyPlans} />
+
       <Card>
         <CardHeader><CardTitle>Active subscriptions</CardTitle></CardHeader>
         <CardContent className="overflow-x-auto">

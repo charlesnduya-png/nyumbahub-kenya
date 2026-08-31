@@ -4,6 +4,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isSiteOwnerEmail } from "@/lib/site-owner";
+import { assertCanCreateListing } from "@/lib/listing-subscription";
 
 import type { Session } from "next-auth";
 
@@ -51,6 +52,7 @@ interface RouteParams {
 const updateSchema = z.object({
   isFeatured: z.boolean().optional(),
   isVerified: z.boolean().optional(),
+  listingLimitOverride: z.number().int().nullable().optional(),
 });
 
 export async function PATCH(request: Request, { params }: RouteParams) {
@@ -70,12 +72,15 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
     if (!parsed.success || Object.keys(parsed.data).length === 0) {
       return NextResponse.json(
-        { success: false, error: "Provide isFeatured and/or isVerified" },
+        {
+          success: false,
+          error: "Provide isFeatured, isVerified, and/or listingLimitOverride",
+        },
         { status: 400 },
       );
     }
 
-    const { isFeatured, isVerified } = parsed.data;
+    const { isFeatured, isVerified, listingLimitOverride } = parsed.data;
 
     const existing = await resolveAgentRecord(id);
 
@@ -84,6 +89,13 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         { success: false, error: "Agent not found" },
         { status: 404 },
       );
+    }
+
+    if (typeof listingLimitOverride !== "undefined") {
+      await prisma.user.update({
+        where: { id: existing.userId },
+        data: { listingLimitOverride },
+      });
     }
 
     const agent = await prisma.agent.update({
@@ -135,6 +147,15 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       });
     }
 
+    const access = await assertCanCreateListing({
+      userId: existing.userId,
+      role: "AGENT",
+    });
+    const userRow = await prisma.user.findUnique({
+      where: { id: existing.userId },
+      select: { listingLimitOverride: true },
+    });
+
     return NextResponse.json({
       success: true,
       data: {
@@ -150,6 +171,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         rating: agent.rating,
         reviewCount: agent.reviewCount,
         listingsCount: agent._count.listings,
+        listingUsed: access.used,
+        listingLimit: access.limit,
+        listingLimitOverride: userRow?.listingLimitOverride ?? null,
         image: agent.user.image,
         isFeatured: agent.isFeatured,
         isVerified: agent.isVerified,

@@ -226,6 +226,8 @@ model User {
   titleDeedVerified     VerificationStatus @default(UNVERIFIED)
   verificationStatus    VerificationStatus @default(UNVERIFIED)
   isActive              Boolean            @default(true)
+  /// Admin-set cap on active listings. null = use plan tier; -1 = unlimited.
+  listingLimitOverride  Int?
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
 
@@ -1118,6 +1120,14 @@ enum HotelPlanTier {
   ENTERPRISE
 }
 
+enum AgencyPlanTier {
+  FREE
+  BASIC
+  PRO
+  PREMIUM
+  ENTERPRISE
+}
+
 enum HotelServiceRequestStatus {
   NEW
   REVIEWING
@@ -1214,4 +1224,11 @@ model HotelPlanPriceConfig {
   price     Float
   currency  String        @default("KES")
   updatedAt DateTime      @updatedAt
+}
+
+/// Admin-configurable listing caps per agency plan tier
+model AgencyPlanListingConfig {
+  tier        AgencyPlanTier @id
+  maxListings Int?
+  updatedAt   DateTime       @updatedAt
 }

@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isSiteOwnerEmail } from "@/lib/site-owner";
+import { assertCanCreateListing } from "@/lib/listing-subscription";
+import { UNLIMITED_LISTING_OVERRIDE } from "@/lib/agency-plan-limits";
 
 import type { Session } from "next-auth";
 
@@ -37,6 +39,7 @@ export async function GET() {
         nationalId: true,
         nationalIdVerified: true,
         verificationStatus: true,
+        listingLimitOverride: true,
         createdAt: true,
         agentProfile: {
           select: {
@@ -56,12 +59,16 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      data: agentUsers.map((u) => {
+    const data = await Promise.all(
+      agentUsers.map(async (u) => {
         const profile = u.agentProfile;
+        const access = await assertCanCreateListing({
+          userId: u.id,
+          role: "AGENT",
+        });
         const listingsCount =
           (profile?._count.listings ?? 0) + u._count.properties;
+
         return {
           id: profile?.id ?? u.id,
           userId: u.id,
@@ -77,6 +84,12 @@ export async function GET() {
           rating: profile?.rating ?? 0,
           reviewCount: profile?.reviewCount ?? 0,
           listingsCount,
+          listingUsed: access.used,
+          listingLimit: access.limit,
+          listingLimitOverride: u.listingLimitOverride,
+          listingUnlimited:
+            u.listingLimitOverride === UNLIMITED_LISTING_OVERRIDE ||
+            access.limit == null,
           image: u.image,
           isFeatured: profile?.isFeatured ?? false,
           isVerified: profile?.isVerified ?? false,
@@ -86,6 +99,11 @@ export async function GET() {
           createdAt: u.createdAt.toISOString(),
         };
       }),
+    );
+
+    return NextResponse.json({
+      success: true,
+      data,
     });
   } catch {
     return NextResponse.json(

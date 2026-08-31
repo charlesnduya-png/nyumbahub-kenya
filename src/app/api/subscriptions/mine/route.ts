@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import {
-  FREE_TIER_MAX_LISTINGS,
   assertCanCreateListing,
   getActiveListingSubscription,
   PRICING_MUTED,
@@ -39,7 +38,7 @@ export async function GET() {
         active: Boolean(subscription),
         freeTier: !subscription,
         pricingMuted: PRICING_MUTED,
-        listingLimit: canCreate.limit ?? FREE_TIER_MAX_LISTINGS,
+        listingLimit: canCreate.limit,
         used: canCreate.used ?? 0,
         remaining: canCreate.remaining ?? 0,
         atLimit: !canCreate.ok,
