@@ -2,9 +2,9 @@ import { getAgencyFreeMaxListings } from "@/lib/agency-plans";
 
 /**
  * Launch / monetization switches.
- * Set PAYMENTS_REQUIRED to true when you want paid plans & the KES 150 viewing pass live.
+ * Set to false only for a temporary free-launch period.
  */
-export const PAYMENTS_REQUIRED = false;
+export const PAYMENTS_REQUIRED = true;
 
 /** When true (or payments off), professionals list without paying. */
 export const LISTINGS_ARE_FREE = !PAYMENTS_REQUIRED;
