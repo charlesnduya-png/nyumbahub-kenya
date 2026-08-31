@@ -1,5 +1,6 @@
 import { formatPrice } from "@/lib/utils";
 import { HOTEL_PLANS, type HotelPlanTierId } from "@/lib/hotel-plans";
+import { AGENCY_PLANS, type AgencyPlanProductId } from "@/lib/agency-plans";
 
 export type ListingProductId = "standard" | "featured" | "premium";
 export type BoostProductId =
@@ -10,7 +11,7 @@ export type BoostProductId =
   | "promote_pro"
   | "promote_max"
   | "verified_badge";
-export type AgentProductId = "agent_basic" | "agent_pro" | "agent_enterprise";
+export type AgentProductId = AgencyPlanProductId;
 export type HotelPlanProductId =
   | "hotel_plan_starter"
   | "hotel_plan_pro"
@@ -224,57 +225,20 @@ export const PUBLIC_BOOST_PRODUCTS = BOOST_PRODUCTS.filter(
     p.id !== VERIFIED_BADGE_PRODUCT_ID,
 );
 
-export const AGENT_PRODUCTS: PricingProduct[] = [
-  {
-    id: "agent_basic",
-    name: "Agent Basic",
-    price: 1000,
-    currency: "KES",
-    durationDays: 30,
-    category: "subscription",
-    description: "For solo agents starting on Your Home.",
-    features: [
-      "Up to 15 active listings",
-      "Lead inbox",
-      "Basic CRM",
-      "M-Pesa billing",
-    ],
-    maxListings: 15,
-  },
-  {
-    id: "agent_pro",
-    name: "Agent Pro",
-    price: 2500,
-    currency: "KES",
-    durationDays: 30,
-    category: "subscription",
-    popular: true,
-    description: "Best for active agents closing deals every week.",
-    features: [
-      "Up to 40 active listings",
-      "Full CRM & viewings",
-      "Verified agent badge",
-      "Priority support",
-    ],
-    maxListings: 40,
-  },
-  {
-    id: "agent_enterprise",
-    name: "Agency",
-    price: 5000,
-    currency: "KES",
-    durationDays: 30,
-    category: "subscription",
-    description: "For agencies with multiple agents and inventory.",
-    features: [
-      "Up to 100 active listings",
-      "Team-ready workflow",
-      "Featured agent profile",
-      "Reports & analytics",
-    ],
-    maxListings: 100,
-  },
-];
+export const AGENT_PRODUCTS: PricingProduct[] = AGENCY_PLANS.filter(
+  (plan) => plan.productId,
+).map((plan) => ({
+  id: plan.productId!,
+  name: plan.name,
+  price: plan.price,
+  currency: plan.currency,
+  durationDays: plan.durationDays,
+  category: "subscription" as const,
+  description: plan.description,
+  features: plan.features,
+  popular: plan.popular,
+  maxListings: plan.maxListings ?? undefined,
+}));
 
 const PAID_HOTEL_TIER_TO_PRODUCT: Record<
   Exclude<HotelPlanTierId, "FREE">,

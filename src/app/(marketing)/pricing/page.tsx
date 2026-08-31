@@ -20,6 +20,7 @@ import {
   formatProductPrice,
   type PricingProduct,
 } from "@/lib/pricing";
+import { AGENCY_PLANS, formatAgencyListingCap } from "@/lib/agency-plans";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata = buildPageMetadata({
@@ -28,7 +29,7 @@ export const metadata = buildPageMetadata({
     : "Pricing — List Property in Kenya",
   description: PRICING_MUTED
     ? `Your Home is free to use for now — list up to ${FREE_TIER_MAX_LISTINGS} properties and contact landlords at no charge.`
-    : "Free 3 listings, agent plans from KES 1,000/month, featured listings, property promotions, and BnB booking commission on Your Home.",
+    : "Free 3 listings, agency plans from KES 1,500/month, featured listings, property promotions, and BnB booking commission on Your Home.",
   path: "/pricing",
 });
 
@@ -215,12 +216,47 @@ export default function PricingPage() {
 
         <div className="mt-16">
           <h2 className="font-display text-2xl font-semibold">
-            Agent subscriptions
+            Recommended agency pricing
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Monthly plans for licensed agents — from KES 1,000.
+            Monthly plans for agents and agencies — from KES 1,500.
           </p>
-          <div className="mt-6 grid gap-6 md:grid-cols-3">
+
+          <div className="mt-6 overflow-x-auto rounded-lg border">
+            <table className="w-full min-w-[640px] text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50 text-left">
+                  <th className="px-4 py-3 font-medium">Package</th>
+                  <th className="px-4 py-3 font-medium">Price</th>
+                  <th className="px-4 py-3 font-medium">Listings</th>
+                  <th className="px-4 py-3 font-medium">Best for</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {AGENCY_PLANS.map((plan) => (
+                  <tr key={plan.id}>
+                    <td className="px-4 py-3 font-medium">
+                      {plan.name}
+                      {plan.popular ? " ⭐" : ""}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {plan.price === 0
+                        ? "KSh 0"
+                        : plan.id === "ENTERPRISE"
+                          ? "KSh 15,000+ / month"
+                          : `KSh ${plan.price.toLocaleString("en-KE")} / month`}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {formatAgencyListingCap(plan.maxListings)}
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">{plan.bestFor}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
             {AGENT_PRODUCTS.map((p) => (
               <PlanCard
                 key={p.id}

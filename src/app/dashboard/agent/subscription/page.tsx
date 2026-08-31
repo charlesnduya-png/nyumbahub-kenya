@@ -68,7 +68,7 @@ export default function AgentSubscriptionPage() {
         <h1 className="text-2xl font-bold">Agent subscription</h1>
         <p className="text-muted-foreground">
           Free accounts get {FREE_TIER_MAX_LISTINGS} listings. Upgrade from KES
-          1,000/month for more inventory and tools.
+          1,500/month for more inventory and tools.
         </p>
       </div>
 
@@ -92,7 +92,7 @@ export default function AgentSubscriptionPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {AGENT_PRODUCTS.map((plan) => {
           const isSelected = selected === plan.id;
           return (

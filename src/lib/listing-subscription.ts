@@ -19,6 +19,7 @@ export const MONTHLY_LISTING_PRODUCT_IDS = new Set([
   "premium",
   "agent_basic",
   "agent_pro",
+  "agent_premium",
   "agent_enterprise",
 ]);
 
@@ -31,9 +32,13 @@ export function productIdToSubscriptionPlan(
 ): SubscriptionPlan {
   switch (productId) {
     case "featured":
-    case "agent_pro":
       return "PREMIUM";
     case "premium":
+      return "PREMIUM";
+    case "agent_pro":
+      return "AGENT_PRO";
+    case "agent_premium":
+      return "AGENT_ENTERPRISE";
     case "agent_enterprise":
       return "AGENT_ENTERPRISE";
     case "agent_basic":
@@ -107,6 +112,30 @@ function maxListingsForPlan(plan: SubscriptionPlan): number | null {
   return caps.length > 0 ? Math.max(...caps) : null;
 }
 
+async function maxListingsForSubscription(subscription: {
+  id: string;
+  plan: SubscriptionPlan;
+}) {
+  const payment = await prisma.payment.findFirst({
+    where: {
+      subscriptionId: subscription.id,
+      status: "COMPLETED",
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const productId = (payment?.metadata as { productId?: string } | null)?.productId;
+  if (productId && isMonthlyListingProduct(productId)) {
+    const product = getProduct(productId);
+    if (product) {
+      if (typeof product.maxListings === "number") return product.maxListings;
+      return null;
+    }
+  }
+
+  return maxListingsForPlan(subscription.plan);
+}
+
 /**
  * Admins bypass. When LISTINGS_ARE_FREE / payments off, pros list within free cap.
  * Active subscriptions raise the cap via product maxListings.
@@ -150,7 +179,7 @@ export async function assertCanCreateListing(input: {
   const subscription = await getActiveListingSubscription(input.userId);
 
   if (subscription) {
-    const paidLimit = maxListingsForPlan(subscription.plan);
+    const paidLimit = await maxListingsForSubscription(subscription);
     if (paidLimit == null) {
       return {
         ok: true as const,
@@ -282,5 +311,6 @@ export type ProductIdMonthly = Extract<
   | "premium"
   | "agent_basic"
   | "agent_pro"
+  | "agent_premium"
   | "agent_enterprise"
 >;
