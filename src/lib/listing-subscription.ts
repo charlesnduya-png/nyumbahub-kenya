@@ -86,7 +86,7 @@ export async function countProfessionalListings(userId: string) {
   return prisma.property.count({
     where: {
       ownerId: userId,
-      status: { not: "ARCHIVED" },
+      status: { notIn: ["ARCHIVED", "SOLD", "RENTED", "EXPIRED"] },
     },
   });
 }

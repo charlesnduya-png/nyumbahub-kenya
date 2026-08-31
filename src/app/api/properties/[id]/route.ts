@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { isOwnerListingStatus } from "@/lib/listing-status";
 import { prisma } from "@/lib/prisma";
 import { resolveListingImagesForStorage, resolveListingVideosForStorage } from "@/lib/media-assets";
 import { resolveProfessionalActingContext } from "@/lib/account-team";
@@ -178,18 +179,36 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       updateData.status &&
       (isOwner || isListingAgent) &&
       !isAdmin &&
-      !["DRAFT", "PENDING", "ARCHIVED"].includes(updateData.status)
+      !isOwnerListingStatus(updateData.status)
     ) {
       return NextResponse.json(
         {
           success: false,
-          error: "Owners can only set DRAFT, PENDING, or ARCHIVED",
+          error:
+            "You can update listing status to draft, pending review, sold, rented, expired, or archived.",
         },
         { status: 403 },
       );
     }
 
-    // Resolve media outside the DB transaction. MediaAsset lookups can exceed
+    if (
+      updateData.status === "SOLD" &&
+      !["BUY", "LAND", "COMMERCIAL"].includes(existing.listingType)
+    ) {
+      return NextResponse.json(
+        { success: false, error: "Sold status applies to sale listings only." },
+        { status: 400 },
+      );
+    }
+
+    if (updateData.status === "RENTED" && existing.listingType !== "RENT") {
+      return NextResponse.json(
+        { success: false, error: "Rented status applies to rental listings only." },
+        { status: 400 },
+      );
+    }
+
+    // Resolve media outside the DB transaction.
     // Prisma's default 5s interactive transaction timeout on Neon.
     const resolvedImages =
       images === undefined

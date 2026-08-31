@@ -57,6 +57,11 @@ import { CurrencySelect } from "@/components/properties/currency-select";
 import { CountrySelect } from "@/components/properties/country-select";
 import { ListingFeaturesPicker } from "@/components/property/listing-features-picker";
 import { listingFeatureSlugsFromAmenities } from "@/lib/listing-features";
+import {
+  listingStatusLabel,
+  listingStatusVariant,
+  ownerStatusOptionsForListing,
+} from "@/lib/listing-status";
 
 export type ManagedListing = {
   id: string;
@@ -164,7 +169,7 @@ export function ListingsManager({
   excludeListingTypes,
   hideHeader = false,
   title = "All listings",
-  subtitle = "Update photos, location, details, and track views. Hotels are managed under Hotels.",
+  subtitle = "Manage your listings — update details, mark sold or rented, archive, or resubmit for review.",
   newHref = "/dashboard/seller/properties/new",
   newLabel = "Add property",
   emptyHint = "You have no listings yet. Add your first property to start selling or renting on Your Home.",
@@ -183,6 +188,8 @@ export function ListingsManager({
   const [editing, setEditing] = useState<ManagedListing | null>(null);
   const [deleting, setDeleting] = useState<ManagedListing | null>(null);
   const [busy, setBusy] = useState(false);
+  const [statusBusyId, setStatusBusyId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [draft, setDraft] = useState<EditDraft>({
     images: [],
     videos: [],
@@ -233,18 +240,33 @@ export function ListingsManager({
     if (excludeListingTypes?.length) {
       rows = rows.filter((p) => !excludeListingTypes.includes(p.listingType));
     }
+    if (statusFilter !== "ALL") {
+      rows = rows.filter((p) => p.status === statusFilter);
+    }
     return rows;
-  }, [listings, listingType, excludeListingTypes]);
+  }, [listings, listingType, excludeListingTypes, statusFilter]);
 
   const counts = useMemo(
-    () => ({
-      all: visible.length,
-      active: visible.filter((p) => p.status === "ACTIVE").length,
-      pending: visible.filter((p) => p.status === "PENDING").length,
-      archived: visible.filter((p) => p.status === "ARCHIVED").length,
-      views: visible.reduce((s, p) => s + p.views, 0),
-    }),
-    [visible],
+    () => {
+      const base =
+        listingType || excludeListingTypes?.length
+          ? listings.filter((p) => {
+              if (listingType && p.listingType !== listingType) return false;
+              if (excludeListingTypes?.includes(p.listingType)) return false;
+              return true;
+            })
+          : listings;
+      return {
+        all: base.length,
+        active: base.filter((p) => p.status === "ACTIVE").length,
+        pending: base.filter((p) => p.status === "PENDING").length,
+        sold: base.filter((p) => p.status === "SOLD").length,
+        rented: base.filter((p) => p.status === "RENTED").length,
+        archived: base.filter((p) => p.status === "ARCHIVED").length,
+        views: base.reduce((s, p) => s + p.views, 0),
+      };
+    },
+    [listings, listingType, excludeListingTypes],
   );
 
   function openEdit(listing: ManagedListing) {
@@ -448,28 +470,47 @@ export function ListingsManager({
     }
   }
 
-  function archiveListing(listing: ManagedListing) {
+  async function updateListingStatus(listingId: string, status: string) {
+    const listing = listings.find((p) => p.id === listingId);
+    if (!listing) return;
+
     const previousStatus = listing.status;
+    setStatusBusyId(listingId);
     setListings((prev) =>
-      prev.map((p) =>
-        p.id === listing.id ? { ...p, status: "ARCHIVED" } : p,
-      ),
+      prev.map((p) => (p.id === listingId ? { ...p, status } : p)),
     );
-    toast.success("Listing archived");
-    void fetch(`/api/properties/${listing.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: listing.id, status: "ARCHIVED" }),
-    }).then(async (res) => {
-      if (res.ok) return;
+
+    try {
+      const res = await fetch(`/api/properties/${listingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: listingId, status }),
+      });
       const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) {
+        setListings((prev) =>
+          prev.map((p) =>
+            p.id === listingId ? { ...p, status: previousStatus } : p,
+          ),
+        );
+        toast.error(json.error ?? "Could not update listing status");
+        return;
+      }
+      toast.success(`Listing marked as ${listingStatusLabel(status).toLowerCase()}`);
+    } catch {
       setListings((prev) =>
         prev.map((p) =>
-          p.id === listing.id ? { ...p, status: previousStatus } : p,
+          p.id === listingId ? { ...p, status: previousStatus } : p,
         ),
       );
-      toast.error(json.error ?? "Could not archive listing");
-    });
+      toast.error("Could not update listing status");
+    } finally {
+      setStatusBusyId(null);
+    }
+  }
+
+  function archiveListing(listing: ManagedListing) {
+    void updateListingStatus(listing.id, "ARCHIVED");
   }
 
   return (
@@ -489,15 +530,37 @@ export function ListingsManager({
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Badge variant="secondary">All {counts.all}</Badge>
-        <Badge>Active {counts.active}</Badge>
+        <Badge>Live {counts.active}</Badge>
         <Badge variant="outline">Pending {counts.pending}</Badge>
-        <Badge variant="secondary">Archived {counts.archived}</Badge>
+        {counts.sold > 0 ? (
+          <Badge variant="secondary">Sold {counts.sold}</Badge>
+        ) : null}
+        {counts.rented > 0 ? (
+          <Badge variant="secondary">Rented {counts.rented}</Badge>
+        ) : null}
+        <Badge variant="outline">Archived {counts.archived}</Badge>
         <Badge variant="outline">
           <Eye className="mr-1 h-3 w-3" />
           {counts.views.toLocaleString()} total views
         </Badge>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="ml-auto w-[180px]">
+            <SelectValue placeholder="Filter status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All statuses</SelectItem>
+            <SelectItem value="ACTIVE">Live</SelectItem>
+            <SelectItem value="PENDING">Pending review</SelectItem>
+            <SelectItem value="DRAFT">Draft</SelectItem>
+            <SelectItem value="SOLD">Sold</SelectItem>
+            <SelectItem value="RENTED">Rented</SelectItem>
+            <SelectItem value="EXPIRED">Expired</SelectItem>
+            <SelectItem value="REJECTED">Rejected</SelectItem>
+            <SelectItem value="ARCHIVED">Archived</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {counts.views > 0 && !listingType ? (
@@ -570,17 +633,34 @@ export function ListingsManager({
                       {p.town}, {p.county}
                     </td>
                     <td className="py-3 pr-4">
-                      <Badge
-                        variant={
-                          p.status === "ACTIVE"
-                            ? "default"
-                            : p.status === "PENDING"
-                              ? "outline"
-                              : "secondary"
-                        }
-                      >
-                        {p.status}
-                      </Badge>
+                      <div className="flex min-w-[160px] flex-col gap-2">
+                        <Badge variant={listingStatusVariant(p.status)}>
+                          {listingStatusLabel(p.status)}
+                        </Badge>
+                        {ownerStatusOptionsForListing(p.listingType, p.status).length >
+                        0 ? (
+                          <Select
+                            disabled={statusBusyId === p.id}
+                            onValueChange={(value) =>
+                              void updateListingStatus(p.id, value)
+                            }
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Update status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {ownerStatusOptionsForListing(
+                                p.listingType,
+                                p.status,
+                              ).map((opt) => (
+                                <SelectItem key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : null}
+                      </div>
                     </td>
                     <td className="py-3 pr-4 font-medium">
                       {p.views.toLocaleString()}
