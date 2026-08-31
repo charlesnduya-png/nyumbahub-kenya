@@ -5,7 +5,6 @@ import { MapPin, ShieldCheck } from "lucide-react";
 import * as React from "react";
 
 import { HeroSearch } from "@/components/home/hero-search";
-import { CurrencySwitcher } from "@/components/currency/currency-switcher";
 import { useDisplayCurrency } from "@/components/currency/currency-provider";
 
 const HERO_SLIDES = [
@@ -188,15 +187,12 @@ export function AnimatedHero() {
             and every African country — buy, rent, or book a BnB.
           </p>
 
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            <div className="inline-flex items-center gap-2 rounded-full bg-black/35 px-3 py-1.5 text-xs text-white/90 backdrop-blur-md sm:text-sm">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-              </span>
-              Now showing · {slide.label} · {formatConvertedPrice(slide.price, "KES")}
-            </div>
-            <CurrencySwitcher variant="hero" />
+          <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-black/35 px-3 py-1.5 text-xs text-white/90 backdrop-blur-md sm:text-sm">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+            </span>
+            Now showing · {slide.label} · {formatConvertedPrice(slide.price, "KES")}
           </div>
         </div>
 

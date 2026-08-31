@@ -18,28 +18,34 @@ export function CurrencySwitcher({
   variant = "default",
 }: {
   className?: string;
-  variant?: "default" | "hero";
+  variant?: "default" | "hero" | "header";
 }) {
   const { currency, setCurrency } = useDisplayCurrency();
+  const showIcon = variant !== "header";
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      <Coins
-        className={cn(
-          "h-4 w-4 shrink-0",
-          variant === "hero" ? "text-emerald-200" : "text-muted-foreground",
-        )}
-        aria-hidden
-      />
+      {showIcon ? (
+        <Coins
+          className={cn(
+            "h-4 w-4 shrink-0",
+            variant === "hero" ? "text-emerald-200" : "text-muted-foreground",
+          )}
+          aria-hidden
+        />
+      ) : null}
       <Select
         value={currency}
         onValueChange={(value) => setCurrency(value as SupportedCurrency)}
       >
         <SelectTrigger
           className={cn(
-            "h-9 w-[148px] rounded-full text-sm",
+            "h-9 rounded-full text-sm",
+            variant === "default" && "w-[148px]",
+            variant === "header" &&
+              "h-9 w-[4.25rem] border-0 bg-transparent px-2 shadow-none hover:bg-accent focus:ring-0 focus:ring-offset-0",
             variant === "hero" &&
-              "border-white/25 bg-white/10 text-white backdrop-blur-md hover:bg-white/15",
+              "w-[148px] border-white/25 bg-white/10 text-white backdrop-blur-md hover:bg-white/15",
           )}
           aria-label="Display currency"
         >

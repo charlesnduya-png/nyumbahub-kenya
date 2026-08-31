@@ -16,6 +16,7 @@ import {
 import * as React from "react";
 
 import { BrandLogo } from "@/components/brand/logo";
+import { CurrencySwitcher } from "@/components/currency/currency-switcher";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { Button } from "@/components/ui/button";
@@ -132,6 +133,8 @@ export function Header() {
             </Link>
           </Button>
 
+          <CurrencySwitcher variant="header" className="shrink-0" />
+
           {isLoggedIn ? <NotificationBell /> : null}
 
           <ThemeToggle />
@@ -209,6 +212,10 @@ export function Header() {
                 })}
               </nav>
               <div className="mt-6 flex flex-col gap-3 border-t pt-6">
+                <div className="flex items-center justify-between gap-3 px-1">
+                  <span className="text-sm font-medium">Currency</span>
+                  <CurrencySwitcher variant="default" />
+                </div>
                 <Button variant="outline" asChild>
                   <Link href="/compare" onClick={() => setOpen(false)}>
                     <GitCompareArrows className="h-4 w-4" aria-hidden="true" />
