@@ -10,7 +10,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { AGENCY_PLANS, formatAgencyListingCap } from "@/lib/agency-plans";
+import {
+  AGENCY_PLANS,
+  FREE_AGENCY_PLAN,
+  formatAgencyListingCap,
+} from "@/lib/agency-plans";
 import { AGENT_PRODUCTS, formatProductPrice, type PricingProduct } from "@/lib/pricing";
 
 function AgencyPlanCard({
@@ -68,27 +72,88 @@ function AgencyPlanCard({
   );
 }
 
+function FreeAgencyPlanCard({
+  ctaHref,
+  ctaLabel,
+  ctaDisabled,
+}: {
+  ctaHref?: string;
+  ctaLabel: string;
+  ctaDisabled?: boolean;
+}) {
+  return (
+    <Card className="border-primary/30">
+      <CardHeader>
+        <CardTitle className="text-lg">{FREE_AGENCY_PLAN.name}</CardTitle>
+        <CardDescription>{FREE_AGENCY_PLAN.description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <p className="text-3xl font-bold">
+          KSh 0
+          <span className="text-sm font-normal text-muted-foreground">/mo</span>
+        </p>
+        <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
+          {FREE_AGENCY_PLAN.features.map((f) => (
+            <li key={f} className="flex gap-2">
+              <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <span>{f}</span>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+      <CardFooter>
+        {ctaDisabled || !ctaHref ? (
+          <Button className="w-full" variant="secondary" disabled>
+            {ctaLabel}
+          </Button>
+        ) : (
+          <Button asChild className="w-full">
+            <Link href={ctaHref}>{ctaLabel}</Link>
+          </Button>
+        )}
+      </CardFooter>
+    </Card>
+  );
+}
+
 export function AgencyPricingSection({
   showPlanCards = true,
+  showFreePlan = true,
+  asPageTitle = false,
   planCtaHref = "/dashboard/agent/subscription",
+  freePlanCtaHref = "/register/professional",
   planCtaLabel = "Choose plan",
+  freePlanCtaLabel = "Start free",
   planCtaDisabled = false,
   mutedNote,
 }: {
   showPlanCards?: boolean;
+  showFreePlan?: boolean;
+  asPageTitle?: boolean;
   planCtaHref?: string;
+  freePlanCtaHref?: string;
   planCtaLabel?: string;
+  freePlanCtaLabel?: string;
   planCtaDisabled?: boolean;
   mutedNote?: string;
 }) {
+  const Heading = asPageTitle ? "h1" : "h2";
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-display text-2xl font-semibold">
+        <Heading
+          className={
+            asPageTitle
+              ? "font-display text-4xl font-semibold tracking-tight sm:text-5xl"
+              : "font-display text-2xl font-semibold"
+          }
+        >
           Recommended agency pricing
-        </h2>
+        </Heading>
         <p className="mt-1 text-sm text-muted-foreground">
-          Monthly plans for agents and agencies — from KES 1,500.
+          Start with {formatAgencyListingCap(FREE_AGENCY_PLAN.maxListings)} on Free,
+          then upgrade from KES 1,500/month.
         </p>
         {mutedNote ? (
           <p className="mt-2 text-sm text-primary">{mutedNote}</p>
@@ -130,7 +195,14 @@ export function AgencyPricingSection({
       </div>
 
       {showPlanCards ? (
-        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          {showFreePlan ? (
+            <FreeAgencyPlanCard
+              ctaHref={freePlanCtaHref}
+              ctaLabel={freePlanCtaLabel}
+              ctaDisabled={planCtaDisabled}
+            />
+          ) : null}
           {AGENT_PRODUCTS.map((p) => (
             <AgencyPlanCard
               key={p.id}

@@ -108,6 +108,12 @@ export const AGENCY_PLANS: AgencyPlanDefinition[] = [
   },
 ];
 
+export const FREE_AGENCY_PLAN = AGENCY_PLANS.find((plan) => plan.id === "FREE")!;
+
+export function getAgencyFreeMaxListings() {
+  return FREE_AGENCY_PLAN.maxListings ?? 3;
+}
+
 export function formatAgencyListingCap(maxListings: number | null) {
   if (maxListings == null) return "Unlimited / custom";
   return `${maxListings} listing${maxListings === 1 ? "" : "s"}`;

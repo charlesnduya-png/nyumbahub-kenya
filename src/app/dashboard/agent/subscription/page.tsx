@@ -37,32 +37,32 @@ export default function AgentSubscriptionPage() {
     return (
       <div className="space-y-8">
         <div>
-          <h1 className="text-2xl font-bold">Agent plan</h1>
+          <h1 className="text-2xl font-bold">Agency plan</h1>
           <p className="text-muted-foreground">
-            Paid subscriptions are paused — Your Home is free to use for now.
+            You are on the Free tier ({FREE_TIER_MAX_LISTINGS} listings). M-Pesa
+            upgrades open soon — see the full agency pricing below.
           </p>
         </div>
-        <Card className="border-primary/30">
+
+        <Card>
           <CardHeader>
-            <CardTitle>Free access</CardTitle>
+            <CardTitle>Current plan</CardTitle>
             <CardDescription>
-              List up to {FREE_TIER_MAX_LISTINGS} properties at no charge. Chat
-              and contact tools are unlocked without a viewing pass.
+              Free · {FREE_TIER_MAX_LISTINGS} active listings
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="flex flex-wrap items-center gap-3">
             <Badge>Active · Free</Badge>
-            <Button asChild>
-              <Link href="/dashboard/seller/properties/new">
-                List a property
-              </Link>
+            <Button asChild size="sm">
+              <Link href="/dashboard/seller/properties/new">List a property</Link>
             </Button>
           </CardContent>
         </Card>
 
         <AgencyPricingSection
-          showPlanCards={false}
-          mutedNote="Reference pricing for when agency billing goes live. You are on the free launch tier today."
+          planCtaDisabled
+          planCtaLabel="Billing opens soon"
+          mutedNote="Paid agency plans activate when M-Pesa billing goes live."
         />
       </div>
     );

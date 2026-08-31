@@ -24,10 +24,10 @@ import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata = buildPageMetadata({
   title: PRICING_MUTED
-    ? "Free to use — Your Home Kenya"
+    ? "Agency pricing — Your Home Kenya"
     : "Pricing — List Property in Kenya",
   description: PRICING_MUTED
-    ? `Your Home is free to use for now — list up to ${FREE_TIER_MAX_LISTINGS} properties and contact landlords at no charge.`
+    ? `Agency pricing on Your Home — Free (${FREE_TIER_MAX_LISTINGS} listings) through Enterprise. Paid upgrades from KES 1,500/month.`
     : "Free 3 listings, agency plans from KES 1,500/month, featured listings, property promotions, and BnB booking commission on Your Home.",
   path: "/pricing",
 });
@@ -95,68 +95,35 @@ export default function PricingPage() {
     return (
       <div className="gradient-mesh">
         <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-          <div className="text-center">
+          <div className="mx-auto max-w-2xl text-center">
             <p className="mb-3 inline-flex items-center gap-2 rounded-full border bg-background/80 px-3 py-1 text-sm text-muted-foreground backdrop-blur">
               <ShieldCheck className="h-4 w-4 text-primary" />
-              Launch offer · Free to use
+              Agents & agencies · M-Pesa billing opens soon
             </p>
-            <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">
-              Everything is free for now
-            </h1>
             <p className="mt-4 text-muted-foreground">
-              List properties, chat, reserve, and call landlords at no charge
-              while we grow. Paid plans (agent subscriptions, featured boosts,
-              and the KES 150 viewing pass) will return later.
+              Every account starts on the Free tier ({FREE_TIER_MAX_LISTINGS}{" "}
+              listings). Upgrade when you need more inventory — tenants browse
+              and contact at no charge.
             </p>
           </div>
 
-          <Card className="mt-10 border-primary/30">
-            <CardHeader>
-              <CardTitle>Free access</CardTitle>
-              <CardDescription>
-                For tenants, landlords, and agents
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <p className="text-3xl font-bold text-primary">
-                KES 0
-                <span className="text-sm font-normal text-muted-foreground">
-                  {" "}
-                  for now
-                </span>
-              </p>
-              <ul className="space-y-2 text-muted-foreground">
-                {[
-                  `Up to ${FREE_TIER_MAX_LISTINGS} property listings`,
-                  "Chat, reserve, WhatsApp & call — no viewing pass",
-                  "Sale, rent, land, commercial & BnB",
-                  "Admin quality review before listings go live",
-                ].map((item) => (
-                  <li key={item} className="flex gap-2">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-            <CardFooter className="flex flex-col gap-2 sm:flex-row">
-              <Button asChild className="w-full sm:flex-1">
-                <Link href="/register/professional">
-                  Create free professional account
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="w-full sm:flex-1">
-                <Link href="/register">Browse as a tenant</Link>
-              </Button>
-            </CardFooter>
-          </Card>
-
-          <div className="mt-14">
+          <div className="mt-10">
             <AgencyPricingSection
+              asPageTitle
               planCtaDisabled
               planCtaLabel="Billing opens soon"
-              mutedNote="Listing is free during launch. These are the agency plans when M-Pesa billing goes live."
+              freePlanCtaLabel="Create free account"
+              mutedNote="Paid upgrades via M-Pesa are coming soon. Free tier limits apply today."
             />
+          </div>
+
+          <div className="mt-10 flex flex-col gap-2 sm:flex-row sm:justify-center">
+            <Button asChild>
+              <Link href="/register/professional">Create professional account</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/register">Browse as a tenant</Link>
+            </Button>
           </div>
         </section>
       </div>
@@ -180,48 +147,6 @@ export default function PricingPage() {
         </div>
 
         <div className="mt-14">
-          <h2 className="font-display text-2xl font-semibold">Start free</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Every professional account includes a free listing allowance.
-          </p>
-          <Card className="mt-6 max-w-md border-primary/30">
-            <CardHeader>
-              <CardTitle>Free</CardTitle>
-              <CardDescription>
-                Landlords, owners, and agents — no card required
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <p className="text-3xl font-bold text-primary">
-                KES 0
-                <span className="text-sm font-normal text-muted-foreground">
-                  {" "}
-                  / month
-                </span>
-              </p>
-              <ul className="space-y-2 text-muted-foreground">
-                {[
-                  `Up to ${FREE_TIER_MAX_LISTINGS} active listings`,
-                  "Sale, rent, land, commercial & BnB",
-                  "WhatsApp & in-app buyer enquiries",
-                  "Admin quality review before going live",
-                ].map((item) => (
-                  <li key={item} className="flex gap-2">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-            <CardFooter>
-              <Button asChild className="w-full">
-                <Link href="/register/professional">Create free account</Link>
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
-
-        <div className="mt-16">
           <AgencyPricingSection planCtaHref="/dashboard/agent/subscription" />
         </div>
 
