@@ -83,6 +83,7 @@ export default function NewPropertyPage() {
   const [listingRemaining, setListingRemaining] = useState(FREE_TIER_MAX_LISTINGS);
   const [atLimit, setAtLimit] = useState(false);
   const [monthlyPayOpen, setMonthlyPayOpen] = useState(false);
+  const [hotelMaxPhotos, setHotelMaxPhotos] = useState(3);
 
   const { data: session } = useSession();
   const isAgent = session?.user?.role === "AGENT";
@@ -133,6 +134,25 @@ export default function NewPropertyPage() {
       setValue("features", [...DEFAULT_HOTEL_FEATURES]);
     }
   }, [presetType, setValue]);
+
+  const photoLimit = addingHotel ? hotelMaxPhotos : MAX_LISTING_IMAGES;
+
+  useEffect(() => {
+    if (!addingHotel) return;
+    fetch("/api/hotel-plans/mine")
+      .then((r) => r.json())
+      .then(
+        (json: {
+          success?: boolean;
+          data?: { usage?: { limits?: { maxImages?: number } } };
+        }) => {
+          if (json.success && json.data?.usage?.limits?.maxImages) {
+            setHotelMaxPhotos(json.data.usage.limits.maxImages);
+          }
+        },
+      )
+      .catch(() => null);
+  }, [addingHotel]);
 
   useEffect(() => {
     async function loadSubscription() {
@@ -504,10 +524,10 @@ export default function NewPropertyPage() {
             <ImageUploader
               value={images}
               onChange={syncImages}
-              maxFiles={MAX_LISTING_IMAGES}
+              maxFiles={photoLimit}
             />
             <p className="mt-2 text-xs text-muted-foreground">
-              Add up to {MAX_LISTING_IMAGES} clear photos. First photo (or the one
+              Add up to {photoLimit} clear photos. First photo (or the one
               marked Cover) is the listing image.
             </p>
           </CardContent>

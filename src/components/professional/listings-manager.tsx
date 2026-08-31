@@ -188,6 +188,24 @@ export function ListingsManager({
     videos: [],
     features: [],
   });
+  const [hotelMaxPhotos, setHotelMaxPhotos] = useState(3);
+
+  useEffect(() => {
+    if (listingType !== "HOTEL") return;
+    fetch("/api/hotel-plans/mine")
+      .then((r) => r.json())
+      .then(
+        (json: {
+          success?: boolean;
+          data?: { usage?: { limits?: { maxImages?: number } } };
+        }) => {
+          if (json.success && json.data?.usage?.limits?.maxImages) {
+            setHotelMaxPhotos(json.data.usage.limits.maxImages);
+          }
+        },
+      )
+      .catch(() => null);
+  }, [listingType]);
 
   useEffect(() => {
     async function load() {
@@ -627,6 +645,11 @@ export function ListingsManager({
               <ImageUploader
                 value={draft.images}
                 onChange={(images) => setDraft((d) => ({ ...d, images }))}
+                maxFiles={
+                  draft.listingType === "HOTEL" || listingType === "HOTEL"
+                    ? hotelMaxPhotos
+                    : undefined
+                }
               />
             </div>
 

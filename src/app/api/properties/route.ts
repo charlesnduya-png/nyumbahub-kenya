@@ -165,6 +165,21 @@ export async function POST(request: Request) {
 
     const images = data.images ?? [];
     const videos = data.videos ?? [];
+
+    if (data.listingType === "HOTEL" && images.length > 0) {
+      const { getHotelPlanTier, assertHotelImageCount } = await import(
+        "@/lib/hotel-plan-server"
+      );
+      const tier = await getHotelPlanTier(ctx.actingOwnerId);
+      const imageCheck = assertHotelImageCount(tier, images.length);
+      if (!imageCheck.ok) {
+        return NextResponse.json(
+          { success: false, error: imageCheck.error, code: imageCheck.code },
+          { status: 403 },
+        );
+      }
+    }
+
     const hasPrimary = images.some((img) => img.isPrimary);
 
     let resolvedImages: Awaited<ReturnType<typeof resolveListingImagesForStorage>> =

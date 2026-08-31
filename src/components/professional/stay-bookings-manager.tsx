@@ -10,6 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { formatPrice } from "@/lib/utils";
 import type { ListingType } from "@/types";
+import { HotelBookingAnalytics } from "@/components/professional/hotel-booking-analytics";
+import type { HotelPlanUsage } from "@/lib/hotel-plan-server";
 
 type BookingRow = {
   id: string;
@@ -63,22 +65,34 @@ export function StayBookingsManager({
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [actingId, setActingId] = useState<string | null>(null);
+  const [planUsage, setPlanUsage] = useState<HotelPlanUsage | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const query = listingType ? `?listingType=${listingType}` : "";
-      const res = await fetch(`/api/bookings${query}`);
-      const json = (await res.json()) as {
+      const fetches: Promise<Response>[] = [fetch(`/api/bookings${query}`)];
+      if (listingType === "HOTEL") {
+        fetches.push(fetch("/api/hotel-plans/mine"));
+      }
+      const [bookRes, planRes] = await Promise.all(fetches);
+      const json = (await bookRes.json()) as {
         success?: boolean;
         data?: BookingRow[];
         error?: string;
       };
-      if (!res.ok || !json.success) {
+      if (!bookRes.ok || !json.success) {
         toast.error(json.error ?? "Could not load bookings");
         return;
       }
       setBookings(json.data ?? []);
+      if (planRes) {
+        const planJson = (await planRes.json()) as {
+          success?: boolean;
+          data?: { usage: HotelPlanUsage };
+        };
+        if (planJson.success && planJson.data) setPlanUsage(planJson.data.usage);
+      }
     } catch {
       toast.error("Could not load bookings");
     } finally {
@@ -136,6 +150,10 @@ export function StayBookingsManager({
           ) : null}
         </div>
       )}
+
+      {listingType === "HOTEL" && !loading ? (
+        <HotelBookingAnalytics bookings={bookings} usage={planUsage} />
+      ) : null}
 
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading bookings…</p>

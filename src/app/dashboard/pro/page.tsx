@@ -189,25 +189,46 @@ export default async function ProfessionalAdminPage() {
         </Link>
       ) : null}
 
-      <Link href="/dashboard/pro/hotels" className="block">
-        <Card className="transition hover:border-primary/40 hover:shadow-md">
-          <CardContent className="flex flex-wrap items-center justify-between gap-4 p-5">
-            <div className="flex items-center gap-3">
-              <Hotel className="h-8 w-8 text-primary/70" />
-              <div>
-                <p className="text-sm text-muted-foreground">Hotels</p>
-                <p className="text-2xl font-bold">
-                  {hotelListings} hotel{hotelListings === 1 ? "" : "s"}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Listings, nightly bookings, and guest reviews
-                </p>
+      <div className="space-y-4">
+        <Link href="/dashboard/pro/hotels" className="block">
+          <Card className="transition hover:border-primary/40 hover:shadow-md">
+            <CardContent className="flex flex-wrap items-center justify-between gap-4 p-5">
+              <div className="flex items-center gap-3">
+                <Hotel className="h-8 w-8 text-primary/70" />
+                <div>
+                  <p className="text-sm text-muted-foreground">Hotels</p>
+                  <p className="text-2xl font-bold">
+                    {hotelListings} hotel{hotelListings === 1 ? "" : "s"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Listings, bookings, group stays, events, sports packages & offers
+                  </p>
+                </div>
               </div>
-            </div>
-            <span className="text-sm font-medium text-primary">Open hotels</span>
-          </CardContent>
-        </Card>
-      </Link>
+              <span className="text-sm font-medium text-primary">Open hotels</span>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            { label: "Group bookings", href: "/dashboard/pro/hotels/group-bookings" },
+            { label: "Events & conferences", href: "/dashboard/pro/hotels/events-conferences" },
+            { label: "Event requests", href: "/dashboard/pro/hotels/event-requests" },
+            { label: "Sports team packages", href: "/dashboard/pro/hotels/sports-teams" },
+            { label: "Cooperative packages", href: "/dashboard/pro/hotels/cooperative" },
+            { label: "Hotel offers", href: "/dashboard/pro/hotels/offers" },
+          ].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="rounded-lg border bg-card px-4 py-3 text-sm font-medium transition hover:border-primary/40 hover:bg-muted/30"
+            >
+              {item.label}
+            </Link>
+          ))}
+        </div>
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {[

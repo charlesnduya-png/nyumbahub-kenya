@@ -263,6 +263,10 @@ model User {
   wallet               ProfessionalWallet?
   walletTransactions   WalletTransaction[]
   bnbCommissionsHosted PlatformCommission[]
+  hotelPackagesOwned     HotelPackage[]         @relation("HotelPackageOwner")
+  hotelRequestsOwned     HotelServiceRequest[]  @relation("HotelRequestOwner")
+  hotelRequestsAsGuest   HotelServiceRequest[]  @relation("HotelRequestGuest")
+  hotelPlan              HotelAccountPlan?
 
   @@index([role])
   @@index([email])
@@ -551,6 +555,8 @@ model Property {
   bookings          Booking[]
   offers            PropertyOffer[]
   rentalReservations RentalReservation[]
+  hotelPackages      HotelPackage[]
+  hotelServiceRequests HotelServiceRequest[]
   rentalRepublishRequests RentalRepublishRequest[]
   rentalRooms       PropertyRentalRoom[]
   rentPayments      RentalRentPayment[]
@@ -1093,4 +1099,111 @@ model AccountTeamInvite {
 
   @@index([teamId])
   @@index([email])
+}
+
+enum HotelServiceCategory {
+  GROUP_BOOKING
+  EVENT_CONFERENCE
+  EVENT_BOOKING_REQUEST
+  SPORTS_TEAM
+  COOPERATIVE
+  HOTEL_OFFER
+}
+
+enum HotelPlanTier {
+  FREE
+  STARTER
+  PRO
+  BUSINESS
+  ENTERPRISE
+}
+
+enum HotelServiceRequestStatus {
+  NEW
+  REVIEWING
+  QUOTED
+  CONFIRMED
+  DECLINED
+  CANCELLED
+}
+
+/// Published packages — group stays, events, sports blocks, corporate rates, promos
+model HotelPackage {
+  id          String               @id @default(cuid())
+  ownerId     String
+  propertyId  String?
+  category    HotelServiceCategory
+  title       String
+  description String               @db.Text
+  minGuests   Int?
+  maxGuests   Int?
+  minRooms    Int?
+  priceFrom   Float?
+  priceTo     Float?
+  currency    String               @default("KES")
+  isActive    Boolean              @default(true)
+  validFrom   DateTime?
+  validUntil  DateTime?
+  terms       String?              @db.Text
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  owner       User                 @relation("HotelPackageOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  property    Property?            @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  requests    HotelServiceRequest[]
+
+  @@index([ownerId, category])
+  @@index([propertyId])
+  @@index([isActive])
+}
+
+/// Incoming booking requests from guests — quote, confirm, or decline
+model HotelServiceRequest {
+  id             String                      @id @default(cuid())
+  packageId      String?
+  propertyId     String?
+  ownerId        String
+  guestId        String?
+  category       HotelServiceCategory
+  contactName    String
+  contactEmail   String?
+  contactPhone   String?
+  organization   String?
+  eventTitle     String?
+  checkIn        DateTime?
+  checkOut       DateTime?
+  guestCount     Int?
+  roomCount      Int?
+  message        String?                     @db.Text
+  status         HotelServiceRequestStatus   @default(NEW)
+  ownerNote      String?                     @db.Text
+  quotedAmount   Float?
+  currency       String                      @default("KES")
+  createdAt      DateTime                    @default(now())
+  updatedAt      DateTime                    @updatedAt
+
+  package        HotelPackage?               @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  property       Property?                   @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  owner          User                        @relation("HotelRequestOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  guest          User?                       @relation("HotelRequestGuest", fields: [guestId], references: [id], onDelete: SetNull)
+
+  @@index([ownerId, category])
+  @@index([propertyId])
+  @@index([status])
+  @@index([guestId])
+}
+
+/// Professional hotel operator plan — Free through Enterprise
+model HotelAccountPlan {
+  id        String        @id @default(cuid())
+  userId    String        @unique
+  tier      HotelPlanTier @default(FREE)
+  startDate DateTime      @default(now())
+  endDate   DateTime?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tier])
 }
