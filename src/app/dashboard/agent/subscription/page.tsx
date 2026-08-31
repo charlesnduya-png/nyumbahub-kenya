@@ -20,6 +20,7 @@ import {
   formatProductPrice,
   type AgentProductId,
 } from "@/lib/pricing";
+import { AgencyPricingSection } from "@/components/pricing/agency-pricing-section";
 import { cn } from "@/lib/utils";
 
 export default function AgentSubscriptionPage() {
@@ -58,6 +59,11 @@ export default function AgentSubscriptionPage() {
             </Button>
           </CardContent>
         </Card>
+
+        <AgencyPricingSection
+          showPlanCards={false}
+          mutedNote="Reference pricing for when agency billing goes live. You are on the free launch tier today."
+        />
       </div>
     );
   }

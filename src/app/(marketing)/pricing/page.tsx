@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/card";
 import { FREE_TIER_MAX_LISTINGS, PRICING_MUTED } from "@/lib/listing-flags";
 import {
-  AGENT_PRODUCTS,
   BNB_BOOKING_COMMISSION_RATE,
   LISTING_PRODUCTS,
   MONETIZATION_COPY,
@@ -20,7 +19,7 @@ import {
   formatProductPrice,
   type PricingProduct,
 } from "@/lib/pricing";
-import { AGENCY_PLANS, formatAgencyListingCap } from "@/lib/agency-plans";
+import { AgencyPricingSection } from "@/components/pricing/agency-pricing-section";
 import { buildPageMetadata } from "@/lib/seo";
 
 export const metadata = buildPageMetadata({
@@ -95,7 +94,7 @@ export default function PricingPage() {
   if (PRICING_MUTED) {
     return (
       <div className="gradient-mesh">
-        <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
+        <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
           <div className="text-center">
             <p className="mb-3 inline-flex items-center gap-2 rounded-full border bg-background/80 px-3 py-1 text-sm text-muted-foreground backdrop-blur">
               <ShieldCheck className="h-4 w-4 text-primary" />
@@ -151,6 +150,14 @@ export default function PricingPage() {
               </Button>
             </CardFooter>
           </Card>
+
+          <div className="mt-14">
+            <AgencyPricingSection
+              planCtaDisabled
+              planCtaLabel="Billing opens soon"
+              mutedNote="Listing is free during launch. These are the agency plans when M-Pesa billing goes live."
+            />
+          </div>
         </section>
       </div>
     );
@@ -215,57 +222,7 @@ export default function PricingPage() {
         </div>
 
         <div className="mt-16">
-          <h2 className="font-display text-2xl font-semibold">
-            Recommended agency pricing
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Monthly plans for agents and agencies — from KES 1,500.
-          </p>
-
-          <div className="mt-6 overflow-x-auto rounded-lg border">
-            <table className="w-full min-w-[640px] text-sm">
-              <thead>
-                <tr className="border-b bg-muted/50 text-left">
-                  <th className="px-4 py-3 font-medium">Package</th>
-                  <th className="px-4 py-3 font-medium">Price</th>
-                  <th className="px-4 py-3 font-medium">Listings</th>
-                  <th className="px-4 py-3 font-medium">Best for</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {AGENCY_PLANS.map((plan) => (
-                  <tr key={plan.id}>
-                    <td className="px-4 py-3 font-medium">
-                      {plan.name}
-                      {plan.popular ? " ⭐" : ""}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {plan.price === 0
-                        ? "KSh 0"
-                        : plan.id === "ENTERPRISE"
-                          ? "KSh 15,000+ / month"
-                          : `KSh ${plan.price.toLocaleString("en-KE")} / month`}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {formatAgencyListingCap(plan.maxListings)}
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">{plan.bestFor}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-            {AGENT_PRODUCTS.map((p) => (
-              <PlanCard
-                key={p.id}
-                product={p}
-                ctaHref="/dashboard/agent/subscription"
-                ctaLabel="Choose plan"
-              />
-            ))}
-          </div>
+          <AgencyPricingSection planCtaHref="/dashboard/agent/subscription" />
         </div>
 
         <div className="mt-16">
