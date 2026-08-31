@@ -1,5 +1,6 @@
 import type { HotelPlanTier } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { hotelProductIdToTier } from "@/lib/pricing";
 import {
   getHotelPlan,
   normalizeHotelPlanTier,
@@ -140,4 +141,19 @@ export function assertHotelImageCount(tier: HotelPlanTierId, count: number) {
     };
   }
   return { ok: true as const, max };
+}
+
+export async function activateHotelPlanFromPayment(input: {
+  userId: string;
+  productId: string;
+}) {
+  const tier = hotelProductIdToTier(input.productId);
+  if (!tier) return;
+
+  const plan = getHotelPlan(tier);
+  await setHotelPlanTier(
+    input.userId,
+    tier as HotelPlanTier,
+    plan.durationDays,
+  );
 }

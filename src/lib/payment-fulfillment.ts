@@ -70,6 +70,19 @@ export async function fulfillCompletedPayment(payment: {
     }).catch(() => null);
   }
 
+  if (payment.userId) {
+    const { isHotelPlanProduct } = await import("@/lib/pricing");
+    if (isHotelPlanProduct(productId)) {
+      const { activateHotelPlanFromPayment } = await import(
+        "@/lib/hotel-plan-server"
+      );
+      await activateHotelPlanFromPayment({
+        userId: payment.userId,
+        productId,
+      }).catch(() => null);
+    }
+  }
+
   await prisma.payment.update({
     where: { id: payment.id },
     data: {

@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { resolveProfessionalActingContext } from "@/lib/account-team";
 import { getHotelPlanUsage, setHotelPlanTier } from "@/lib/hotel-plan-server";
-import { HOTEL_PLANS, HOTEL_PLAN_TIER_IDS, type HotelPlanTierId } from "@/lib/hotel-plans";
+import {
+  HOTEL_PLANS,
+  HOTEL_PLAN_TIER_IDS,
+  type HotelPlanTierId,
+} from "@/lib/hotel-plans";
+import { hotelTierToProductId } from "@/lib/pricing";
 import type { HotelPlanTier } from "@prisma/client";
 
 export async function GET() {
@@ -44,6 +49,22 @@ export async function POST(req: Request) {
     }
 
     const plan = HOTEL_PLANS.find((p) => p.id === body.tier)!;
+    const checkoutProductId = hotelTierToProductId(body.tier);
+
+    if (checkoutProductId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Complete M-Pesa payment to activate this hotel plan.",
+          code: "PAYMENT_REQUIRED",
+          productId: checkoutProductId,
+          tier: body.tier,
+          amount: plan.price,
+        },
+        { status: 402 },
+      );
+    }
+
     await setHotelPlanTier(
       ctx.actingOwnerId,
       body.tier as HotelPlanTier,

@@ -1,4 +1,5 @@
 import { formatPrice } from "@/lib/utils";
+import { HOTEL_PLANS, type HotelPlanTierId } from "@/lib/hotel-plans";
 
 export type ListingProductId = "standard" | "featured" | "premium";
 export type BoostProductId =
@@ -10,10 +11,19 @@ export type BoostProductId =
   | "promote_max"
   | "verified_badge";
 export type AgentProductId = "agent_basic" | "agent_pro" | "agent_enterprise";
-export type ProductId = ListingProductId | BoostProductId | AgentProductId;
+export type HotelPlanProductId =
+  | "hotel_plan_starter"
+  | "hotel_plan_pro"
+  | "hotel_plan_business"
+  | "hotel_plan_enterprise";
+export type ProductId =
+  | ListingProductId
+  | BoostProductId
+  | AgentProductId
+  | HotelPlanProductId;
 
 export interface PricingProduct {
-  id: ProductId;
+  id: ProductId | string;
   name: string;
   price: number;
   currency: "KES";
@@ -266,10 +276,53 @@ export const AGENT_PRODUCTS: PricingProduct[] = [
   },
 ];
 
+const PAID_HOTEL_TIER_TO_PRODUCT: Record<
+  Exclude<HotelPlanTierId, "FREE">,
+  HotelPlanProductId
+> = {
+  STARTER: "hotel_plan_starter",
+  PRO: "hotel_plan_pro",
+  BUSINESS: "hotel_plan_business",
+  ENTERPRISE: "hotel_plan_enterprise",
+};
+
+export function hotelTierToProductId(
+  tier: HotelPlanTierId,
+): HotelPlanProductId | null {
+  if (tier === "FREE") return null;
+  return PAID_HOTEL_TIER_TO_PRODUCT[tier];
+}
+
+export function hotelProductIdToTier(productId: string): HotelPlanTierId | null {
+  const match = Object.entries(PAID_HOTEL_TIER_TO_PRODUCT).find(
+    ([, id]) => id === productId,
+  );
+  return match ? (match[0] as HotelPlanTierId) : null;
+}
+
+export function isHotelPlanProduct(productId: string): productId is HotelPlanProductId {
+  return productId.startsWith("hotel_plan_");
+}
+
+export const HOTEL_PLAN_PRODUCTS: PricingProduct[] = HOTEL_PLANS.filter(
+  (plan) => plan.price > 0,
+).map((plan) => ({
+  id: hotelTierToProductId(plan.id)!,
+  name: `Hotel ${plan.name}`,
+  price: plan.price,
+  currency: "KES" as const,
+  durationDays: plan.durationDays,
+  category: "subscription" as const,
+  description: plan.description,
+  features: plan.features,
+  popular: plan.popular,
+}));
+
 export const ALL_PRODUCTS: PricingProduct[] = [
   ...LISTING_PRODUCTS,
   ...BOOST_PRODUCTS,
   ...AGENT_PRODUCTS,
+  ...HOTEL_PLAN_PRODUCTS,
 ];
 
 export function getProduct(id: string): PricingProduct | undefined {

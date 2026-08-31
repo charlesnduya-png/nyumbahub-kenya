@@ -1,16 +1,17 @@
 "use client";
 
-import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Briefcase,
   Building2,
   Check,
   Crown,
+  Smartphone,
   Sparkles,
   Zap,
 } from "lucide-react";
 import { toast } from "sonner";
+import { PaymentCheckoutDialog } from "@/components/payments/payment-checkout-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +24,11 @@ import {
   type HotelPlanTierId,
 } from "@/lib/hotel-plans";
 import type { HotelPlanUsage } from "@/lib/hotel-plan-server";
+import {
+  formatProductPrice,
+  getProduct,
+  hotelTierToProductId,
+} from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 
 const TIER_ICON = {
@@ -42,6 +48,12 @@ export function HotelPlansPanel() {
   const [plans, setPlans] = useState<HotelPlanProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState<HotelPlanTierId | null>(null);
+  const [payTier, setPayTier] = useState<HotelPlanTierId | null>(null);
+  const [payOpen, setPayOpen] = useState(false);
+
+  const payProductId = payTier ? hotelTierToProductId(payTier) : null;
+  const payProduct = payProductId ? getProduct(payProductId) : null;
+  const payPlan = payTier ? HOTEL_PLANS.find((p) => p.id === payTier) : null;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -66,8 +78,12 @@ export function HotelPlansPanel() {
     void load();
   }, [load]);
 
-  const upgrade = async (tier: HotelPlanTierId) => {
-    if (tier === usage?.tier) return;
+  const comparisonPlans = useMemo(
+    () => (plans.length > 0 ? plans : HOTEL_PLANS),
+    [plans],
+  );
+
+  const activateFree = async (tier: HotelPlanTierId) => {
     setUpgrading(tier);
     try {
       const res = await fetch("/api/hotel-plans/mine", {
@@ -80,7 +96,7 @@ export function HotelPlansPanel() {
         toast.error(json.error ?? "Could not change plan");
         return;
       }
-      toast.success(tier === "FREE" ? "Switched to Free plan" : `${tier} plan activated`);
+      toast.success("Switched to Free plan");
       void load();
     } catch {
       toast.error("Could not change plan");
@@ -89,11 +105,27 @@ export function HotelPlansPanel() {
     }
   };
 
+  const selectPlan = (tier: HotelPlanTierId) => {
+    if (tier === usage?.tier) return;
+
+    if (tier === "FREE") {
+      void activateFree(tier);
+      return;
+    }
+
+    const productId = hotelTierToProductId(tier);
+    if (!productId) {
+      toast.error("This plan is not available for checkout");
+      return;
+    }
+
+    setPayTier(tier);
+    setPayOpen(true);
+  };
+
   if (loading) {
     return <p className="text-sm text-muted-foreground">Loading hotel plans…</p>;
   }
-
-  const comparisonPlans = plans.length > 0 ? plans : HOTEL_PLANS;
 
   return (
     <div className="space-y-6">
@@ -102,6 +134,16 @@ export function HotelPlansPanel() {
           <CardContent className="py-4">
             <p className="text-sm text-muted-foreground">Current plan</p>
             <p className="text-xl font-bold">{usage.planName}</p>
+            {usage.endDate ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Renews / expires{" "}
+                {new Date(usage.endDate).toLocaleDateString("en-KE", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
+              </p>
+            ) : null}
             <div className="mt-3 flex flex-wrap gap-3 text-sm text-muted-foreground">
               <span>Photos: up to {usage.limits.maxImages} / listing</span>
               <span>
@@ -125,9 +167,10 @@ export function HotelPlansPanel() {
       ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {(plans.length > 0 ? plans : HOTEL_PLANS).map((plan) => {
+        {comparisonPlans.map((plan) => {
           const Icon = tierIcon(plan.id);
           const active = usage?.tier === plan.id;
+          const isPaid = plan.price > 0;
           return (
             <Card
               key={plan.id}
@@ -168,16 +211,21 @@ export function HotelPlansPanel() {
                   variant={active ? "secondary" : "default"}
                   size="sm"
                   disabled={active || upgrading !== null}
-                  onClick={() => void upgrade(plan.id)}
+                  onClick={() => selectPlan(plan.id)}
                   className="w-full"
                 >
-                  {active
-                    ? "Current plan"
-                    : upgrading === plan.id
-                      ? "Updating…"
-                      : plan.price === 0
-                        ? "Use Free"
-                        : `Choose ${plan.name}`}
+                  {active ? (
+                    "Current plan"
+                  ) : upgrading === plan.id ? (
+                    "Updating…"
+                  ) : isPaid ? (
+                    <>
+                      <Smartphone className="mr-2 h-4 w-4" />
+                      Pay with M-Pesa
+                    </>
+                  ) : (
+                    "Use Free"
+                  )}
                 </Button>
               </CardContent>
             </Card>
@@ -224,13 +272,30 @@ export function HotelPlansPanel() {
       </Card>
 
       <p className="text-xs text-muted-foreground">
-        Need M-Pesa checkout for paid plans?{" "}
-        <Link href="/dashboard/agent/subscription" className="text-primary underline">
-          Contact support
-        </Link>{" "}
-        — plan switches above apply immediately for testing.
+        Paid hotel plans activate automatically after successful M-Pesa payment.
+        Switch to Free anytime without payment.
       </p>
+
+      {payProductId && payProduct && payPlan ? (
+        <PaymentCheckoutDialog
+          hideTrigger
+          open={payOpen}
+          onOpenChange={(open) => {
+            setPayOpen(open);
+            if (!open) setPayTier(null);
+          }}
+          productId={payProductId}
+          title={`Activate Hotel ${payPlan.name}`}
+          description={`${formatProductPrice(payProduct)} for ${payPlan.durationDays} days via M-Pesa.`}
+          ctaLabel={`Pay ${formatProductPrice(payProduct)} with M-Pesa`}
+          onPaid={(payment) => {
+            if (payment.status === "COMPLETED") {
+              toast.success(`${payPlan.name} plan activated · ${payment.reference}`);
+              void load();
+            }
+          }}
+        />
+      ) : null}
     </div>
   );
 }
-
