@@ -2,11 +2,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { resolveProfessionalActingContext } from "@/lib/account-team";
 import { getHotelPlanUsage, setHotelPlanTier } from "@/lib/hotel-plan-server";
-import {
-  HOTEL_PLANS,
-  HOTEL_PLAN_TIER_IDS,
-  type HotelPlanTierId,
-} from "@/lib/hotel-plans";
+import { getEffectiveHotelPlans } from "@/lib/hotel-plan-pricing";
+import { HOTEL_PLAN_TIER_IDS, type HotelPlanTierId } from "@/lib/hotel-plans";
 import { hotelTierToProductId } from "@/lib/pricing";
 import type { HotelPlanTier } from "@prisma/client";
 
@@ -17,13 +14,16 @@ export async function GET() {
   }
 
   const ctx = await resolveProfessionalActingContext(session.user.id);
-  const usage = await getHotelPlanUsage(ctx.actingOwnerId);
+  const [usage, plans] = await Promise.all([
+    getHotelPlanUsage(ctx.actingOwnerId),
+    getEffectiveHotelPlans(),
+  ]);
 
   return NextResponse.json({
     success: true,
     data: {
       usage,
-      plans: HOTEL_PLANS,
+      plans,
     },
   });
 }
@@ -48,7 +48,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "Invalid plan" }, { status: 400 });
     }
 
-    const plan = HOTEL_PLANS.find((p) => p.id === body.tier)!;
+    const plans = await getEffectiveHotelPlans();
+    const plan = plans.find((p) => p.id === body.tier)!;
     const checkoutProductId = hotelTierToProductId(body.tier);
 
     if (checkoutProductId) {

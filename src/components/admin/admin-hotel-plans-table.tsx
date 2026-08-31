@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { HOTEL_PLANS } from "@/lib/hotel-plans";
-import { formatRelativeDate } from "@/lib/utils";
+import { HOTEL_PLANS, type HotelPlanProduct } from "@/lib/hotel-plans";
+import { formatPrice, formatRelativeDate } from "@/lib/utils";
 
 type PlanRow = {
   id: string;
@@ -19,8 +19,14 @@ type PlanRow = {
 
 const tierName = Object.fromEntries(HOTEL_PLANS.map((p) => [p.id, p.name]));
 
-export function AdminHotelPlansTable({ plans }: { plans: PlanRow[] }) {
-  const tierSummary = HOTEL_PLANS.map((plan) => ({
+export function AdminHotelPlansTable({
+  plans,
+  hotelPlans = HOTEL_PLANS,
+}: {
+  plans: PlanRow[];
+  hotelPlans?: HotelPlanProduct[];
+}) {
+  const tierSummary = hotelPlans.map((plan) => ({
     ...plan,
     count: plans.filter((row) => row.tier === plan.id).length,
   }));
@@ -33,7 +39,13 @@ export function AdminHotelPlansTable({ plans }: { plans: PlanRow[] }) {
             <CardContent className="pt-5">
               <p className="text-sm text-muted-foreground">{plan.name}</p>
               <p className="text-2xl font-bold">{plan.count}</p>
-              <p className="mt-1 text-xs text-muted-foreground">operators</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {plan.price === 0
+                  ? "Free"
+                  : `${formatPrice(plan.price, { currency: plan.currency })}/mo`}
+                {" · "}
+                {plan.count === 1 ? "1 operator" : `${plan.count} operators`}
+              </p>
             </CardContent>
           </Card>
         ))}

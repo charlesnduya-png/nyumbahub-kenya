@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   HOTEL_PLAN_COMPARISON_ROWS,
   HOTEL_PLANS,
+  type HotelPlanProduct,
 } from "@/lib/hotel-plans";
 import { formatPrice } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,7 @@ const TIER_ICON = {
 } as const;
 
 type HotelPlansShowcaseProps = {
+  plans?: HotelPlanProduct[];
   manageHref?: string;
   planActionLabel?: string;
   showComparison?: boolean;
@@ -33,12 +35,14 @@ type HotelPlansShowcaseProps = {
 };
 
 export function HotelPlansShowcase({
+  plans: plansProp,
   manageHref = "/dashboard/pro/hotels/plans",
   planActionLabel = "Choose",
   showComparison = true,
   showManageLink = true,
   className,
 }: HotelPlansShowcaseProps) {
+  const plans = plansProp ?? HOTEL_PLANS;
   return (
     <div className={cn("space-y-4", className)}>
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -57,7 +61,7 @@ export function HotelPlansShowcase({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {HOTEL_PLANS.map((plan) => {
+        {plans.map((plan) => {
           const Icon = TIER_ICON[plan.id] ?? Sparkles;
           return (
             <Card
@@ -108,7 +112,7 @@ export function HotelPlansShowcase({
               <thead>
                 <tr className="border-b text-left text-muted-foreground">
                   <th className="py-2 pr-4">Feature</th>
-                  {HOTEL_PLANS.map((plan) => (
+                  {plans.map((plan) => (
                     <th key={plan.id} className="px-2 py-2 font-medium">
                       {plan.name}
                     </th>
@@ -119,7 +123,7 @@ export function HotelPlansShowcase({
                 {HOTEL_PLAN_COMPARISON_ROWS.map((row) => (
                   <tr key={row.label}>
                     <td className="py-2.5 pr-4 font-medium">{row.label}</td>
-                    {HOTEL_PLANS.map((plan) => (
+                    {plans.map((plan) => (
                       <td key={plan.id} className="px-2">
                         {row.value(plan.limits)}
                       </td>
@@ -137,9 +141,12 @@ export function HotelPlansShowcase({
 
 export function HotelPlansNavStrip({
   basePath = "/dashboard/pro/hotels",
+  plans: plansProp,
 }: {
   basePath?: string;
+  plans?: HotelPlanProduct[];
 }) {
+  const plans = plansProp ?? HOTEL_PLANS;
   const plansHref = `${basePath}/plans`;
 
   return (
@@ -148,7 +155,7 @@ export function HotelPlansNavStrip({
         Hotel packages
       </p>
       <div className="flex gap-2 overflow-x-auto pb-1">
-        {HOTEL_PLANS.map((plan) => (
+        {plans.map((plan) => (
           <Link
             key={plan.id}
             href={plansHref}

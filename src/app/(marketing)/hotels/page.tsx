@@ -10,6 +10,7 @@ import {
   getHotelPropertiesForHome,
 } from "@/lib/properties";
 import { buildPageMetadata } from "@/lib/seo";
+import { getEffectiveHotelPlans } from "@/lib/hotel-plan-pricing";
 
 export const metadata = buildPageMetadata({
   title: "Hotels in Africa | Nairobi, Lagos, Accra, Cape Town",
@@ -41,9 +42,10 @@ const destinations = [
 export const revalidate = 60;
 
 export default async function HotelsPage() {
-  const [hotels, hotelCount] = await Promise.all([
+  const [hotels, hotelCount, hotelPlans] = await Promise.all([
     getHotelPropertiesForHome(24),
     countActiveProperties("HOTEL"),
+    getEffectiveHotelPlans(),
   ]);
 
   return (
@@ -110,6 +112,7 @@ export default async function HotelsPage() {
 
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <HotelPlansShowcase
+          plans={hotelPlans}
           manageHref="/register/professional"
           planActionLabel="Get"
           showManageLink={false}

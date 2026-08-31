@@ -6,13 +6,14 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { HOTEL_SERVICE_SECTIONS } from "@/lib/hotel-services";
 import { HotelPlansShowcase } from "@/components/professional/hotel-plans-showcase";
+import type { HotelPlanProduct } from "@/lib/hotel-plans";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-export function HotelsOverview() {
+export function HotelsOverview({ plans }: { plans?: HotelPlanProduct[] }) {
   return (
     <div className="space-y-8">
-      <HotelPlansShowcase />
+      <HotelPlansShowcase plans={plans} />
 
       <div>
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">

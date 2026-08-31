@@ -1207,3 +1207,11 @@ model HotelAccountPlan {
 
   @@index([tier])
 }
+
+/// Admin-configurable monthly prices for hotel operator plan tiers
+model HotelPlanPriceConfig {
+  tier      HotelPlanTier @id
+  price     Float
+  currency  String        @default("KES")
+  updatedAt DateTime      @updatedAt
+}

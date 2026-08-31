@@ -25,7 +25,6 @@ import {
 } from "@/lib/hotel-plans";
 import type { HotelPlanUsage } from "@/lib/hotel-plan-server";
 import {
-  formatProductPrice,
   getProduct,
   hotelTierToProductId,
 } from "@/lib/pricing";
@@ -51,9 +50,16 @@ export function HotelPlansPanel() {
   const [payTier, setPayTier] = useState<HotelPlanTierId | null>(null);
   const [payOpen, setPayOpen] = useState(false);
 
+  const comparisonPlans = useMemo(
+    () => (plans.length > 0 ? plans : HOTEL_PLANS),
+    [plans],
+  );
+
   const payProductId = payTier ? hotelTierToProductId(payTier) : null;
   const payProduct = payProductId ? getProduct(payProductId) : null;
-  const payPlan = payTier ? HOTEL_PLANS.find((p) => p.id === payTier) : null;
+  const payPlan = payTier
+    ? comparisonPlans.find((p) => p.id === payTier) ?? null
+    : null;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -77,11 +83,6 @@ export function HotelPlansPanel() {
   useEffect(() => {
     void load();
   }, [load]);
-
-  const comparisonPlans = useMemo(
-    () => (plans.length > 0 ? plans : HOTEL_PLANS),
-    [plans],
-  );
 
   const activateFree = async (tier: HotelPlanTierId) => {
     setUpgrading(tier);
@@ -285,9 +286,10 @@ export function HotelPlansPanel() {
             if (!open) setPayTier(null);
           }}
           productId={payProductId}
+          priceOverride={payPlan.price}
           title={`Activate Hotel ${payPlan.name}`}
-          description={`${formatProductPrice(payProduct)} for ${payPlan.durationDays} days via M-Pesa.`}
-          ctaLabel={`Pay ${formatProductPrice(payProduct)} with M-Pesa`}
+          description={`${formatPrice(payPlan.price, { currency: payPlan.currency })} for ${payPlan.durationDays} days via M-Pesa.`}
+          ctaLabel={`Pay ${formatPrice(payPlan.price, { currency: payPlan.currency })} with M-Pesa`}
           onPaid={(payment) => {
             if (payment.status === "COMPLETED") {
               toast.success(`${payPlan.name} plan activated · ${payment.reference}`);

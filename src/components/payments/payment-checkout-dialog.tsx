@@ -25,6 +25,8 @@ type PaidPayload = {
 interface PaymentCheckoutDialogProps {
   productId: ProductId | string;
   propertyId?: string;
+  /** Override displayed and expected checkout amount (e.g. admin-edited hotel plan prices). */
+  priceOverride?: number;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   /** Hide the default pay button (use with controlled open + your own trigger). */
@@ -45,6 +47,7 @@ interface PaymentCheckoutDialogProps {
 export function PaymentCheckoutDialog({
   productId,
   propertyId,
+  priceOverride,
   open: controlledOpen,
   onOpenChange,
   hideTrigger = false,
@@ -62,7 +65,12 @@ export function PaymentCheckoutDialog({
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
-  const product = getProduct(productId);
+  const baseProduct = getProduct(productId);
+  const product = baseProduct
+    ? priceOverride != null
+      ? { ...baseProduct, price: priceOverride }
+      : baseProduct
+    : undefined;
 
   if (!product) {
     return (
@@ -103,6 +111,7 @@ export function PaymentCheckoutDialog({
                 embedded
                 productId={productId}
                 propertyId={propertyId}
+                priceOverride={priceOverride}
                 showCard={showCard}
                 ctaLabel={ctaLabel ?? defaultTrigger}
                 onPaid={(payment) => {

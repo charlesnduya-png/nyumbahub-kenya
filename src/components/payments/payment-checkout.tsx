@@ -13,6 +13,7 @@ import { formatProductPrice, getProduct, type ProductId } from "@/lib/pricing";
 interface CheckoutProps {
   productId: ProductId | string;
   propertyId?: string;
+  priceOverride?: number;
   onPaid?: (payment: {
     id: string;
     reference: string;
@@ -29,12 +30,18 @@ interface CheckoutProps {
 export function PaymentCheckout({
   productId,
   propertyId,
+  priceOverride,
   onPaid,
   ctaLabel,
   showCard = true,
   embedded = false,
 }: CheckoutProps) {
-  const product = getProduct(productId);
+  const baseProduct = getProduct(productId);
+  const product = baseProduct
+    ? priceOverride != null
+      ? { ...baseProduct, price: priceOverride }
+      : baseProduct
+    : undefined;
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState<"mpesa" | "card" | null>(null);
 

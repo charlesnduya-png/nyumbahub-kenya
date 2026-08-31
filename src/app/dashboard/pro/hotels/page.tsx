@@ -1,5 +1,7 @@
 import { HotelsOverview } from "@/components/professional/hotels-overview";
+import { getEffectiveHotelPlans } from "@/lib/hotel-plan-pricing";
 
-export default function ProHotelsPage() {
-  return <HotelsOverview />;
+export default async function ProHotelsPage() {
+  const hotelPlans = await getEffectiveHotelPlans();
+  return <HotelsOverview plans={hotelPlans} />;
 }

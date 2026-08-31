@@ -13,7 +13,7 @@ import {
   isIntaSendConfigured,
 } from "@/lib/intasend";
 import { isMpesaConfigured, MpesaConfigError, stkPush } from "@/lib/mpesa";
-import { getProduct } from "@/lib/pricing";
+import { getProductWithLivePricing } from "@/lib/hotel-plan-pricing";
 import { createCheckoutSession, isStripeConfigured } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const product = getProduct(parsed.data.productId);
+    const product = await getProductWithLivePricing(parsed.data.productId);
     if (!product) {
       return NextResponse.json(
         { success: false, error: "Unknown pricing product" },

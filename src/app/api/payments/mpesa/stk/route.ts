@@ -15,7 +15,7 @@ import {
   MpesaConfigError,
   stkPush,
 } from "@/lib/mpesa";
-import { getProduct } from "@/lib/pricing";
+import { getProductWithLivePricing } from "@/lib/hotel-plan-pricing";
 import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     }
 
     const product = parsed.data.productId
-      ? getProduct(parsed.data.productId)
+      ? await getProductWithLivePricing(parsed.data.productId)
       : null;
     const amount = parsed.data.amount ?? product?.price;
 
