@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 
 const SESSION_COOKIE = "nyumba_sid";
 const SKIP_PREFIXES = ["/api", "/dashboard", "/_next", "/favicon", "/sitemap"];
-const DEDUPE_MS = 10 * 60 * 1000;
+const DEDUPE_MS = 15 * 60 * 1000;
 
 export async function POST(request: Request) {
   try {
@@ -39,6 +39,7 @@ export async function POST(request: Request) {
     const recent = await prisma.siteVisit.findFirst({
       where: { sessionId, path, createdAt: { gte: since } },
       select: { id: true },
+      orderBy: { createdAt: "desc" },
     });
     if (recent) {
       const res = NextResponse.json({ success: true, skipped: true });

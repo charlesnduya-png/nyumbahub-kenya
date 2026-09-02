@@ -90,7 +90,6 @@ const professionalNav: NavItem[] = [
 const agentExtraNav: NavItem[] = [
   { label: "Clients", href: "/dashboard/agent/clients", icon: Users },
   { label: "CRM", href: "/dashboard/agent/crm", icon: ClipboardList },
-  { label: "Viewings", href: "/dashboard/pro/viewings", icon: CalendarDays },
   { label: "Subscription", href: "/dashboard/agent/subscription", icon: CreditCard },
 ];
 
@@ -112,7 +111,6 @@ const adminNav: NavItem[] = [
   { label: "Verify accounts", href: "/dashboard/admin/verification", icon: BadgeCheck },
   { label: "Payments", href: "/dashboard/admin/payments", icon: CreditCard },
   { label: "Wallets", href: "/dashboard/admin/wallets", icon: Banknote },
-  { label: "Job partners", href: "/dashboard/admin/job-partners", icon: Briefcase },
   { label: "Subscriptions", href: "/dashboard/admin/subscriptions", icon: FileText },
   { label: "Ads", href: "/dashboard/admin/ads", icon: Megaphone },
   { label: "Blog", href: "/dashboard/admin/blog", icon: FileText },

@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 import { isCrawlerUserAgent } from "@/lib/crawler";
 
 const SESSION_VISIT_KEY = "yh_site_visits";
-const MIN_GAP_MS = 10 * 60 * 1000;
-const MAX_VISITS_PER_SESSION = 12;
+const MIN_GAP_MS = 15 * 60 * 1000;
+const MAX_VISITS_PER_SESSION = 8;
 
 function shouldRecordVisit(path: string) {
   if (typeof window === "undefined") return false;
