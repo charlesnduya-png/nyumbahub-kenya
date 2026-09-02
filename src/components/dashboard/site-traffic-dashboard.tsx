@@ -253,9 +253,19 @@ export function SiteTrafficDashboard() {
   useEffect(() => {
     setLoading(true);
     void load(range);
-    const ms = range === "live" ? 20_000 : 60_000;
-    const id = window.setInterval(() => void load(range), ms);
-    return () => window.clearInterval(id);
+    const ms = range === "live" ? 60_000 : 120_000;
+
+    function tick() {
+      if (document.visibilityState !== "visible") return;
+      void load(range);
+    }
+
+    const id = window.setInterval(tick, ms);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", tick);
+    };
   }, [range, load]);
 
   useEffect(() => {

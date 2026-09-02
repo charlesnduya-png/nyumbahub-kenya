@@ -33,6 +33,9 @@ import { KENYA_COUNTIES } from "@/lib/kenya";
 
 import { registerSchema, type RegisterInput } from "@/lib/validations/auth";
 
+const AUTH_FORM_FOOTER =
+  "sticky bottom-0 z-10 flex flex-col gap-4 border-t bg-card/95 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-sm";
+
 export default function ProfessionalRegisterClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -317,7 +320,7 @@ export default function ProfessionalRegisterClient() {
               )}
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col gap-4">
+          <CardFooter className={AUTH_FORM_FOOTER}>
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading
                 ? "Creating professional account…"

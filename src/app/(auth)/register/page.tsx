@@ -22,6 +22,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { registerSchema, type RegisterInput } from "@/lib/validations/auth";
 
+const AUTH_FORM_FOOTER =
+  "sticky bottom-0 z-10 flex flex-col gap-4 border-t bg-card/95 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-sm";
+
 export default function RegisterPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -155,7 +158,7 @@ export default function RegisterPage() {
               )}
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col gap-4">
+          <CardFooter className={AUTH_FORM_FOOTER}>
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Creating account…" : "Create customer account"}
             </Button>

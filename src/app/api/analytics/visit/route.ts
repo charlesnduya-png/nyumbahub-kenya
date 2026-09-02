@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 
 const SESSION_COOKIE = "nyumba_sid";
 const SKIP_PREFIXES = ["/api", "/dashboard", "/_next", "/favicon", "/sitemap"];
+const DEDUPE_MS = 10 * 60 * 1000;
 
 export async function POST(request: Request) {
   try {
@@ -18,7 +19,9 @@ export async function POST(request: Request) {
 
     if (
       SKIP_PREFIXES.some((p) => path.startsWith(p)) ||
-      path.includes(".")
+      path.includes(".") ||
+      path.startsWith("/login") ||
+      path.startsWith("/register")
     ) {
       return NextResponse.json({ success: true, skipped: true });
     }
@@ -30,6 +33,23 @@ export async function POST(request: Request) {
 
     if (!sessionId || sessionId.length < 8) {
       sessionId = crypto.randomUUID();
+    }
+
+    const since = new Date(Date.now() - DEDUPE_MS);
+    const recent = await prisma.siteVisit.findFirst({
+      where: { sessionId, path, createdAt: { gte: since } },
+      select: { id: true },
+    });
+    if (recent) {
+      const res = NextResponse.json({ success: true, skipped: true });
+      res.cookies.set(SESSION_COOKIE, sessionId, {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 30,
+        sameSite: "lax",
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+      });
+      return res;
     }
 
     const referrer =

@@ -62,7 +62,7 @@ export function NotificationBell({
   const { status, data: session } = useSession();
   const role = session?.user?.role;
   const isOwner = role === "SELLER" || role === "AGENT";
-  const effectivePollMs = pollMs ?? (isOwner ? 20_000 : 45_000);
+  const effectivePollMs = pollMs ?? (isOwner ? 60_000 : 120_000);
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -119,9 +119,24 @@ export function NotificationBell({
 
   useEffect(() => {
     if (status !== "authenticated") return;
+
     void load();
-    const id = window.setInterval(() => void load(), effectivePollMs);
-    return () => window.clearInterval(id);
+
+    function tick() {
+      if (document.visibilityState !== "visible") return;
+      void load();
+    }
+
+    const id = window.setInterval(tick, effectivePollMs);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [status, load, effectivePollMs]);
 
   useEffect(() => {

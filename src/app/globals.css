@@ -104,6 +104,7 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
   overflow-x: hidden;
   max-width: 100%;
+  min-height: 100%;
 }
 
 .leaflet-container {

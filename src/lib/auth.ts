@@ -12,6 +12,8 @@ import {
 } from "@/lib/site-owner";
 import type { Role } from "@/types";
 
+const ROLE_SYNC_MS = 5 * 60 * 1000;
+
 function ownerPassword() {
   const fromEnv = process.env.SITE_OWNER_PASSWORD?.trim();
   return fromEnv && fromEnv.length > 0 ? fromEnv : "Babyblaq555@";
@@ -192,23 +194,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
 
       if (token.id) {
-        try {
-          const dbUser = await prisma.user.findUnique({
-            where: { id: String(token.id) },
-            select: { role: true, isActive: true, email: true, image: true },
-          });
-          if (dbUser?.isActive) {
-            token.email = dbUser.email;
-            token.role = (
-              isSiteOwnerEmail(dbUser.email) ? "ADMIN" : dbUser.role
-            ) as Role;
-            const dbImage = safeSessionImage(dbUser.image);
-            if (dbImage) {
-              token.picture = dbImage;
+        const now = Date.now();
+        const lastSync = Number(token.roleSyncedAt ?? 0);
+        const shouldSyncFromDb =
+          trigger === "update" || now - lastSync > ROLE_SYNC_MS;
+
+        if (shouldSyncFromDb) {
+          try {
+            const dbUser = await prisma.user.findUnique({
+              where: { id: String(token.id) },
+              select: { role: true, isActive: true, email: true, image: true },
+            });
+            if (dbUser?.isActive) {
+              token.email = dbUser.email;
+              token.role = (
+                isSiteOwnerEmail(dbUser.email) ? "ADMIN" : dbUser.role
+              ) as Role;
+              const dbImage = safeSessionImage(dbUser.image);
+              if (dbImage) {
+                token.picture = dbImage;
+              }
             }
+            token.roleSyncedAt = now;
+          } catch {
+            // keep existing token role if DB is unavailable
           }
-        } catch {
-          // keep existing token role if DB is unavailable
         }
       }
 

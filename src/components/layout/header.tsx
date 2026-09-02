@@ -111,7 +111,18 @@ export function Header() {
           </nav>
         </div>
 
-        <div className="flex shrink-0 items-center gap-0.5 sm:gap-1.5">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
+          {!isLoggedIn && status !== "loading" ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-9 px-3 text-xs sm:text-sm lg:hidden"
+              asChild
+            >
+              <Link href="/login">Sign in</Link>
+            </Button>
+          ) : null}
+
           <Button
             variant="ghost"
             size="icon"
@@ -176,14 +187,18 @@ export function Header() {
                 <Menu className="h-5 w-5" aria-hidden="true" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[min(100vw,24rem)]">
-              <SheetHeader>
+            <SheetContent
+              side="right"
+              className="flex w-[min(100vw,24rem)] flex-col overflow-hidden p-0"
+            >
+              <SheetHeader className="shrink-0 border-b px-6 py-4">
                 <SheetTitle className="text-left">
                   <BrandLogo href={null} showKenya size="sm" />
                 </SheetTitle>
               </SheetHeader>
+              <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
               <nav
-                className="mt-8 flex flex-col gap-1"
+                className="flex flex-col gap-1"
                 aria-label="Mobile navigation"
               >
                 {navLinks.map((link) => {
@@ -211,7 +226,7 @@ export function Header() {
                   );
                 })}
               </nav>
-              <div className="mt-6 flex flex-col gap-3 border-t pt-6">
+              <div className="mt-6 flex flex-col gap-3 border-t pt-6 pb-2">
                 <div className="flex items-center justify-between gap-3 px-1">
                   <span className="text-sm font-medium">Currency</span>
                   <CurrencySwitcher variant="default" />
@@ -258,6 +273,7 @@ export function Header() {
                     </Button>
                   </>
                 )}
+              </div>
               </div>
             </SheetContent>
           </Sheet>

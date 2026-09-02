@@ -23,6 +23,9 @@ import { JobPartnerEarningsInfo } from "@/components/job-partner/job-partner-ear
 import { jobPartnerCommissionPercent } from "@/lib/job-partner-copy";
 import { registerSchema, type RegisterInput } from "@/lib/validations/auth";
 
+const AUTH_FORM_FOOTER =
+  "sticky bottom-0 z-10 flex flex-col gap-4 border-t bg-card/95 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur-sm";
+
 export default function JobPartnerRegisterPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -180,7 +183,7 @@ export default function JobPartnerRegisterPage() {
               )}
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col gap-4">
+          <CardFooter className={AUTH_FORM_FOOTER}>
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Creating account…" : "Create job partner account"}
             </Button>
