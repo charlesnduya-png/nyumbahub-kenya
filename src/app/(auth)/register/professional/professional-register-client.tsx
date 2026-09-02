@@ -26,14 +26,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { KENYA_COUNTIES } from "@/lib/kenya";
+import { RegisterAccountTypePicker } from "@/components/auth/register-account-type-picker";
+import { jobPartnerCommissionPercent } from "@/lib/job-partner-copy";
 import { addHotelPath, isProfessionalRole } from "@/lib/hotel-listing";
+import { KENYA_COUNTIES } from "@/lib/kenya";
+
 import { registerSchema, type RegisterInput } from "@/lib/validations/auth";
 
 export default function ProfessionalRegisterClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const jobRefFromUrl = searchParams.get("jobRef")?.trim() ?? "";
+  const pct = jobPartnerCommissionPercent();
   const { data: session, status } = useSession();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -116,42 +120,29 @@ export default function ProfessionalRegisterClient() {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 rounded-2xl bg-white p-3 shadow-sm sm:grid-cols-3">
-        <Link
-          href="/register"
-          className="rounded-xl border border-slate-200 bg-white p-4 text-slate-900 transition hover:border-primary/50 hover:bg-slate-50"
-        >
-          <div className="mb-2 flex items-center gap-2">
-            <UserRound className="h-4 w-4 text-primary" />
-            <span className="text-sm font-semibold">Customer</span>
-          </div>
-          <p className="text-xs text-slate-600">
-            Browse and save homes only.
-          </p>
-        </Link>
-        <div className="rounded-xl border-2 border-primary bg-primary/10 p-4 text-slate-900">
-          <div className="mb-2 flex items-center gap-2 text-primary">
-            <Building2 className="h-4 w-4" />
-            <span className="text-sm font-semibold">Professional</span>
-          </div>
-          <p className="text-xs text-slate-600">
-            List houses for sale or rent after ID verification and admin
-            approval.
-          </p>
-        </div>
-        <Link
-          href="/register/jobs"
-          className="rounded-xl border border-slate-200 bg-white p-4 text-slate-900 transition hover:border-primary/50 hover:bg-slate-50"
-        >
-          <div className="mb-2 flex items-center gap-2">
-            <Briefcase className="h-4 w-4 text-primary" />
-            <span className="text-sm font-semibold">Job partner</span>
-          </div>
-          <p className="text-xs text-slate-600">
-            Earn commission by onboarding hotels.
-          </p>
-        </Link>
-      </div>
+      <RegisterAccountTypePicker
+        options={[
+          {
+            href: "/register",
+            icon: UserRound,
+            label: "Customer",
+            description: "Browse and save homes only.",
+          },
+          {
+            active: true,
+            icon: Building2,
+            label: "Professional",
+            description:
+              "List houses for sale or rent after ID verification and admin approval.",
+          },
+          {
+            href: "/register/jobs",
+            icon: Briefcase,
+            label: "Job partner",
+            description: `Earn ${pct}% by referring agencies and hotels.`,
+          },
+        ]}
+      />
 
       <Card>
         <CardHeader className="text-center">
@@ -175,9 +166,8 @@ export default function ProfessionalRegisterClient() {
             {jobRefFromUrl ? (
               <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
                 Referred by job partner{" "}
-                <span className="font-mono font-semibold">{jobRefFromUrl}</span>
-                . Their commission is tracked when you subscribe to a hotel
-                plan.
+                <span className="font-mono font-semibold">{jobRefFromUrl}</span>.
+                They earn {pct}% when you pay a monthly agency or hotel plan.
                 <input type="hidden" {...register("jobRef")} />
               </div>
             ) : null}

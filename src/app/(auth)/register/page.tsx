@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import { Building2, Briefcase, UserRound } from "lucide-react";
+import { RegisterAccountTypePicker } from "@/components/auth/register-account-type-picker";
+import { jobPartnerCommissionPercent } from "@/lib/job-partner-copy";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +25,7 @@ import { registerSchema, type RegisterInput } from "@/lib/validations/auth";
 export default function RegisterPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const pct = jobPartnerCommissionPercent();
 
   const {
     register,
@@ -67,41 +70,28 @@ export default function RegisterPage() {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 rounded-2xl bg-white p-3 shadow-sm sm:grid-cols-3">
-        <div className="rounded-xl border-2 border-primary bg-primary/10 p-4 text-slate-900">
-          <div className="mb-2 flex items-center gap-2 text-primary">
-            <UserRound className="h-4 w-4" />
-            <span className="text-sm font-semibold">Customer</span>
-          </div>
-          <p className="text-xs text-slate-600">
-            Browse, save homes, and contact sellers.
-          </p>
-        </div>
-        <Link
-          href="/register/professional"
-          className="rounded-xl border border-slate-200 bg-white p-4 text-slate-900 transition hover:border-primary/50 hover:bg-slate-50"
-        >
-          <div className="mb-2 flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-primary" />
-            <span className="text-sm font-semibold">Professional</span>
-          </div>
-          <p className="text-xs text-slate-600">
-            List properties for sale or rent (admin approval required).
-          </p>
-        </Link>
-        <Link
-          href="/register/jobs"
-          className="rounded-xl border border-slate-200 bg-white p-4 text-slate-900 transition hover:border-primary/50 hover:bg-slate-50"
-        >
-          <div className="mb-2 flex items-center gap-2">
-            <Briefcase className="h-4 w-4 text-primary" />
-            <span className="text-sm font-semibold">Job partner</span>
-          </div>
-          <p className="text-xs text-slate-600">
-            Earn 30% when hotels you refer pay their monthly plan.
-          </p>
-        </Link>
-      </div>
+      <RegisterAccountTypePicker
+        options={[
+          {
+            active: true,
+            icon: UserRound,
+            label: "Customer",
+            description: "Browse, save homes, and contact sellers.",
+          },
+          {
+            href: "/register/professional",
+            icon: Building2,
+            label: "Professional",
+            description: "List properties for sale or rent (admin approval required).",
+          },
+          {
+            href: "/register/jobs",
+            icon: Briefcase,
+            label: "Job partner",
+            description: `Earn ${pct}% when agencies or hotels you refer pay their plan.`,
+          },
+        ]}
+      />
 
       <Card>
         <CardHeader className="text-center">

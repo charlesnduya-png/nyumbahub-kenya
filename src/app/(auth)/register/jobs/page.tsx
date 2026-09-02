@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import { Briefcase, Building2, IdCard, UserRound } from "lucide-react";
+import { RegisterAccountTypePicker } from "@/components/auth/register-account-type-picker";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,11 +19,14 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { JobPartnerEarningsInfo } from "@/components/job-partner/job-partner-earnings-info";
+import { jobPartnerCommissionPercent } from "@/lib/job-partner-copy";
 import { registerSchema, type RegisterInput } from "@/lib/validations/auth";
 
 export default function JobPartnerRegisterPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const pct = jobPartnerCommissionPercent();
 
   const {
     register,
@@ -67,55 +71,42 @@ export default function JobPartnerRegisterPage() {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 rounded-2xl bg-white p-3 shadow-sm sm:grid-cols-3">
-        <Link
-          href="/register"
-          className="rounded-xl border border-slate-200 bg-white p-4 text-slate-900 transition hover:border-primary/50 hover:bg-slate-50"
-        >
-          <div className="mb-2 flex items-center gap-2">
-            <UserRound className="h-4 w-4 text-primary" />
-            <span className="text-sm font-semibold">Customer</span>
-          </div>
-          <p className="text-xs text-slate-600">Browse and save homes.</p>
-        </Link>
-        <Link
-          href="/register/professional"
-          className="rounded-xl border border-slate-200 bg-white p-4 text-slate-900 transition hover:border-primary/50 hover:bg-slate-50"
-        >
-          <div className="mb-2 flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-primary" />
-            <span className="text-sm font-semibold">Professional</span>
-          </div>
-          <p className="text-xs text-slate-600">List properties and hotels.</p>
-        </Link>
-        <div className="rounded-xl border-2 border-primary bg-primary/10 p-4 text-slate-900">
-          <div className="mb-2 flex items-center gap-2 text-primary">
-            <Briefcase className="h-4 w-4" />
-            <span className="text-sm font-semibold">Job partner</span>
-          </div>
-          <p className="text-xs text-slate-600">
-            Earn 30% when hotels you refer pay their plan.
-          </p>
-        </div>
-      </div>
+      <RegisterAccountTypePicker
+        options={[
+          {
+            href: "/register",
+            icon: UserRound,
+            label: "Customer",
+            description: "Browse and save homes.",
+          },
+          {
+            href: "/register/professional",
+            icon: Building2,
+            label: "Professional",
+            description: "List properties and hotels.",
+          },
+          {
+            active: true,
+            icon: Briefcase,
+            label: "Job partner",
+            description: `Earn ${pct}% when agencies or hotels you refer pay their plan.`,
+          },
+        ]}
+      />
 
       <Card>
         <CardHeader className="text-center">
           <CardTitle>Create a job partner account</CardTitle>
           <CardDescription>
-            Get a personal referral link, track hotels you onboard, and earn
-            30% commission on their monthly hotel plan payments.
+            Refer estate agencies and hotel operators. Earn {pct}% on every
+            monthly agency or hotel plan payment — credited to your wallet right
+            away.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <CardContent className="space-y-4">
-            <div className="rounded-xl border bg-muted/40 p-3 text-sm text-muted-foreground">
-              <p className="font-medium text-foreground">How it works</p>
-              <ol className="mt-2 list-inside list-decimal space-y-1">
-                <li>Share your link with hotel operators</li>
-                <li>They create a professional account and subscribe to a plan</li>
-                <li>You earn 30% every month they pay — tracked in your wallet</li>
-              </ol>
+            <div className="rounded-xl border bg-muted/40 p-4">
+              <JobPartnerEarningsInfo />
             </div>
 
             <div className="space-y-2">

@@ -68,6 +68,21 @@ export async function fulfillCompletedPayment(payment: {
       paymentId: payment.id,
       durationDays: product?.durationDays,
     }).catch(() => null);
+
+    if (productId.startsWith("agent_")) {
+      const { processJobPartnerRecruitmentCommission } = await import(
+        "@/lib/job-partner"
+      );
+      await processJobPartnerRecruitmentCommission({
+        paymentId: payment.id,
+        referredUserId: payment.userId,
+        grossAmount: amountPaid ?? 0,
+        currency: "KES",
+        productId,
+      }).catch((error) => {
+        console.error("Agency recruitment commission failed:", error);
+      });
+    }
   }
 
   if (payment.userId) {
@@ -81,12 +96,12 @@ export async function fulfillCompletedPayment(payment: {
         productId,
       }).catch(() => null);
 
-      const { processHotelRecruitmentCommission } = await import(
+      const { processJobPartnerRecruitmentCommission } = await import(
         "@/lib/job-partner"
       );
-      await processHotelRecruitmentCommission({
+      await processJobPartnerRecruitmentCommission({
         paymentId: payment.id,
-        hotelUserId: payment.userId,
+        referredUserId: payment.userId,
         grossAmount: amountPaid ?? 0,
         currency: "KES",
         productId,

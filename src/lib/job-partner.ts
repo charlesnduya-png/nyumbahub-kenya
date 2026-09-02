@@ -1,8 +1,20 @@
 import type { PrismaClient } from "@prisma/client";
+import { agencyProductIdToTier } from "@/lib/agency-plans";
+import { isHotelPlanProduct } from "@/lib/pricing";
 import { prisma } from "@/lib/prisma";
-import { creditHotelRecruitmentCommission } from "@/lib/wallet";
+import { JOB_PARTNER_COMMISSION_RATE } from "@/lib/job-partner-copy";
+import { creditHotelRecruitmentCommission, formatPayoutMethod, payoutDetailsFromWallet } from "@/lib/wallet";
 
-export const HOTEL_RECRUITMENT_COMMISSION_RATE = 0.3;
+export const HOTEL_RECRUITMENT_COMMISSION_RATE = JOB_PARTNER_COMMISSION_RATE;
+
+export function isJobPartnerCommissionProduct(productId?: string | null) {
+  if (!productId) return false;
+  return isHotelPlanProduct(productId) || productId.startsWith("agent_");
+}
+
+export function isAgencyCommissionProduct(productId?: string | null) {
+  return Boolean(productId?.startsWith("agent_"));
+}
 
 function randomReferralCode() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -57,8 +69,8 @@ export function absoluteJobPartnerReferralUrl(
   return `${baseUrl.replace(/\/$/, "")}${jobPartnerReferralPath(referralCode)}`;
 }
 
-export async function attachHotelReferral(input: {
-  hotelUserId: string;
+export async function attachProfessionalReferral(input: {
+  referredUserId: string;
   jobRef?: string | null;
 }) {
   const code = input.jobRef?.trim();
@@ -68,18 +80,18 @@ export async function attachHotelReferral(input: {
   if (!partner || partner.user.role !== "JOB_PARTNER" || !partner.user.isActive) {
     return null;
   }
-  if (partner.userId === input.hotelUserId) return null;
+  if (partner.userId === input.referredUserId) return null;
 
-  const hotelUser = await prisma.user.findUnique({
-    where: { id: input.hotelUserId },
+  const referredUser = await prisma.user.findUnique({
+    where: { id: input.referredUserId },
     select: { referredByJobPartnerUserId: true },
   });
-  if (hotelUser?.referredByJobPartnerUserId) return partner;
+  if (referredUser?.referredByJobPartnerUserId) return partner;
 
   await prisma.$transaction(async (tx) => {
     const updated = await tx.user.updateMany({
       where: {
-        id: input.hotelUserId,
+        id: input.referredUserId,
         referredByJobPartnerUserId: null,
       },
       data: { referredByJobPartnerUserId: partner.userId },
@@ -95,25 +107,57 @@ export async function attachHotelReferral(input: {
   return partner;
 }
 
-export async function processHotelRecruitmentCommission(input: {
-  paymentId: string;
+/** @deprecated Use attachProfessionalReferral */
+export async function attachHotelReferral(input: {
   hotelUserId: string;
+  jobRef?: string | null;
+}) {
+  return attachProfessionalReferral({
+    referredUserId: input.hotelUserId,
+    jobRef: input.jobRef,
+  });
+}
+
+function commissionDescription(input: {
+  productId?: string;
+  accountLabel: string;
+  planLabel: string;
+}) {
+  const pct = Math.round(JOB_PARTNER_COMMISSION_RATE * 100);
+  if (isAgencyCommissionProduct(input.productId)) {
+    return `${pct}% agency plan commission · ${input.accountLabel} · ${input.planLabel}`;
+  }
+  return `${pct}% hotel plan commission · ${input.accountLabel} · ${input.planLabel}`;
+}
+
+export async function processJobPartnerRecruitmentCommission(input: {
+  paymentId: string;
+  referredUserId: string;
   grossAmount: number;
   currency?: string;
   productId?: string;
 }) {
   if (!input.grossAmount || input.grossAmount <= 0) return null;
+  if (!isJobPartnerCommissionProduct(input.productId)) return null;
 
-  const hotelUser = await prisma.user.findUnique({
-    where: { id: input.hotelUserId },
+  const referredUser = await prisma.user.findUnique({
+    where: { id: input.referredUserId },
     select: {
       referredByJobPartnerUserId: true,
       name: true,
+      role: true,
       hotelPlan: { select: { tier: true } },
+      agentProfile: { select: { agencyName: true } },
+      subscriptions: {
+        where: { status: "ACTIVE" },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { plan: true },
+      },
     },
   });
 
-  const partnerUserId = hotelUser?.referredByJobPartnerUserId;
+  const partnerUserId = referredUser?.referredByJobPartnerUserId;
   if (!partnerUserId) return null;
 
   const partner = await prisma.user.findUnique({
@@ -129,16 +173,47 @@ export async function processHotelRecruitmentCommission(input: {
     return null;
   }
 
-  const tier = hotelUser.hotelPlan?.tier ?? "paid plan";
-  const hotelLabel = hotelUser.name?.trim() || "Hotel operator";
+  const agencyTier = input.productId?.startsWith("agent_")
+    ? agencyProductIdToTier(input.productId)
+    : null;
+  const planLabel =
+    agencyTier ??
+    referredUser.hotelPlan?.tier ??
+    referredUser.subscriptions[0]?.plan ??
+    "paid plan";
+  const accountLabel =
+    referredUser.agentProfile?.agencyName?.trim() ||
+    referredUser.name?.trim() ||
+    (referredUser.role === "AGENT" ? "Agency" : "Professional");
 
   return creditHotelRecruitmentCommission(prisma, {
     partnerUserId,
-    hotelUserId: input.hotelUserId,
+    hotelUserId: input.referredUserId,
     paymentId: input.paymentId,
     grossAmount: input.grossAmount,
     currency: input.currency ?? "KES",
-    description: `30% hotel plan commission · ${hotelLabel} · ${tier}`,
+    description: commissionDescription({
+      productId: input.productId,
+      accountLabel,
+      planLabel: String(planLabel).replace(/_/g, " "),
+    }),
+  });
+}
+
+/** @deprecated Use processJobPartnerRecruitmentCommission */
+export async function processHotelRecruitmentCommission(input: {
+  paymentId: string;
+  hotelUserId: string;
+  grossAmount: number;
+  currency?: string;
+  productId?: string;
+}) {
+  return processJobPartnerRecruitmentCommission({
+    paymentId: input.paymentId,
+    referredUserId: input.hotelUserId,
+    grossAmount: input.grossAmount,
+    currency: input.currency,
+    productId: input.productId,
   });
 }
 
@@ -156,10 +231,12 @@ export type JobPartnerDashboardData = {
     currency: string;
     monthEarned: number;
   };
-  referredHotels: Array<{
+  referredProfessionals: Array<{
     id: string;
     name: string | null;
     email: string;
+    role: string;
+    accountType: string;
     tier: string | null;
     joinedAt: string;
     planPayments: number;
@@ -183,7 +260,7 @@ export async function getJobPartnerDashboard(
   });
   if (!profile) return null;
 
-  const [wallet, referredHotels, commissions, monthCommissions] =
+  const [wallet, referredUsers, commissions, monthCommissions] =
     await Promise.all([
       prisma.professionalWallet.findUnique({ where: { userId } }),
       prisma.user.findMany({
@@ -194,8 +271,16 @@ export async function getJobPartnerDashboard(
           id: true,
           name: true,
           email: true,
+          role: true,
           createdAt: true,
           hotelPlan: { select: { tier: true } },
+          agentProfile: { select: { agencyName: true } },
+          subscriptions: {
+            where: { status: "ACTIVE" },
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: { plan: true },
+          },
         },
       }),
       prisma.walletTransaction.findMany({
@@ -216,12 +301,12 @@ export async function getJobPartnerDashboard(
       }),
     ]);
 
-  const hotelIds = referredHotels.map((row) => row.id);
+  const referredIds = referredUsers.map((row) => row.id);
   const payments =
-    hotelIds.length > 0
+    referredIds.length > 0
       ? await prisma.payment.findMany({
           where: {
-            userId: { in: hotelIds },
+            userId: { in: referredIds },
             status: "COMPLETED",
           },
           select: { userId: true, amount: true, metadata: true },
@@ -231,7 +316,7 @@ export async function getJobPartnerDashboard(
   const paymentStats = new Map<string, { count: number; gross: number }>();
   for (const payment of payments) {
     const meta = payment.metadata as { productId?: string } | null;
-    if (!meta?.productId?.startsWith("hotel_plan_")) continue;
+    if (!isJobPartnerCommissionProduct(meta?.productId)) continue;
     const row = paymentStats.get(payment.userId) ?? { count: 0, gross: 0 };
     row.count += 1;
     row.gross += payment.amount;
@@ -274,15 +359,30 @@ export async function getJobPartnerDashboard(
       currency: wallet?.currency ?? "KES",
       monthEarned,
     },
-    referredHotels: referredHotels.map((hotel) => ({
-      id: hotel.id,
-      name: hotel.name,
-      email: hotel.email,
-      tier: hotel.hotelPlan?.tier ?? null,
-      joinedAt: hotel.createdAt.toISOString(),
-      planPayments: paymentStats.get(hotel.id)?.count ?? 0,
-      commissionEarned: commissionTotals.get(hotel.id) ?? 0,
-    })),
+    referredProfessionals: referredUsers.map((user) => {
+      const accountType =
+        user.role === "AGENT"
+          ? "Agency"
+          : user.hotelPlan
+            ? "Hotel"
+            : "Professional";
+      const tier =
+        user.hotelPlan?.tier ??
+        user.subscriptions[0]?.plan ??
+        null;
+
+      return {
+        id: user.id,
+        name: user.agentProfile?.agencyName ?? user.name,
+        email: user.email,
+        role: user.role,
+        accountType,
+        tier,
+        joinedAt: user.createdAt.toISOString(),
+        planPayments: paymentStats.get(user.id)?.count ?? 0,
+        commissionEarned: commissionTotals.get(user.id) ?? 0,
+      };
+    }),
     recentCommissions: commissions.map((tx) => ({
       id: tx.id,
       amount: tx.amount,
@@ -294,196 +394,134 @@ export async function getJobPartnerDashboard(
   };
 }
 
-export type AdminJobPartnerRow = {
-  userId: string;
-  name: string | null;
-  email: string;
-  phone: string | null;
-  isActive: boolean;
-  referralCode: string;
-  hotelsReferred: number;
-  joinedAt: string;
-  availableBalance: number;
-  pendingBalance: number;
-  lifetimeEarned: number;
-  lifetimePaidOut: number;
-  currency: string;
-  pendingWithdrawals: number;
-  commissionTotal: number;
-  payoutLabel: string;
-};
-
-export type AdminReferredHotelRow = {
-  id: string;
-  name: string | null;
-  email: string;
-  isActive: boolean;
-  tier: string | null;
-  joinedAt: string;
-  partnerUserId: string;
-  partnerName: string | null;
-  partnerEmail: string;
-  partnerReferralCode: string;
-  planPayments: number;
-  commissionEarned: number;
-};
-
-export type AdminJobPartnerSummary = {
-  totalPartners: number;
-  activePartners: number;
-  suspendedPartners: number;
-  totalHotelsReferred: number;
-  pendingWithdrawalCount: number;
-  pendingWithdrawalAmount: number;
-  totalCommissionsEarned: number;
-  currency: string;
-};
-
-function payoutLabelFromWallet(
-  wallet: {
-    payoutMethod: string | null;
-    payoutAccountName: string | null;
-    payoutPhone: string | null;
-    payoutProvider: string | null;
-    payoutBankName: string | null;
-    payoutBankAccount: string | null;
-    payoutCountry: string | null;
-  } | null,
-) {
-  if (!wallet?.payoutMethod) return "Not set";
-  if (wallet.payoutMethod === "MOBILE_MONEY") {
-    return `${wallet.payoutProvider ?? "Mobile"} · ${wallet.payoutPhone ?? "—"}`;
-  }
-  if (wallet.payoutMethod === "BANK") {
-    return `${wallet.payoutBankName ?? "Bank"} · ${wallet.payoutBankAccount ?? "—"}`;
-  }
-  return wallet.payoutAccountName ?? wallet.payoutMethod;
-}
-
-export async function getAdminJobPartnerSummary(): Promise<AdminJobPartnerSummary> {
-  const [partners, pendingWithdrawals, commissionSum] = await Promise.all([
-    prisma.user.findMany({
-      where: { role: "JOB_PARTNER" },
-      select: {
-        isActive: true,
-        jobPartnerProfile: { select: { hotelsReferred: true } },
-      },
-    }),
-    prisma.walletTransaction.findMany({
-      where: {
-        type: "PAYOUT",
-        status: "PENDING",
-        user: { role: "JOB_PARTNER" },
-      },
-      select: { amount: true },
-    }),
-    prisma.walletTransaction.aggregate({
-      where: {
-        type: "HOTEL_RECRUITMENT",
-        status: { in: ["AVAILABLE", "PAID_OUT"] },
-        user: { role: "JOB_PARTNER" },
-      },
-      _sum: { amount: true },
-    }),
-  ]);
-
-  const totalHotelsReferred = partners.reduce(
-    (sum, row) => sum + (row.jobPartnerProfile?.hotelsReferred ?? 0),
-    0,
-  );
+export async function getAdminJobPartnerSummary() {
+  const [partners, referredCount, pendingWithdrawals, commissionSum, walletSample] =
+    await Promise.all([
+      prisma.user.findMany({
+        where: { role: "JOB_PARTNER" },
+        select: { isActive: true, jobPartnerProfile: { select: { hotelsReferred: true } } },
+      }),
+      prisma.user.count({ where: { referredByJobPartnerUserId: { not: null } } }),
+      prisma.walletTransaction.findMany({
+        where: {
+          type: "PAYOUT",
+          status: "PENDING",
+          user: { role: "JOB_PARTNER" },
+        },
+        select: { amount: true },
+      }),
+      prisma.walletTransaction.aggregate({
+        where: {
+          type: "HOTEL_RECRUITMENT",
+          status: { in: ["AVAILABLE", "PAID_OUT"] },
+          user: { role: "JOB_PARTNER" },
+        },
+        _sum: { amount: true },
+      }),
+      prisma.professionalWallet.findFirst({
+        where: { user: { role: "JOB_PARTNER" } },
+        select: { currency: true },
+      }),
+    ]);
 
   return {
     totalPartners: partners.length,
     activePartners: partners.filter((p) => p.isActive).length,
     suspendedPartners: partners.filter((p) => !p.isActive).length,
-    totalHotelsReferred,
+    totalHotelsReferred: referredCount,
     pendingWithdrawalCount: pendingWithdrawals.length,
     pendingWithdrawalAmount: pendingWithdrawals.reduce(
       (sum, row) => sum + row.amount,
       0,
     ),
     totalCommissionsEarned: commissionSum._sum.amount ?? 0,
-    currency: "KES",
+    currency: walletSample?.currency ?? "KES",
   };
 }
 
-export async function getAdminJobPartnersList(): Promise<AdminJobPartnerRow[]> {
+export async function getAdminJobPartnersList() {
   const partners = await prisma.user.findMany({
     where: { role: "JOB_PARTNER" },
     orderBy: { createdAt: "desc" },
     include: {
       jobPartnerProfile: true,
-      wallet: true,
+      wallet: {
+        select: {
+          availableBalance: true,
+          pendingBalance: true,
+          lifetimeEarned: true,
+          lifetimePaidOut: true,
+          currency: true,
+          payoutMethod: true,
+          payoutCountry: true,
+          payoutAccountName: true,
+          payoutPhone: true,
+          payoutProvider: true,
+          payoutBankName: true,
+          payoutBankAccount: true,
+          payoutBankBranch: true,
+          payoutSwift: true,
+          payoutEmail: true,
+        },
+      },
+      walletTransactions: {
+        where: { type: { in: ["HOTEL_RECRUITMENT", "PAYOUT"] } },
+        select: { type: true, status: true, amount: true },
+      },
     },
   });
 
-  const partnerIds = partners.map((p) => p.id);
-  const [commissionTotals, pendingByUser] = await Promise.all([
-    partnerIds.length
-      ? prisma.walletTransaction.groupBy({
-          by: ["userId"],
-          where: {
-            userId: { in: partnerIds },
-            type: "HOTEL_RECRUITMENT",
-            status: { not: "CANCELLED" },
-          },
-          _sum: { amount: true },
-        })
-      : [],
-    partnerIds.length
-      ? prisma.walletTransaction.groupBy({
-          by: ["userId"],
-          where: {
-            userId: { in: partnerIds },
-            type: "PAYOUT",
-            status: "PENDING",
-          },
-          _count: { _all: true },
-        })
-      : [],
-  ]);
+  return partners.map((user) => {
+    const commissionTotal = user.walletTransactions
+      .filter((tx) => tx.type === "HOTEL_RECRUITMENT" && tx.status !== "CANCELLED")
+      .reduce((sum, tx) => sum + tx.amount, 0);
+    const pendingWithdrawals = user.walletTransactions.filter(
+      (tx) => tx.type === "PAYOUT" && tx.status === "PENDING",
+    ).length;
 
-  const commissionMap = new Map(
-    commissionTotals.map((row) => [row.userId, row._sum.amount ?? 0]),
-  );
-  const pendingMap = new Map(
-    pendingByUser.map((row) => [row.userId, row._count._all]),
-  );
-
-  return partners.map((partner) => ({
-    userId: partner.id,
-    name: partner.name,
-    email: partner.email,
-    phone: partner.phone,
-    isActive: partner.isActive,
-    referralCode: partner.jobPartnerProfile?.referralCode ?? "—",
-    hotelsReferred: partner.jobPartnerProfile?.hotelsReferred ?? 0,
-    joinedAt: partner.createdAt.toISOString(),
-    availableBalance: partner.wallet?.availableBalance ?? 0,
-    pendingBalance: partner.wallet?.pendingBalance ?? 0,
-    lifetimeEarned: partner.wallet?.lifetimeEarned ?? 0,
-    lifetimePaidOut: partner.wallet?.lifetimePaidOut ?? 0,
-    currency: partner.wallet?.currency ?? "KES",
-    pendingWithdrawals: pendingMap.get(partner.id) ?? 0,
-    commissionTotal: commissionMap.get(partner.id) ?? 0,
-    payoutLabel: payoutLabelFromWallet(partner.wallet),
-  }));
+    return {
+      userId: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      isActive: user.isActive,
+      referralCode: user.jobPartnerProfile?.referralCode ?? "",
+      hotelsReferred: user.jobPartnerProfile?.hotelsReferred ?? 0,
+      joinedAt: user.createdAt.toISOString(),
+      availableBalance: user.wallet?.availableBalance ?? 0,
+      pendingBalance: user.wallet?.pendingBalance ?? 0,
+      lifetimeEarned: user.wallet?.lifetimeEarned ?? 0,
+      lifetimePaidOut: user.wallet?.lifetimePaidOut ?? 0,
+      currency: user.wallet?.currency ?? "KES",
+      pendingWithdrawals,
+      commissionTotal,
+      payoutLabel: user.wallet
+        ? formatPayoutMethod(payoutDetailsFromWallet(user.wallet))
+        : "Not set",
+    };
+  });
 }
 
-export async function getAdminReferredHotelsList(): Promise<
-  AdminReferredHotelRow[]
-> {
+export async function getAdminReferredHotelsList() {
   const referred = await prisma.user.findMany({
     where: { referredByJobPartnerUserId: { not: null } },
     orderBy: { createdAt: "desc" },
+    take: 200,
     select: {
       id: true,
       name: true,
       email: true,
       isActive: true,
+      role: true,
       createdAt: true,
-      referredByJobPartnerUserId: true,
       hotelPlan: { select: { tier: true } },
+      agentProfile: { select: { agencyName: true } },
+      subscriptions: {
+        where: { status: "ACTIVE" },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { plan: true },
+      },
       referredByJobPartner: {
         select: {
           id: true,
@@ -495,29 +533,26 @@ export async function getAdminReferredHotelsList(): Promise<
     },
   });
 
-  const hotelIds = referred.map((h) => h.id);
-  const [payments, commissions] = await Promise.all([
-    hotelIds.length
-      ? prisma.payment.findMany({
-          where: { userId: { in: hotelIds }, status: "COMPLETED" },
-          select: { userId: true, amount: true, metadata: true },
+  const ids = referred.map((row) => row.id);
+  const payments =
+    ids.length > 0
+      ? await prisma.payment.findMany({
+          where: { userId: { in: ids }, status: "COMPLETED" },
+          select: { userId: true, metadata: true },
         })
-      : [],
-    hotelIds.length
-      ? prisma.walletTransaction.findMany({
-          where: { type: "HOTEL_RECRUITMENT", status: { not: "CANCELLED" } },
-          select: { amount: true, sourceId: true },
-        })
-      : [],
-  ]);
+      : [];
 
-  const paymentStats = new Map<string, number>();
+  const paymentCounts = new Map<string, number>();
   for (const payment of payments) {
     const meta = payment.metadata as { productId?: string } | null;
-    if (!meta?.productId?.startsWith("hotel_plan_")) continue;
-    paymentStats.set(payment.userId, (paymentStats.get(payment.userId) ?? 0) + 1);
+    if (!isJobPartnerCommissionProduct(meta?.productId)) continue;
+    paymentCounts.set(payment.userId, (paymentCounts.get(payment.userId) ?? 0) + 1);
   }
 
+  const commissions = await prisma.walletTransaction.findMany({
+    where: { type: "HOTEL_RECRUITMENT", status: { not: "CANCELLED" } },
+    select: { amount: true, sourceId: true },
+  });
   const paymentIdToUser = new Map(
     (
       await prisma.payment.findMany({
@@ -526,60 +561,84 @@ export async function getAdminReferredHotelsList(): Promise<
       })
     ).map((p) => [p.id, p.userId]),
   );
-
-  const commissionByHotel = new Map<string, number>();
+  const commissionByUser = new Map<string, number>();
   for (const tx of commissions) {
-    const hotelUserId = paymentIdToUser.get(tx.sourceId);
-    if (!hotelUserId) continue;
-    commissionByHotel.set(
-      hotelUserId,
-      (commissionByHotel.get(hotelUserId) ?? 0) + tx.amount,
-    );
+    const userId = paymentIdToUser.get(tx.sourceId);
+    if (!userId) continue;
+    commissionByUser.set(userId, (commissionByUser.get(userId) ?? 0) + tx.amount);
   }
 
-  return referred.map((hotel) => ({
-    id: hotel.id,
-    name: hotel.name,
-    email: hotel.email,
-    isActive: hotel.isActive,
-    tier: hotel.hotelPlan?.tier ?? null,
-    joinedAt: hotel.createdAt.toISOString(),
-    partnerUserId: hotel.referredByJobPartner?.id ?? "",
-    partnerName: hotel.referredByJobPartner?.name ?? null,
-    partnerEmail: hotel.referredByJobPartner?.email ?? "—",
-    partnerReferralCode:
-      hotel.referredByJobPartner?.jobPartnerProfile?.referralCode ?? "—",
-    planPayments: paymentStats.get(hotel.id) ?? 0,
-    commissionEarned: commissionByHotel.get(hotel.id) ?? 0,
-  }));
+  return referred
+    .filter((row) => row.referredByJobPartner)
+    .map((row) => ({
+      id: row.id,
+      name: row.agentProfile?.agencyName ?? row.name,
+      email: row.email,
+      isActive: row.isActive,
+      tier: row.hotelPlan?.tier ?? row.subscriptions[0]?.plan ?? null,
+      joinedAt: row.createdAt.toISOString(),
+      partnerUserId: row.referredByJobPartner!.id,
+      partnerName: row.referredByJobPartner!.name,
+      partnerEmail: row.referredByJobPartner!.email,
+      partnerReferralCode:
+        row.referredByJobPartner!.jobPartnerProfile?.referralCode ?? "",
+      planPayments: paymentCounts.get(row.id) ?? 0,
+      commissionEarned: commissionByUser.get(row.id) ?? 0,
+    }));
 }
 
 export async function getAdminJobPartnerDetail(userId: string) {
-  const dashboard = await getJobPartnerDashboard(userId);
-  if (!dashboard) return null;
-
   const user = await prisma.user.findUnique({
-    where: { id: userId, role: "JOB_PARTNER" },
+    where: { id: userId },
     select: {
       id: true,
       name: true,
       email: true,
       phone: true,
       isActive: true,
-      createdAt: true,
       nationalId: true,
-      nationalIdVerified: true,
-      verificationStatus: true,
-      wallet: true,
+      createdAt: true,
+      role: true,
+      wallet: {
+        select: {
+          availableBalance: true,
+          lifetimeEarned: true,
+          currency: true,
+          payoutMethod: true,
+          payoutCountry: true,
+          payoutAccountName: true,
+          payoutPhone: true,
+          payoutProvider: true,
+          payoutBankName: true,
+          payoutBankAccount: true,
+          payoutBankBranch: true,
+          payoutSwift: true,
+          payoutEmail: true,
+        },
+      },
       jobPartnerProfile: true,
     },
   });
-  if (!user) return null;
+
+  if (!user || user.role !== "JOB_PARTNER" || !user.jobPartnerProfile) {
+    return null;
+  }
+
+  const dashboard = await getJobPartnerDashboard(userId);
+  if (!dashboard) return null;
 
   const withdrawals = await prisma.walletTransaction.findMany({
     where: { userId, type: "PAYOUT" },
     orderBy: { createdAt: "desc" },
     take: 30,
+    select: {
+      id: true,
+      amount: true,
+      currency: true,
+      status: true,
+      description: true,
+      createdAt: true,
+    },
   });
 
   return {
@@ -591,20 +650,35 @@ export async function getAdminJobPartnerDetail(userId: string) {
       isActive: user.isActive,
       joinedAt: user.createdAt.toISOString(),
       nationalId: user.nationalId,
-      nationalIdVerified: user.nationalIdVerified,
-      verificationStatus: user.verificationStatus,
-      payoutLabel: payoutLabelFromWallet(user.wallet),
+      payoutLabel: user.wallet
+        ? formatPayoutMethod(payoutDetailsFromWallet(user.wallet))
+        : "Not set",
     },
     profile: dashboard.profile,
-    summary: dashboard.summary,
-    referredHotels: dashboard.referredHotels,
-    recentCommissions: dashboard.recentCommissions,
-    withdrawals: withdrawals.map((row) => ({
+    summary: {
+      availableBalance: dashboard.summary.availableBalance,
+      lifetimeEarned: dashboard.summary.lifetimeEarned,
+      monthEarned: dashboard.summary.monthEarned,
+      currency: dashboard.summary.currency,
+    },
+    referredHotels: dashboard.referredProfessionals.map((row) => ({
       id: row.id,
-      amount: row.amount,
-      currency: row.currency,
-      status: row.status,
-      description: row.description,
+      name: row.name,
+      email: row.email,
+      tier: row.tier,
+      joinedAt: row.joinedAt,
+      planPayments: row.planPayments,
+      commissionEarned: row.commissionEarned,
+    })),
+    recentCommissions: dashboard.recentCommissions.map((row) => ({
+      ...row,
+      partnerUserId: userId,
+      partnerName: user.name,
+      partnerEmail: user.email,
+      status: "AVAILABLE",
+    })),
+    withdrawals: withdrawals.map((row) => ({
+      ...row,
       createdAt: row.createdAt.toISOString(),
     })),
   };

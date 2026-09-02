@@ -27,14 +27,14 @@ export default function AuthLayout({
         }}
       />
 
-      <div className="relative z-10 mx-auto flex min-h-dvh w-full max-w-lg flex-col items-center justify-center px-4 py-8 sm:px-8 sm:py-10">
+      <div className="relative z-10 mx-auto flex min-h-dvh w-full max-w-lg flex-col px-4 py-6 sm:justify-center sm:px-8 sm:py-10">
         <BrandLogo
           showKenya
           size="md"
           onDark
-          className="mb-6 sm:mb-8 sm:scale-110"
+          className="mb-4 shrink-0 self-center sm:mb-8 sm:scale-110"
         />
-        <div className="w-full max-w-md">{children}</div>
+        <div className="w-full min-w-0 max-w-md self-center">{children}</div>
       </div>
     </div>
   );

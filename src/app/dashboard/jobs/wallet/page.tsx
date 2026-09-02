@@ -3,10 +3,12 @@ import { Banknote, Clock3, TrendingUp, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { JobPartnerCommissionsList } from "@/components/job-partner/job-partner-commissions-list";
+import { JobPartnerEarningsInfo } from "@/components/job-partner/job-partner-earnings-info";
 import { PayoutMethodForm } from "@/components/professional/payout-method-form";
 import { WalletWithdrawForm } from "@/components/professional/wallet-withdraw-form";
 import { auth } from "@/lib/auth";
-import { HOTEL_RECRUITMENT_COMMISSION_RATE } from "@/lib/job-partner";
+import { jobPartnerCommissionPercent } from "@/lib/job-partner-copy";
 import { prisma } from "@/lib/prisma";
 import { formatPrice, formatRelativeDate } from "@/lib/utils";
 import { getWalletOverview } from "@/lib/wallet";
@@ -20,7 +22,7 @@ function statusLabel(status: string, type?: string) {
 }
 
 function typeLabel(type: string) {
-  if (type === "HOTEL_RECRUITMENT") return "Hotel recruitment";
+  if (type === "HOTEL_RECRUITMENT") return "Partner referral";
   if (type === "PAYOUT") return "Withdrawal";
   return "Adjustment";
 }
@@ -34,7 +36,7 @@ export default async function JobPartnerWalletPage() {
     session.user.id,
   );
 
-  const commissionPct = Math.round(HOTEL_RECRUITMENT_COMMISSION_RATE * 100);
+  const commissionPct = jobPartnerCommissionPercent();
 
   const stats = [
     {
@@ -52,7 +54,7 @@ export default async function JobPartnerWalletPage() {
     {
       label: "Total earned",
       value: formatPrice(summary.lifetimeEarned, { currency: summary.currency }),
-      hint: "All hotel recruitment commissions",
+      hint: "Agency & hotel referral commissions",
       icon: TrendingUp,
     },
     {
@@ -66,14 +68,14 @@ export default async function JobPartnerWalletPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold">Wallet</h1>
           <p className="mt-1 text-muted-foreground">
-            You earn {commissionPct}% when referred hotels pay their monthly plan.
-            Withdraw anytime once funds are available.
+            You earn {commissionPct}% when referred agencies or hotels pay their
+            monthly plan. Commissions land here immediately — withdraw anytime.
           </p>
         </div>
-        <Button variant="outline" asChild>
+        <Button variant="outline" asChild className="w-full shrink-0 sm:w-auto">
           <Link href="/dashboard/jobs">Back to dashboard</Link>
         </Button>
       </div>
@@ -92,6 +94,15 @@ export default async function JobPartnerWalletPage() {
           </Card>
         ))}
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>When you earn</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <JobPartnerEarningsInfo />
+        </CardContent>
+      </Card>
 
       <Card id="payout-method">
         <CardHeader>
@@ -121,7 +132,7 @@ export default async function JobPartnerWalletPage() {
         <CardHeader>
           <CardTitle>Activity</CardTitle>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
+        <CardContent>
           {transactions.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No wallet activity yet. Share your referral link from the{" "}
@@ -131,28 +142,17 @@ export default async function JobPartnerWalletPage() {
               to start earning.
             </p>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-left text-muted-foreground">
-                  <th className="pb-3 pr-4 font-medium">When</th>
-                  <th className="pb-3 pr-4 font-medium">Type</th>
-                  <th className="pb-3 pr-4 font-medium">Details</th>
-                  <th className="pb-3 pr-4 font-medium">Amount</th>
-                  <th className="pb-3 font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
+            <>
+              <div className="space-y-3 md:hidden">
                 {transactions.map((row) => (
-                  <tr key={row.id} className="border-b last:border-0">
-                    <td className="py-3 pr-4 text-muted-foreground">
-                      {formatRelativeDate(row.createdAt)}
-                    </td>
-                    <td className="py-3 pr-4">{typeLabel(row.type)}</td>
-                    <td className="py-3 pr-4">{row.description}</td>
-                    <td className="py-3 pr-4 font-medium">
-                      {formatPrice(row.amount, { currency: row.currency })}
-                    </td>
-                    <td className="py-3">
+                  <div
+                    key={row.id}
+                    className="rounded-xl border bg-card p-4 text-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="font-medium">
+                        {formatPrice(row.amount, { currency: row.currency })}
+                      </p>
                       <Badge
                         variant={
                           row.status === "AVAILABLE"
@@ -164,11 +164,55 @@ export default async function JobPartnerWalletPage() {
                       >
                         {statusLabel(row.status, row.type)}
                       </Badge>
-                    </td>
-                  </tr>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {formatRelativeDate(row.createdAt)} · {typeLabel(row.type)}
+                    </p>
+                    <p className="mt-2 text-muted-foreground">{row.description}</p>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full min-w-[640px] text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-muted-foreground">
+                      <th className="pb-3 pr-4 font-medium">When</th>
+                      <th className="pb-3 pr-4 font-medium">Type</th>
+                      <th className="pb-3 pr-4 font-medium">Details</th>
+                      <th className="pb-3 pr-4 font-medium">Amount</th>
+                      <th className="pb-3 font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transactions.map((row) => (
+                      <tr key={row.id} className="border-b last:border-0">
+                        <td className="py-3 pr-4 text-muted-foreground">
+                          {formatRelativeDate(row.createdAt)}
+                        </td>
+                        <td className="py-3 pr-4">{typeLabel(row.type)}</td>
+                        <td className="py-3 pr-4">{row.description}</td>
+                        <td className="py-3 pr-4 font-medium">
+                          {formatPrice(row.amount, { currency: row.currency })}
+                        </td>
+                        <td className="py-3">
+                          <Badge
+                            variant={
+                              row.status === "AVAILABLE"
+                                ? "default"
+                                : row.status === "CANCELLED"
+                                  ? "destructive"
+                                  : "secondary"
+                            }
+                          >
+                            {statusLabel(row.status, row.type)}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

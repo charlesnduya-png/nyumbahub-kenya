@@ -6,16 +6,17 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
+import { JobPartnerCommissionsList } from "@/components/job-partner/job-partner-commissions-list";
+import { JobPartnerEarningsInfo } from "@/components/job-partner/job-partner-earnings-info";
 import { ReferralLinkCard } from "@/components/job-partner/referral-link-card";
+import { ReferredProfessionalsList } from "@/components/job-partner/referred-professionals-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
-import {
-  getJobPartnerDashboard,
-  HOTEL_RECRUITMENT_COMMISSION_RATE,
-} from "@/lib/job-partner";
-import { formatPrice, formatRelativeDate } from "@/lib/utils";
+import { jobPartnerCommissionPercent } from "@/lib/job-partner-copy";
+import { getJobPartnerDashboard } from "@/lib/job-partner";
+import { formatPrice } from "@/lib/utils";
 
 export default async function JobPartnerDashboardPage() {
   const session = await auth();
@@ -30,7 +31,7 @@ export default async function JobPartnerDashboardPage() {
     );
   }
 
-  const commissionPct = Math.round(HOTEL_RECRUITMENT_COMMISSION_RATE * 100);
+  const commissionPct = jobPartnerCommissionPercent();
 
   const stats = [
     {
@@ -46,7 +47,7 @@ export default async function JobPartnerDashboardPage() {
       value: formatPrice(data.summary.monthEarned, {
         currency: data.summary.currency,
       }),
-      hint: `Hotel plan commissions (${commissionPct}%)`,
+      hint: `Agency & hotel commissions (${commissionPct}%)`,
       icon: TrendingUp,
     },
     {
@@ -58,9 +59,9 @@ export default async function JobPartnerDashboardPage() {
       icon: Banknote,
     },
     {
-      label: "Hotels referred",
+      label: "Referrals",
       value: String(data.profile.hotelsReferred),
-      hint: "Operators who joined via your link",
+      hint: "Agencies & hotels you brought onboard",
       icon: Users,
     },
   ];
@@ -68,14 +69,14 @@ export default async function JobPartnerDashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold">Job partner dashboard</h1>
           <p className="mt-1 text-muted-foreground">
-            Bring hotels onboard and earn {commissionPct}% of their monthly plan
-            payments — tracked automatically in your wallet.
+            Refer agencies and hotel operators. Earn {commissionPct}% every time
+            they pay a monthly plan — credited instantly to your wallet.
           </p>
         </div>
-        <Button asChild>
+        <Button asChild className="w-full shrink-0 sm:w-auto">
           <Link href="/dashboard/jobs/wallet">
             <Wallet className="mr-2 h-4 w-4" />
             Open wallet
@@ -86,17 +87,26 @@ export default async function JobPartnerDashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => (
           <Card key={stat.label}>
-            <CardContent className="flex items-start justify-between p-5">
-              <div>
+            <CardContent className="flex items-start justify-between gap-3 p-5">
+              <div className="min-w-0">
                 <p className="text-sm text-muted-foreground">{stat.label}</p>
                 <p className="mt-1 text-2xl font-bold">{stat.value}</p>
                 <p className="mt-1 text-xs text-muted-foreground">{stat.hint}</p>
               </div>
-              <stat.icon className="h-8 w-8 text-primary/70" />
+              <stat.icon className="h-8 w-8 shrink-0 text-primary/70" />
             </CardContent>
           </Card>
         ))}
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>When & how you earn</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <JobPartnerEarningsInfo />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -111,54 +121,23 @@ export default async function JobPartnerDashboardPage() {
       </Card>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
-            Referred hotels
+            <Building2 className="h-5 w-5 shrink-0" />
+            Referred agencies & hotels
           </CardTitle>
-          <Badge variant="secondary">{data.referredHotels.length} total</Badge>
+          <Badge variant="secondary">
+            {data.referredProfessionals.length} total
+          </Badge>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
-          {data.referredHotels.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No hotels yet. Send your referral link to property owners who want
-              to list hotels on Your Home.
-            </p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-left text-muted-foreground">
-                  <th className="pb-3 pr-4 font-medium">Hotel / operator</th>
-                  <th className="pb-3 pr-4 font-medium">Plan</th>
-                  <th className="pb-3 pr-4 font-medium">Joined</th>
-                  <th className="pb-3 pr-4 font-medium">Plan payments</th>
-                  <th className="pb-3 font-medium">Your commission</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.referredHotels.map((hotel) => (
-                  <tr key={hotel.id} className="border-b last:border-0">
-                    <td className="py-3 pr-4">
-                      <p className="font-medium">{hotel.name ?? "—"}</p>
-                      <p className="text-xs text-muted-foreground">{hotel.email}</p>
-                    </td>
-                    <td className="py-3 pr-4 capitalize">
-                      {hotel.tier?.replace(/_/g, " ") ?? "Not subscribed"}
-                    </td>
-                    <td className="py-3 pr-4 text-muted-foreground">
-                      {formatRelativeDate(new Date(hotel.joinedAt))}
-                    </td>
-                    <td className="py-3 pr-4">{hotel.planPayments}</td>
-                    <td className="py-3 font-medium">
-                      {formatPrice(hotel.commissionEarned, {
-                        currency: data.summary.currency,
-                      })}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+        <CardContent>
+          <ReferredProfessionalsList
+            rows={data.referredProfessionals.map((row) => ({
+              ...row,
+              currency: data.summary.currency,
+            }))}
+            currency={data.summary.currency}
+          />
         </CardContent>
       </Card>
 
@@ -166,40 +145,8 @@ export default async function JobPartnerDashboardPage() {
         <CardHeader>
           <CardTitle>Recent commissions</CardTitle>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
-          {data.recentCommissions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Commissions appear here when a referred hotel pays their monthly
-              plan.
-            </p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-left text-muted-foreground">
-                  <th className="pb-3 pr-4 font-medium">When</th>
-                  <th className="pb-3 pr-4 font-medium">Details</th>
-                  <th className="pb-3 pr-4 font-medium">Plan payment</th>
-                  <th className="pb-3 font-medium">You earned</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.recentCommissions.map((row) => (
-                  <tr key={row.id} className="border-b last:border-0">
-                    <td className="py-3 pr-4 text-muted-foreground">
-                      {formatRelativeDate(new Date(row.createdAt))}
-                    </td>
-                    <td className="py-3 pr-4">{row.description}</td>
-                    <td className="py-3 pr-4">
-                      {formatPrice(row.grossAmount, { currency: row.currency })}
-                    </td>
-                    <td className="py-3 font-medium text-primary">
-                      +{formatPrice(row.amount, { currency: row.currency })}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+        <CardContent>
+          <JobPartnerCommissionsList rows={data.recentCommissions} />
         </CardContent>
       </Card>
     </div>

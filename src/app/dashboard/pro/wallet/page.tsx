@@ -23,7 +23,7 @@ function typeLabel(type: string) {
   if (type === "RENT") return "Rent collected";
   if (type === "SALE") return "Sale offer";
   if (type === "PAYOUT") return "Withdrawal";
-  if (type === "HOTEL_RECRUITMENT") return "Hotel recruitment";
+  if (type === "HOTEL_RECRUITMENT") return "Partner referral";
   return "Adjustment";
 }
 

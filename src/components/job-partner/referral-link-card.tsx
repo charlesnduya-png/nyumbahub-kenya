@@ -5,6 +5,7 @@ import { Check, Copy, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { jobPartnerCommissionPercent } from "@/lib/job-partner-copy";
 
 export function ReferralLinkCard({
   referralCode,
@@ -33,12 +34,17 @@ export function ReferralLinkCard({
         Your referral link
       </div>
       <p className="text-sm text-muted-foreground">
-        Share this link with hotel operators. When they sign up and pay their
-        monthly hotel plan, you earn 30% of each payment — every month they stay
-        subscribed.
+        Share this link with estate agencies, agents, and hotel operators. When
+        they sign up and pay a monthly agency or hotel plan, you earn{" "}
+        {jobPartnerCommissionPercent()}% of each payment — credited to your wallet
+        right away, and again every month they renew.
       </p>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Input readOnly value={referralCode} className="font-mono text-sm" />
+        <Input
+          readOnly
+          value={referralCode}
+          className="min-w-0 font-mono text-sm"
+        />
         <Button
           type="button"
           variant="outline"
@@ -54,7 +60,7 @@ export function ReferralLinkCard({
         </Button>
       </div>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Input readOnly value={referralUrl} className="text-sm" />
+        <Input readOnly value={referralUrl} className="min-w-0 text-sm" />
         <Button
           type="button"
           className="shrink-0"
