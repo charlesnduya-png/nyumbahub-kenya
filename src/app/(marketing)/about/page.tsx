@@ -58,6 +58,24 @@ export default function AboutPage() {
         </div>
 
         <div>
+          <h2 className="font-display text-2xl font-semibold">Ways to earn</h2>
+          <p className="mt-3 leading-relaxed text-muted-foreground">
+            Your Home is built for people who want to grow income from property
+            across Africa. Job partners earn referral commission when agencies
+            and hotels they introduce pay monthly plans. Landlords and agents
+            earn by listing homes, land, and rentals. BnB hosts earn from
+            confirmed stays.{" "}
+            <Link
+              href="/partners"
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
+              See how to earn on Your Home
+            </Link>
+            .
+          </p>
+        </div>
+
+        <div>
           <h2 className="font-display text-2xl font-semibold">Our promise</h2>
           <p className="mt-3 leading-relaxed text-muted-foreground">
             Clear pricing, local payment options, and moderated inventory — so
@@ -71,6 +89,9 @@ export default function AboutPage() {
           </Button>
           <Button variant="outline" asChild>
             <Link href="/register/professional">List your property</Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/partners">Earn as a partner</Link>
           </Button>
         </div>
       </section>

@@ -27,9 +27,15 @@ export const metadata = buildPageMetadata({
     ? "Agency pricing — Your Home Kenya"
     : "Pricing — List Property in Kenya",
   description: PRICING_MUTED
-    ? `Agency pricing on Your Home — Free (${FREE_TIER_MAX_LISTINGS} listings) through Enterprise. Paid upgrades from KES 1,500/month.`
-    : "Free 3 listings, agency plans from KES 1,500/month, featured listings, property promotions, and BnB booking commission on Your Home.",
+    ? `Agency pricing on Your Home — Free (${FREE_TIER_MAX_LISTINGS} listings) through Enterprise. Paid upgrades from KES 1,500/month. Also earn 30% as a job partner.`
+    : "Free 3 listings, agency plans from KES 1,500/month, featured listings, property promotions, BnB booking commission, and 30% job partner referral earnings on Your Home.",
   path: "/pricing",
+  keywords: [
+    "Your Home pricing",
+    "list property Kenya cost",
+    "agency plans Kenya",
+    "earn referral commission Your Home",
+  ],
 });
 
 function PlanCard({
@@ -123,6 +129,9 @@ export default function PricingPage() {
             </Button>
             <Button asChild variant="outline">
               <Link href="/register">Browse as a tenant</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/partners">Earn as a partner</Link>
             </Button>
           </div>
         </section>
@@ -236,6 +245,19 @@ export default function PricingPage() {
               </Button>
             </CardFooter>
           </Card>
+        </div>
+
+        <div className="mt-16 mx-auto max-w-2xl text-center">
+          <h2 className="font-display text-2xl font-semibold">
+            Earn by referring agencies & hotels
+          </h2>
+          <p className="mt-3 text-muted-foreground">
+            Job partners earn 30% commission when referred agencies and hotel
+            operators pay monthly plans — including renewals. Free to join.
+          </p>
+          <Button asChild className="mt-6">
+            <Link href="/partners">How to earn on Your Home</Link>
+          </Button>
         </div>
       </section>
     </div>

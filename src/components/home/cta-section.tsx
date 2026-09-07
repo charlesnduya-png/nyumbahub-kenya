@@ -56,6 +56,15 @@ export function CtaSection({
                 <Link href="/dashboard/seller/properties/new">List a property</Link>
               </Button>
             </div>
+            <p className="mx-auto mt-5 max-w-md text-sm text-white/75">
+              Prefer referrals?{" "}
+              <Link
+                href="/partners"
+                className="font-medium text-white underline-offset-4 hover:underline"
+              >
+                Earn 30% as a job partner
+              </Link>
+            </p>
           </div>
         </div>
       </div>

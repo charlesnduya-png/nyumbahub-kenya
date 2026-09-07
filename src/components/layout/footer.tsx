@@ -42,12 +42,14 @@ const africaFooterLinks = featuredAfricaCountrySlugs()
 
 const sellerLinks = [
   { href: "/register/professional", label: "List Your Property" },
-  { href: "/register", label: "Customer Signup" },
-  { href: "/agents/join", label: "Become an Agent" },
+  { href: "/partners", label: "Earn as a Partner" },
+  { href: "/pricing", label: "Pricing" },
+  { href: "/register/professional", label: "Become an Agent" },
 ];
 
 const companyLinks = [
   { href: "/about", label: "About Us" },
+  { href: "/partners", label: "Make Money with Us" },
   { href: "/blog", label: "Blog" },
 ];
 
@@ -75,8 +77,14 @@ export function Footer() {
             <BrandLogo showKenya size="lg" />
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
               Your Home is Africa&apos;s marketplace for verified homes, land,
-              rentals, and BnB stays — starting in Kenya. We connect buyers,
-              tenants, and hosts with trusted sellers and agents.
+              rentals, and BnB stays — starting in Kenya. Buy, rent, list, or{" "}
+              <Link
+                href="/partners"
+                className="text-foreground underline-offset-4 hover:underline"
+              >
+                earn as a partner
+              </Link>
+              .
             </p>
             <div className="mt-4 flex gap-3">
               {socialLinks.map(({ href, label, icon: Icon }) => (

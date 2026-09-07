@@ -127,6 +127,12 @@ export function getPagesSitemapEntries(
       priority: 0.6,
     },
     {
+      url: href("/partners"),
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.75,
+    },
+    {
       url: href("/privacy"),
       lastModified: now,
       changeFrequency: "yearly",

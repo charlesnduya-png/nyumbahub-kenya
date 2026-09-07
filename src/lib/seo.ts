@@ -82,6 +82,11 @@ const SEO_KEYWORDS = [
   "verified property listings Africa",
   "list property free Kenya",
   "M-Pesa property listing",
+  "earn money Your Home",
+  "real estate referral Kenya",
+  "job partner commission Kenya",
+  "make money listing property Kenya",
+  "agency referral program Africa",
 ];
 
 export {
@@ -329,6 +334,8 @@ export function organizationJsonLd() {
       "BnB stays",
       "Airbnb-style holiday homes",
       "commercial property",
+      "real estate referral partner program",
+      "agency and hotel plan commissions",
     ],
   };
 }
@@ -395,6 +402,16 @@ export const HOME_FAQ_ITEMS = [
     question: "Can I list my property for free?",
     answer:
       "Yes. Landlords, agents, and sellers can register on Your Home and list properties in any African country. Listings are reviewed for quality before going live.",
+  },
+  {
+    question: "How can I earn money on Your Home?",
+    answer:
+      "Earn as a job partner with 30% commission when agencies and hotels you refer pay monthly plans, list property for sale or rent, host BnB stays, or grow an agency account. Learn more on the Your Home partners page.",
+  },
+  {
+    question: "What is the Your Home job partner program?",
+    answer:
+      "Job partners share a referral link with agencies, agents, and hotel operators. When they subscribe to a paid plan, you earn 30% commission in your wallet — including recurring renewals.",
   },
 ] as const;
 
