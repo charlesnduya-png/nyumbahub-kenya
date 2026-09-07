@@ -2,15 +2,31 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { isCrawlerUserAgent } from "@/lib/crawler";
 import { prisma } from "@/lib/prisma";
+import { clientIp, rateLimit, tooManyRequests } from "@/lib/rate-limit";
+import { ttlGet, ttlSet } from "@/lib/ttl-cache";
 
 const SESSION_COOKIE = "nyumba_sid";
 const SKIP_PREFIXES = ["/api", "/dashboard", "/_next", "/favicon", "/sitemap"];
 const DEDUPE_MS = 15 * 60 * 1000;
 
+function dedupeKey(sessionId: string, path: string) {
+  return `visit:${sessionId}:${path}`;
+}
+
 export async function POST(request: Request) {
   try {
     if (isCrawlerUserAgent(request.headers.get("user-agent"))) {
       return NextResponse.json({ success: true, skipped: true });
+    }
+
+    const ip = clientIp(request);
+    const ipLimit = rateLimit({
+      key: `visit:ip:${ip}`,
+      limit: 40,
+      windowMs: 60_000,
+    });
+    if (!ipLimit.ok) {
+      return tooManyRequests(ipLimit.retryAfterSec);
     }
 
     const body = await request.json().catch(() => ({}));
@@ -35,6 +51,36 @@ export async function POST(request: Request) {
       sessionId = crypto.randomUUID();
     }
 
+    const sessionLimit = rateLimit({
+      key: `visit:sid:${sessionId}`,
+      limit: 24,
+      windowMs: 60 * 60 * 1000,
+    });
+    if (!sessionLimit.ok) {
+      const res = NextResponse.json({ success: true, skipped: true });
+      res.cookies.set(SESSION_COOKIE, sessionId, {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 30,
+        sameSite: "lax",
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+      });
+      return res;
+    }
+
+    // Memory dedupe avoids a Neon findFirst on every pageview within the window.
+    if (ttlGet<true>(dedupeKey(sessionId, path))) {
+      const res = NextResponse.json({ success: true, skipped: true });
+      res.cookies.set(SESSION_COOKIE, sessionId, {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 30,
+        sameSite: "lax",
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+      });
+      return res;
+    }
+
     const since = new Date(Date.now() - DEDUPE_MS);
     const recent = await prisma.siteVisit.findFirst({
       where: { sessionId, path, createdAt: { gte: since } },
@@ -42,6 +88,7 @@ export async function POST(request: Request) {
       orderBy: { createdAt: "desc" },
     });
     if (recent) {
+      ttlSet(dedupeKey(sessionId, path), true, DEDUPE_MS);
       const res = NextResponse.json({ success: true, skipped: true });
       res.cookies.set(SESSION_COOKIE, sessionId, {
         path: "/",
@@ -65,6 +112,7 @@ export async function POST(request: Request) {
         referrer: referrer || null,
       },
     });
+    ttlSet(dedupeKey(sessionId, path), true, DEDUPE_MS);
 
     const res = NextResponse.json({ success: true });
     res.cookies.set(SESSION_COOKIE, sessionId, {

@@ -25,7 +25,14 @@ export async function GET(request: Request) {
     const range = parseTrafficRange(searchParams.get("range"));
     const data = await getTrafficAnalytics(prisma, range);
 
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json(
+      { success: true, data },
+      {
+        headers: {
+          "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
+        },
+      },
+    );
   } catch {
     return NextResponse.json(
       { success: false, error: "Unable to load traffic analytics" },

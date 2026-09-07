@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { rateLimit, tooManyRequests } from "@/lib/rate-limit";
+import { ttlCached, ttlDelete } from "@/lib/ttl-cache";
+
+function notifCacheKey(userId: string) {
+  return `notifications:${userId}`;
+}
 
 export async function GET() {
   const session = await auth();
@@ -11,21 +17,34 @@ export async function GET() {
     );
   }
 
+  const userId = session.user.id;
+  const limited = rateLimit({
+    key: `notifications:get:${userId}`,
+    limit: 30,
+    windowMs: 60_000,
+  });
+  if (!limited.ok) {
+    return tooManyRequests(limited.retryAfterSec);
+  }
+
   try {
-    const [notifications, unreadCount] = await Promise.all([
-      prisma.notification.findMany({
-        where: { userId: session.user.id },
-        orderBy: { createdAt: "desc" },
-        take: 40,
-      }),
-      prisma.notification.count({
-        where: { userId: session.user.id, isRead: false },
-      }),
-    ]);
+    const data = await ttlCached(notifCacheKey(userId), 25_000, async () => {
+      const [notifications, unreadCount] = await Promise.all([
+        prisma.notification.findMany({
+          where: { userId },
+          orderBy: { createdAt: "desc" },
+          take: 40,
+        }),
+        prisma.notification.count({
+          where: { userId, isRead: false },
+        }),
+      ]);
+      return { notifications, unreadCount };
+    });
 
     return NextResponse.json({
       success: true,
-      data: { notifications, unreadCount },
+      data,
     });
   } catch (error) {
     console.error("List notifications error:", error);
@@ -45,6 +64,8 @@ export async function PATCH(request: Request) {
     );
   }
 
+  const userId = session.user.id;
+
   try {
     const body = (await request.json().catch(() => ({}))) as {
       id?: string;
@@ -53,9 +74,10 @@ export async function PATCH(request: Request) {
 
     if (body.markAll) {
       await prisma.notification.updateMany({
-        where: { userId: session.user.id, isRead: false },
+        where: { userId, isRead: false },
         data: { isRead: true },
       });
+      ttlDelete(notifCacheKey(userId));
       return NextResponse.json({ success: true });
     }
 
@@ -67,7 +89,7 @@ export async function PATCH(request: Request) {
     }
 
     const existing = await prisma.notification.findFirst({
-      where: { id: body.id, userId: session.user.id },
+      where: { id: body.id, userId },
     });
 
     if (!existing) {
@@ -81,6 +103,7 @@ export async function PATCH(request: Request) {
       where: { id: body.id },
       data: { isRead: true },
     });
+    ttlDelete(notifCacheKey(userId));
 
     return NextResponse.json({ success: true, data: updated });
   } catch (error) {

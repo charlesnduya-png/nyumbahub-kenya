@@ -1,4 +1,5 @@
 import type { AdPlacement } from "@prisma/client";
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 
 export const AD_PLACEMENTS = [
@@ -88,29 +89,36 @@ export async function getActiveAds(
   placement: SiteAdPlacement,
   take = 3,
 ): Promise<PublicAd[]> {
-  const now = new Date();
-  try {
-    const ads = await prisma.advertisement.findMany({
-      where: {
-        placement,
-        isActive: true,
-        AND: [
-          { OR: [{ startDate: null }, { startDate: { lte: now } }] },
-          { OR: [{ endDate: null }, { endDate: { gte: now } }] },
-        ],
-      },
-      orderBy: { createdAt: "desc" },
-      take,
-      select: {
-        id: true,
-        title: true,
-        imageUrl: true,
-        linkUrl: true,
-        placement: true,
-      },
-    });
-    return ads.filter((ad) => Boolean(ad.imageUrl));
-  } catch {
-    return [];
-  }
+  const safeTake = Math.min(6, Math.max(1, take));
+  return unstable_cache(
+    async () => {
+      const now = new Date();
+      try {
+        const ads = await prisma.advertisement.findMany({
+          where: {
+            placement,
+            isActive: true,
+            AND: [
+              { OR: [{ startDate: null }, { startDate: { lte: now } }] },
+              { OR: [{ endDate: null }, { endDate: { gte: now } }] },
+            ],
+          },
+          orderBy: { createdAt: "desc" },
+          take: safeTake,
+          select: {
+            id: true,
+            title: true,
+            imageUrl: true,
+            linkUrl: true,
+            placement: true,
+          },
+        });
+        return ads.filter((ad) => Boolean(ad.imageUrl));
+      } catch {
+        return [];
+      }
+    },
+    [`active-ads:${placement}:${safeTake}`],
+    { revalidate: 120, tags: ["active-ads"] },
+  )();
 }

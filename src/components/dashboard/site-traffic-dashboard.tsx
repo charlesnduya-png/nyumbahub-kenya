@@ -233,9 +233,7 @@ export function SiteTrafficDashboard() {
 
   const load = useCallback(async (selected: TrafficRange) => {
     try {
-      const res = await fetch(`/api/admin/traffic?range=${selected}`, {
-        cache: "no-store",
-      });
+      const res = await fetch(`/api/admin/traffic?range=${selected}`);
       const json = await res.json();
       if (!res.ok || !json.success) {
         setError(true);
@@ -253,7 +251,7 @@ export function SiteTrafficDashboard() {
   useEffect(() => {
     setLoading(true);
     void load(range);
-    const ms = range === "live" ? 60_000 : 120_000;
+    const ms = range === "live" ? 120_000 : 180_000;
 
     function tick() {
       if (document.visibilityState !== "visible") return;

@@ -6,6 +6,7 @@ import type {
   TrafficSeriesPoint,
 } from "@/lib/live-analytics";
 import { comparePeriodChange } from "@/lib/live-analytics";
+import { ttlCached } from "@/lib/ttl-cache";
 
 export type { TrafficRange, TrafficReport } from "@/lib/live-analytics";
 
@@ -443,18 +444,23 @@ export async function getTrafficAnalytics(
   prisma: PrismaClient,
   range: TrafficRange = "live",
 ): Promise<TrafficReport> {
-  const now = new Date();
-  switch (range) {
-    case "week":
-      return getWeekReport(prisma, now);
-    case "month":
-      return getMonthReport(prisma, now);
-    case "year":
-      return getYearReport(prisma, now);
-    case "live":
-    default:
-      return getLiveReport(prisma, now);
-  }
+  const ttlMs =
+    range === "live" ? 45_000 : range === "week" ? 90_000 : 120_000;
+
+  return ttlCached(`traffic:${range}`, ttlMs, async () => {
+    const now = new Date();
+    switch (range) {
+      case "week":
+        return getWeekReport(prisma, now);
+      case "month":
+        return getMonthReport(prisma, now);
+      case "year":
+        return getYearReport(prisma, now);
+      case "live":
+      default:
+        return getLiveReport(prisma, now);
+    }
+  });
 }
 
 export async function getLiveAnalytics(prisma: PrismaClient) {

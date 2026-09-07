@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
+import { clientIp, rateLimit, tooManyRequests } from "@/lib/rate-limit";
 import {
   dashboardHomeForRole,
   isSiteOwnerEmail,
@@ -21,6 +22,16 @@ function ownerPassword() {
 
 export async function POST(request: Request) {
   try {
+    const ip = clientIp(request);
+    const limited = rateLimit({
+      key: `login-check:${ip}`,
+      limit: 20,
+      windowMs: 15 * 60_000,
+    });
+    if (!limited.ok) {
+      return tooManyRequests(limited.retryAfterSec, "Too many login attempts");
+    }
+
     const body = await request.json();
     const parsed = schema.safeParse(body);
     if (!parsed.success) {

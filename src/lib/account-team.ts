@@ -1,4 +1,5 @@
 import type { TeamRole } from "@prisma/client";
+import { cache } from "react";
 
 import { prisma } from "@/lib/prisma";
 
@@ -120,9 +121,8 @@ export function hasProfessionalWorkspaceAccess(
   );
 }
 
-export async function resolveProfessionalActingContext(
-  userId: string,
-): Promise<ProfessionalActingContext> {
+export const resolveProfessionalActingContext = cache(
+  async (userId: string): Promise<ProfessionalActingContext> => {
   try {
     const membership = await prisma.accountTeamMember.findUnique({
       where: { userId },
@@ -192,4 +192,5 @@ export async function resolveProfessionalActingContext(
     isTeamMember: false,
     teamMemberRoles: [],
   };
-}
+},
+);

@@ -12,7 +12,7 @@ import {
 } from "@/lib/site-owner";
 import type { Role } from "@/types";
 
-const ROLE_SYNC_MS = 5 * 60 * 1000;
+const ROLE_SYNC_MS = 30 * 60 * 1000;
 
 function ownerPassword() {
   const fromEnv = process.env.SITE_OWNER_PASSWORD?.trim();

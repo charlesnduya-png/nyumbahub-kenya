@@ -212,7 +212,10 @@ export async function assertCanCreateListing(input: {
   const used = await countProfessionalListings(input.userId);
   const freeLimit = await getEffectiveFreeMaxListings();
 
-  const applyLimit = async (planLimit: number | null): Promise<ListingAccessResult> => {
+  const applyLimit = async (
+    planLimit: number | null,
+    paidPlan: boolean,
+  ): Promise<ListingAccessResult> => {
     const effectiveLimit = await resolveUserListingLimit({
       userId: input.userId,
       role: input.role,
@@ -233,7 +236,9 @@ export async function assertCanCreateListing(input: {
       return limitReached(
         used,
         effectiveLimit,
-        `You can list up to ${effectiveLimit} active properties. Archive one or ask admin to raise your limit.`,
+        paidPlan
+          ? `Your plan allows up to ${effectiveLimit} active listings (you have ${used}). Archive some listings or upgrade to a higher plan.`
+          : `You can list up to ${effectiveLimit} active properties. Archive one or upgrade your listing plan.`,
       );
     }
 
@@ -246,17 +251,17 @@ export async function assertCanCreateListing(input: {
   };
 
   if (LISTINGS_ARE_FREE) {
-    return applyLimit(freeLimit);
+    return applyLimit(freeLimit, false);
   }
 
   const subscription = await getActiveListingSubscription(input.userId);
 
   if (subscription) {
     const paidLimit = await maxListingsForSubscription(subscription);
-    return applyLimit(paidLimit);
+    return applyLimit(paidLimit, true);
   }
 
-  return applyLimit(freeLimit);
+  return applyLimit(freeLimit, false);
 }
 
 export async function activateListingSubscription(input: {
@@ -291,53 +296,65 @@ export async function activateListingSubscription(input: {
     baseStart.getTime() + durationDays * 24 * 60 * 60 * 1000,
   );
 
-  if (existing) {
-    const updated = await prisma.subscription.update({
-      where: { id: existing.id },
-      data: {
-        plan,
-        status: "ACTIVE",
-        endDate: nextEnd,
-        amount: input.amount,
-        autoRenew: true,
-      },
-    });
-
-    if (input.paymentId) {
-      await prisma.payment
-        .update({
-          where: { id: input.paymentId },
-          data: { subscriptionId: updated.id, status: "COMPLETED" },
-        })
-        .catch(() => null);
-    }
-
-    return updated;
-  }
-
-  const created = await prisma.subscription.create({
-    data: {
-      userId: input.userId,
-      plan,
-      status: "ACTIVE",
-      startDate,
-      endDate: nextEnd,
-      amount: input.amount,
-      currency: "KES",
-      autoRenew: true,
-    },
-  });
+  const subscription = existing
+    ? await prisma.subscription.update({
+        where: { id: existing.id },
+        data: {
+          plan,
+          status: "ACTIVE",
+          endDate: nextEnd,
+          amount: input.amount,
+          autoRenew: true,
+        },
+      })
+    : await prisma.subscription.create({
+        data: {
+          userId: input.userId,
+          plan,
+          status: "ACTIVE",
+          startDate,
+          endDate: nextEnd,
+          amount: input.amount,
+          currency: "KES",
+          autoRenew: true,
+        },
+      });
 
   if (input.paymentId) {
     await prisma.payment
       .update({
         where: { id: input.paymentId },
-        data: { subscriptionId: created.id, status: "COMPLETED" },
+        data: { subscriptionId: subscription.id, status: "COMPLETED" },
       })
       .catch(() => null);
   }
 
-  return created;
+  // Paying must not leave someone stuck: if they already exceed the plan cap
+  // (e.g. listed under a looser free tier), grant temporary headroom so submit works.
+  const planMax =
+    typeof product?.maxListings === "number" ? product.maxListings : null;
+  if (planMax != null) {
+    const used = await countProfessionalListings(input.userId);
+    if (used >= planMax) {
+      const user = await prisma.user.findUnique({
+        where: { id: input.userId },
+        select: { listingLimitOverride: true },
+      });
+      const current = user?.listingLimitOverride;
+      const needed = used + 10;
+      if (
+        current == null ||
+        (current !== UNLIMITED_LISTING_OVERRIDE && current < needed)
+      ) {
+        await prisma.user.update({
+          where: { id: input.userId },
+          data: { listingLimitOverride: needed },
+        });
+      }
+    }
+  }
+
+  return subscription;
 }
 
 export type ProductIdMonthly = Extract<

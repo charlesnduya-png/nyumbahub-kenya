@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { PropertyType } from "@/types";
+import { unstable_cache } from "next/cache";
 
 export interface BrowseCategory {
   label: string;
@@ -105,97 +106,112 @@ const LOCATION_CONFIG: Omit<TopLocation, "listingCount">[] = [
 ];
 
 export async function getBrowseCategories(): Promise<BrowseCategory[]> {
-  try {
-    const [byType, bnbCount, hotelCount, landCount, commercialCount] = await Promise.all([
-      prisma.property.groupBy({
-        by: ["propertyType"],
-        where: { status: "ACTIVE" },
-        _count: { _all: true },
-      }),
-      prisma.property.count({
-        where: { status: "ACTIVE", listingType: "HOLIDAY" },
-      }),
-      prisma.property.count({
-        where: { status: "ACTIVE", listingType: "HOTEL" },
-      }),
-      prisma.property.count({
-        where: {
-          status: "ACTIVE",
-          OR: [
-            { propertyType: "PLOT" },
-            { propertyType: "FARM" },
-            { listingType: "LAND" },
-          ],
-        },
-      }),
-      prisma.property.count({
-        where: {
-          status: "ACTIVE",
-          OR: [
-            { listingType: "COMMERCIAL" },
-            { propertyType: "OFFICE" },
-            { propertyType: "SHOP" },
-            { propertyType: "WAREHOUSE" },
-          ],
-        },
-      }),
-    ]);
+  return unstable_cache(
+    async () => {
+      try {
+        const [byType, bnbCount, hotelCount, landCount, commercialCount] =
+          await Promise.all([
+            prisma.property.groupBy({
+              by: ["propertyType"],
+              where: { status: "ACTIVE" },
+              _count: { _all: true },
+            }),
+            prisma.property.count({
+              where: { status: "ACTIVE", listingType: "HOLIDAY" },
+            }),
+            prisma.property.count({
+              where: { status: "ACTIVE", listingType: "HOTEL" },
+            }),
+            prisma.property.count({
+              where: {
+                status: "ACTIVE",
+                OR: [
+                  { propertyType: "PLOT" },
+                  { propertyType: "FARM" },
+                  { listingType: "LAND" },
+                ],
+              },
+            }),
+            prisma.property.count({
+              where: {
+                status: "ACTIVE",
+                OR: [
+                  { listingType: "COMMERCIAL" },
+                  { propertyType: "OFFICE" },
+                  { propertyType: "SHOP" },
+                  { propertyType: "WAREHOUSE" },
+                ],
+              },
+            }),
+          ]);
 
-    const counts = new Map(
-      byType.map((row) => [row.propertyType, row._count._all]),
-    );
+        const counts = new Map(
+          byType.map((row) => [row.propertyType, row._count._all]),
+        );
 
-    return CATEGORY_CONFIG.map((cat) => ({
-      ...cat,
-      listingCount:
-        cat.slug === "land-plots"
-          ? landCount
-          : cat.slug === "commercial"
-            ? commercialCount
-            : cat.slug === "hotels"
-              ? hotelCount
-              : cat.propertyType === "BNB"
-                ? bnbCount
-                : (counts.get(cat.propertyType as PropertyType) ?? 0),
-    }));
-  } catch {
-    return CATEGORY_CONFIG.map((cat) => ({ ...cat, listingCount: 0 }));
-  }
+        return CATEGORY_CONFIG.map((cat) => ({
+          ...cat,
+          listingCount:
+            cat.slug === "land-plots"
+              ? landCount
+              : cat.slug === "commercial"
+                ? commercialCount
+                : cat.slug === "hotels"
+                  ? hotelCount
+                  : cat.propertyType === "BNB"
+                    ? bnbCount
+                    : (counts.get(cat.propertyType as PropertyType) ?? 0),
+        }));
+      } catch {
+        return CATEGORY_CONFIG.map((cat) => ({ ...cat, listingCount: 0 }));
+      }
+    },
+    ["browse-categories"],
+    { revalidate: 300, tags: ["active-listings"] },
+  )();
 }
 
 export async function getTopLocations(limit = 6): Promise<TopLocation[]> {
-  try {
-    const byCounty = await prisma.property.groupBy({
-      by: ["county"],
-      where: { status: "ACTIVE" },
-      _count: { _all: true },
-      orderBy: { _count: { county: "desc" } },
-      take: limit,
-    });
+  return unstable_cache(
+    async () => {
+      try {
+        const byCounty = await prisma.property.groupBy({
+          by: ["county"],
+          where: { status: "ACTIVE" },
+          _count: { _all: true },
+          orderBy: { _count: { county: "desc" } },
+          take: limit,
+        });
 
-    const countMap = new Map(
-      byCounty.map((row) => [row.county.toLowerCase(), row._count._all]),
-    );
+        const countMap = new Map(
+          byCounty.map((row) => [row.county.toLowerCase(), row._count._all]),
+        );
 
-    const fromDb = LOCATION_CONFIG.filter((loc) =>
-      countMap.has(loc.county.toLowerCase()),
-    ).map((loc) => ({
-      ...loc,
-      listingCount: countMap.get(loc.county.toLowerCase()) ?? 0,
-    }));
+        const fromDb = LOCATION_CONFIG.filter((loc) =>
+          countMap.has(loc.county.toLowerCase()),
+        ).map((loc) => ({
+          ...loc,
+          listingCount: countMap.get(loc.county.toLowerCase()) ?? 0,
+        }));
 
-    if (fromDb.length > 0) {
-      return fromDb.sort((a, b) => b.listingCount - a.listingCount).slice(0, limit);
-    }
+        if (fromDb.length > 0) {
+          return fromDb
+            .sort((a, b) => b.listingCount - a.listingCount)
+            .slice(0, limit);
+        }
 
-    return byCounty.map((row) => ({
-      name: row.county,
-      slug: row.county.toLowerCase().replace(/\s+/g, "-"),
-      county: row.county,
-      listingCount: row._count._all,
-      image: unsplash("photo-1600585154340-be6161a56a0c"),
-    }));
-  } catch {
-    return [];
-  }
+        return byCounty.map((row) => ({
+          name: row.county,
+          slug: row.county.toLowerCase().replace(/\s+/g, "-"),
+          county: row.county,
+          listingCount: row._count._all,
+          image: unsplash("photo-1600585154340-be6161a56a0c"),
+        }));
+      } catch {
+        return [];
+      }
+    },
+    [`top-locations:${limit}`],
+    { revalidate: 300, tags: ["active-listings"] },
+  )();
 }

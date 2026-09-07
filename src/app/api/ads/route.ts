@@ -15,5 +15,12 @@ export async function GET(request: Request) {
   const takeRaw = Number(searchParams.get("take") ?? "3");
   const take = Number.isInteger(takeRaw) ? Math.min(6, Math.max(1, takeRaw)) : 3;
   const data = await getActiveAds(placement, take);
-  return NextResponse.json({ success: true, data });
+  return NextResponse.json(
+    { success: true, data },
+    {
+      headers: {
+        "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300",
+      },
+    },
+  );
 }

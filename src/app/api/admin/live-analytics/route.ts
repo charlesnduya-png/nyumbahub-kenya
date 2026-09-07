@@ -20,7 +20,14 @@ export async function GET() {
 
     const data = await getTrafficAnalytics(prisma, "live");
 
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json(
+      { success: true, data },
+      {
+        headers: {
+          "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
+        },
+      },
+    );
   } catch {
     return NextResponse.json(
       { success: false, error: "Unable to load live analytics" },

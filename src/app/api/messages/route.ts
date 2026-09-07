@@ -6,6 +6,7 @@ import {
   sendMessageSchema,
 } from "@/lib/validations/message";
 import { canViewWith, resolveProfessionalActingContext } from "@/lib/account-team";
+import { rateLimit, tooManyRequests } from "@/lib/rate-limit";
 
 function inboxPathForRole(role: string, peerId: string, propertyId?: string | null) {
   const params = new URLSearchParams({ peer: peerId });
@@ -23,6 +24,15 @@ export async function GET(request: Request) {
       { success: false, error: "Sign in required" },
       { status: 401 },
     );
+  }
+
+  const limited = rateLimit({
+    key: `messages:get:${session.user.id}`,
+    limit: 40,
+    windowMs: 60_000,
+  });
+  if (!limited.ok) {
+    return tooManyRequests(limited.retryAfterSec);
   }
 
   const ctx = await resolveProfessionalActingContext(session.user.id);

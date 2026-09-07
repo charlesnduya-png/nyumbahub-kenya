@@ -141,11 +141,12 @@ export function InboxChat({
   useEffect(() => {
     void loadConversations();
     const interval = setInterval(() => {
+      if (document.visibilityState !== "visible") return;
       void loadConversations();
       if (selectedPeerId) {
         void loadThread(selectedPeerId, selectedPropertyId);
       }
-    }, 12000);
+    }, 45_000);
     return () => clearInterval(interval);
   }, [loadConversations, loadThread, selectedPeerId, selectedPropertyId]);
 

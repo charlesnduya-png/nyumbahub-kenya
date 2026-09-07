@@ -5,6 +5,7 @@ import {
   type AgencyPlanTierId,
 } from "@/lib/agency-plans";
 import { AGENT_PRODUCTS, getProduct, type PricingProduct } from "@/lib/pricing";
+import { ttlCached, ttlDelete } from "@/lib/ttl-cache";
 
 /** Admin override: unlimited active listings for this account. */
 export const UNLIMITED_LISTING_OVERRIDE = -1;
@@ -14,10 +15,14 @@ export type AgencyListingLimitUpdate = {
   maxListings: number | null;
 };
 
+const AGENCY_LIMITS_CACHE_KEY = "agency-listing-limit-overrides";
+
 export async function getAgencyListingLimitOverrides() {
-  return prisma.agencyPlanListingConfig.findMany({
-    orderBy: { tier: "asc" },
-  });
+  return ttlCached(AGENCY_LIMITS_CACHE_KEY, 5 * 60_000, () =>
+    prisma.agencyPlanListingConfig.findMany({
+      orderBy: { tier: "asc" },
+    }),
+  );
 }
 
 export async function getEffectiveAgencyPlans(): Promise<AgencyPlanDefinition[]> {
@@ -95,6 +100,7 @@ export async function updateAgencyPlanListingLimits(
     ),
   );
 
+  ttlDelete(AGENCY_LIMITS_CACHE_KEY);
   return getEffectiveAgencyPlans();
 }
 
