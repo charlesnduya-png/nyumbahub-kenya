@@ -62,6 +62,18 @@ export async function POST(request: Request) {
         });
 
           for (const payment of payments) {
+          const nextMeta = {
+            ...((payment.metadata as Record<string, unknown>) ?? {}),
+            checkoutRequestId: checkoutRequestId
+              ? String(checkoutRequestId)
+              : undefined,
+            merchantRequestId: merchantRequestId
+              ? String(merchantRequestId)
+              : undefined,
+            amountPaid: amountPaid ?? undefined,
+            callbackAt: new Date().toISOString(),
+          };
+
           await prisma.payment.update({
             where: { id: payment.id },
             data: {
@@ -70,24 +82,14 @@ export async function POST(request: Request) {
               reference: checkoutRequestId
                 ? String(checkoutRequestId)
                 : payment.reference,
-              metadata: {
-                ...((payment.metadata as Record<string, unknown>) ?? {}),
-                checkoutRequestId: checkoutRequestId
-                  ? String(checkoutRequestId)
-                  : undefined,
-                merchantRequestId: merchantRequestId
-                  ? String(merchantRequestId)
-                  : undefined,
-                amountPaid: amountPaid ?? undefined,
-                callbackAt: new Date().toISOString(),
-              },
+              metadata: nextMeta,
             },
           });
 
           await fulfillCompletedPayment({
             id: payment.id,
             userId: payment.userId,
-            metadata: payment.metadata,
+            metadata: nextMeta,
             amount: amountPaid ? Number(amountPaid) : payment.amount,
             mpesaReceipt: mpesaReceipt ?? undefined,
           });

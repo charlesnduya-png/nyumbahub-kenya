@@ -76,12 +76,20 @@ export function listingFlagsForProduct(productId: string) {
   return listingFlagsForPlan(productIdToSubscriptionPlan(productId));
 }
 
+const LISTING_SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
+  "BASIC",
+  "PREMIUM",
+  "AGENT_PRO",
+  "AGENT_ENTERPRISE",
+];
+
 export async function getActiveListingSubscription(userId: string) {
   const now = new Date();
   return prisma.subscription.findFirst({
     where: {
       userId,
       status: "ACTIVE",
+      plan: { in: LISTING_SUBSCRIPTION_PLANS },
       OR: [{ endDate: null }, { endDate: { gt: now } }],
     },
     orderBy: { endDate: "desc" },
@@ -269,6 +277,7 @@ export async function activateListingSubscription(input: {
     where: {
       userId: input.userId,
       status: "ACTIVE",
+      plan: { in: LISTING_SUBSCRIPTION_PLANS },
       OR: [{ endDate: null }, { endDate: { gt: startDate } }],
     },
     orderBy: { endDate: "desc" },

@@ -80,7 +80,9 @@ export default function NewPropertyPage() {
   const [monthlyEndDate, setMonthlyEndDate] = useState<string | null>(null);
   const [subLoading, setSubLoading] = useState(true);
   const [listingUsed, setListingUsed] = useState(0);
-  const [listingRemaining, setListingRemaining] = useState(FREE_TIER_MAX_LISTINGS);
+  const [listingRemaining, setListingRemaining] = useState<number | null>(
+    FREE_TIER_MAX_LISTINGS,
+  );
   const [atLimit, setAtLimit] = useState(false);
   const [monthlyPayOpen, setMonthlyPayOpen] = useState(false);
   const [hotelMaxPhotos, setHotelMaxPhotos] = useState(3);
@@ -163,12 +165,17 @@ export default function NewPropertyPage() {
           if (json.data.active) {
             setMonthlyActive(true);
             setMonthlyEndDate(json.data.subscription?.endDate ?? null);
+          } else {
+            setMonthlyActive(false);
+            setMonthlyEndDate(null);
           }
           if (typeof json.data.used === "number") {
             setListingUsed(json.data.used);
           }
           if (typeof json.data.remaining === "number") {
             setListingRemaining(json.data.remaining);
+          } else if (json.data.remaining === null) {
+            setListingRemaining(null);
           }
           if (typeof json.data.atLimit === "boolean") {
             setAtLimit(json.data.atLimit);
@@ -182,6 +189,25 @@ export default function NewPropertyPage() {
     }
     void loadSubscription();
   }, []);
+
+  async function refreshSubscription() {
+    try {
+      const res = await fetch("/api/subscriptions/mine");
+      const json = await res.json();
+      if (!json.success || !json.data) return;
+      setMonthlyActive(Boolean(json.data.active));
+      setMonthlyEndDate(json.data.subscription?.endDate ?? null);
+      if (typeof json.data.used === "number") setListingUsed(json.data.used);
+      if (typeof json.data.remaining === "number") {
+        setListingRemaining(json.data.remaining);
+      } else if (json.data.remaining === null) {
+        setListingRemaining(null);
+      }
+      if (typeof json.data.atLimit === "boolean") setAtLimit(json.data.atLimit);
+    } catch {
+      // ignore
+    }
+  }
 
   function syncImages(next: UploadedImage[]) {
     setImages(next);
@@ -311,11 +337,7 @@ export default function NewPropertyPage() {
         setMonthlyActive(false);
       } else if (json.code === "LISTING_LIMIT_REACHED") {
         toast.error(json.error);
-        setAtLimit(true);
-        if (typeof json.used === "number") setListingUsed(json.used);
-        if (typeof json.limit === "number") {
-          setListingRemaining(0);
-        }
+        void refreshSubscription();
       } else if (json.code === "IMAGES_INVALID") {
         toast.error(json.error ?? "Re-upload your photos and try again.");
       } else {
@@ -365,7 +387,7 @@ export default function NewPropertyPage() {
               ? "Checking your listing allowance…"
               : atLimit
                 ? `You have used all ${FREE_TIER_MAX_LISTINGS} listings. Archive one to add another.`
-                : `You have used ${listingUsed} of ${FREE_TIER_MAX_LISTINGS} listings (${listingRemaining} remaining).`}
+                : `You have used ${listingUsed} of ${FREE_TIER_MAX_LISTINGS} listings (${listingRemaining ?? 0} remaining).`}
           </>
         ) : monthlyActive ? (
           <>
@@ -385,7 +407,7 @@ export default function NewPropertyPage() {
               ? "Checking your listing allowance…"
               : atLimit
                 ? `You have used all ${FREE_TIER_MAX_LISTINGS} free listings. Upgrade below or archive an existing listing.`
-                : `You have used ${listingUsed} of ${FREE_TIER_MAX_LISTINGS} free listings (${listingRemaining} remaining).`}
+                : `You have used ${listingUsed} of ${FREE_TIER_MAX_LISTINGS} free listings (${listingRemaining ?? 0} remaining).`}
           </>
         )}
       </div>
@@ -502,13 +524,12 @@ export default function NewPropertyPage() {
               description="Pay with M-Pesa to list more properties this month."
               ctaLabel="Upgrade monthly listing plan"
               onPaid={(payment) => {
+                if (payment.status !== "COMPLETED") return;
                 setPaymentId(payment.id);
                 setPaymentRef(payment.reference);
                 setMonthlyActive(true);
                 setAtLimit(false);
-                const end = new Date();
-                end.setDate(end.getDate() + 30);
-                setMonthlyEndDate(end.toISOString());
+                void refreshSubscription();
               }}
             />
           </Card>
@@ -904,7 +925,7 @@ export default function NewPropertyPage() {
             type="submit"
             disabled={
               submitting ||
-              atLimit ||
+              (atLimit && !monthlyActive) ||
               (!canSubmitWithoutPay && !paymentId)
             }
           >
@@ -917,7 +938,7 @@ export default function NewPropertyPage() {
           <Button
             type="button"
             variant="secondary"
-            disabled={submitting || atLimit}
+            disabled={submitting || (atLimit && !monthlyActive)}
             onClick={handleSubmit((data) => onSubmit(data, false), onInvalid)}
           >
             Save as draft

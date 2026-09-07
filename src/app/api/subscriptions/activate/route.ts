@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { resolveProfessionalActingContext } from "@/lib/account-team";
 import {
   activateListingSubscription,
   isMonthlyListingProduct,
 } from "@/lib/listing-subscription";
 import { completePayment, getPayment } from "@/lib/payments-store";
+import { syncPaymentStatus } from "@/lib/payment-sync";
 import { getProduct } from "@/lib/pricing";
 import { prisma } from "@/lib/prisma";
 
@@ -16,7 +18,8 @@ const schema = z.object({
 
 /**
  * Activate / renew monthly listing access after a payment.
- * Completes the in-memory payment when M-Pesa/Stripe is not finishing it yet.
+ * Subscription is always attached to the professional workspace owner
+ * (team members pay on behalf of the owner account).
  */
 export async function POST(request: Request) {
   try {
@@ -37,14 +40,25 @@ export async function POST(request: Request) {
       );
     }
 
+    const ctx = await resolveProfessionalActingContext(session.user.id);
+    const ownerUserId = ctx.actingOwnerId || session.user.id;
+
+    // Prefer live provider sync so PENDING M-Pesa can become COMPLETED first
+    await syncPaymentStatus(parsed.data.paymentId, session.user.id).catch(
+      () => null,
+    );
+
     let payment = getPayment(parsed.data.paymentId);
 
-    // Fall back to Prisma payment if in-memory store lost it (serverless)
-    if (!payment) {
-      const dbPayment = await prisma.payment.findUnique({
-        where: { id: parsed.data.paymentId },
-      });
-      if (!dbPayment || dbPayment.userId !== session.user.id) {
+    const dbPayment = await prisma.payment.findUnique({
+      where: { id: parsed.data.paymentId },
+    });
+
+    if (dbPayment) {
+      if (
+        dbPayment.userId !== session.user.id &&
+        dbPayment.userId !== ownerUserId
+      ) {
         return NextResponse.json(
           { success: false, error: "Payment not found" },
           { status: 404 },
@@ -62,26 +76,57 @@ export async function POST(request: Request) {
         );
       }
 
+      if (dbPayment.status !== "COMPLETED") {
+        return NextResponse.json(
+          {
+            success: false,
+            error:
+              "Payment is not completed yet. Finish the M-Pesa prompt, then try again.",
+            code: "PAYMENT_PENDING",
+            data: { status: dbPayment.status },
+          },
+          { status: 402 },
+        );
+      }
+
       const product = getProduct(productId);
       const subscription = await activateListingSubscription({
-        userId: session.user.id,
+        userId: ownerUserId,
         productId,
         amount: dbPayment.amount,
         paymentId: dbPayment.id,
         durationDays: product?.durationDays,
       });
 
+      // Ensure payment is linked to the owner who holds the listing entitlement
+      if (dbPayment.userId !== ownerUserId) {
+        await prisma.payment
+          .update({
+            where: { id: dbPayment.id },
+            data: { userId: ownerUserId },
+          })
+          .catch(() => null);
+      }
+
       return NextResponse.json({
         success: true,
         data: {
           subscription,
           endDate: subscription.endDate?.toISOString() ?? null,
+          paymentId: dbPayment.id,
         },
-        message: "Monthly listing plan activated",
+        message: "Monthly listing plan activated — you can submit listings now",
       });
     }
 
-    if (payment.userId !== session.user.id) {
+    if (!payment) {
+      return NextResponse.json(
+        { success: false, error: "Payment not found" },
+        { status: 404 },
+      );
+    }
+
+    if (payment.userId !== session.user.id && payment.userId !== ownerUserId) {
       return NextResponse.json(
         { success: false, error: "Payment does not belong to this account" },
         { status: 403 },
@@ -103,7 +148,7 @@ export async function POST(request: Request) {
 
     const product = getProduct(String(productId));
     const subscription = await activateListingSubscription({
-      userId: session.user.id,
+      userId: ownerUserId,
       productId: String(productId),
       amount: payment.amount,
       paymentId: payment.id,
@@ -117,9 +162,10 @@ export async function POST(request: Request) {
         endDate: subscription.endDate?.toISOString() ?? null,
         paymentId: payment.id,
       },
-      message: "Monthly listing plan activated — list unlimited properties this month",
+      message: "Monthly listing plan activated — you can submit listings now",
     });
-  } catch {
+  } catch (error) {
+    console.error("Subscription activate failed:", error);
     return NextResponse.json(
       { success: false, error: "Unable to activate subscription" },
       { status: 500 },

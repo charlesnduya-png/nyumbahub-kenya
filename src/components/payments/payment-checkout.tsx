@@ -79,13 +79,9 @@ export function PaymentCheckout({
     }
 
     if (status !== "COMPLETED") {
-      onPaid?.({
-        id: payment.id,
-        reference: payment.reference ?? payment.id,
-        productId: String(productId),
-        amount: payment.amount ?? product!.price,
-        status: "PENDING",
-      });
+      toast.error(
+        "Payment not confirmed yet. Complete the M-Pesa prompt on your phone, then tap pay again to finish activation.",
+      );
       return;
     }
 
@@ -101,7 +97,7 @@ export function PaymentCheckout({
         return;
       }
       toast.success(
-        json.message ?? "Monthly listing plan active — list unlimited properties",
+        json.message ?? "Monthly listing plan active — you can submit listings now",
       );
     } else {
       toast.success("Payment received — your purchase is now active");

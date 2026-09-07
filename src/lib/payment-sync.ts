@@ -28,7 +28,18 @@ export async function syncPaymentStatus(paymentId: string, userId?: string) {
   }
 
   if (userId && payment.userId !== userId) {
-    return { success: false as const, error: "Forbidden" };
+    // Team members may sync payments billed to the workspace owner
+    try {
+      const { resolveProfessionalActingContext } = await import(
+        "@/lib/account-team"
+      );
+      const ctx = await resolveProfessionalActingContext(userId);
+      if (payment.userId !== ctx.actingOwnerId) {
+        return { success: false as const, error: "Forbidden" };
+      }
+    } catch {
+      return { success: false as const, error: "Forbidden" };
+    }
   }
 
   let meta = (payment.metadata ?? {}) as PaymentMeta;

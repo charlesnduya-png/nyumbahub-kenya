@@ -40,7 +40,12 @@ export async function GET() {
         pricingMuted: PRICING_MUTED,
         listingLimit: canCreate.limit,
         used: canCreate.used ?? 0,
-        remaining: canCreate.remaining ?? 0,
+        remaining:
+          canCreate.remaining === null || canCreate.remaining === undefined
+            ? canCreate.limit == null
+              ? null
+              : 0
+            : canCreate.remaining,
         atLimit: !canCreate.ok,
         subscription: subscription
           ? {

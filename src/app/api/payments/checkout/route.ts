@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { resolveProfessionalActingContext } from "@/lib/account-team";
 import {
   completePayment,
   createPayment,
@@ -51,8 +52,17 @@ export async function POST(request: Request) {
       );
     }
 
+    // Team members pay on behalf of the professional account owner
+    let billingUserId = session.user.id;
+    try {
+      const ctx = await resolveProfessionalActingContext(session.user.id);
+      if (ctx.actingOwnerId) billingUserId = ctx.actingOwnerId;
+    } catch {
+      // fall back to session user
+    }
+
     const payment = createPayment({
-      userId: session.user.id,
+      userId: billingUserId,
       userEmail: session.user.email,
       productId: product.id,
       amount: product.price,
@@ -63,6 +73,7 @@ export async function POST(request: Request) {
         durationDays: product.durationDays,
         listingFlags: product.listingFlags ?? null,
         category: product.category,
+        paidByUserId: session.user.id,
       },
     });
 
@@ -71,7 +82,7 @@ export async function POST(request: Request) {
       await prisma.payment.create({
         data: {
           id: payment.id,
-          userId: session.user.id,
+          userId: billingUserId,
           amount: payment.amount,
           currency: "KES",
           method: parsed.data.method === "CARD" ? "CARD" : "MPESA",
@@ -81,6 +92,7 @@ export async function POST(request: Request) {
           metadata: {
             productId: product.id,
             propertyId: parsed.data.propertyId ?? null,
+            paidByUserId: session.user.id,
           },
         },
       });
@@ -189,15 +201,38 @@ export async function POST(request: Request) {
         transactionDesc: product.name,
       });
 
+      // Link STK IDs so M-Pesa callback / sync can complete this payment
+      // and activate the listing subscription.
+      try {
+        await prisma.payment.update({
+          where: { id: payment.id },
+          data: {
+            reference: stk.CheckoutRequestID || payment.reference,
+            metadata: {
+              productId: product.id,
+              propertyId: parsed.data.propertyId ?? null,
+              checkoutRequestId: stk.CheckoutRequestID,
+              merchantRequestId: stk.MerchantRequestID,
+              provider: "daraja",
+            },
+          },
+        });
+      } catch {
+        // best effort — callback may still match if reference was already set
+      }
+
       return NextResponse.json({
         success: true,
         data: {
           id: payment.id,
-          reference: payment.reference,
+          reference: stk.CheckoutRequestID || payment.reference,
           productId: product.id,
           amount: product.price,
           status: "PENDING",
-          ...stk,
+          CheckoutRequestID: stk.CheckoutRequestID,
+          MerchantRequestID: stk.MerchantRequestID,
+          CustomerMessage: stk.CustomerMessage,
+          ResponseDescription: stk.ResponseDescription,
         },
       });
     } catch (error) {
