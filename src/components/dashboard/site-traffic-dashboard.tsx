@@ -23,6 +23,7 @@ import {
   type TrafficRange,
   type TrafficReport,
 } from "@/lib/live-analytics";
+import { SITE_VISIT_RETENTION_DAYS } from "@/lib/site-visit-retention";
 
 const RANGES: TrafficRange[] = ["live", "week", "month", "year"];
 
@@ -251,7 +252,7 @@ export function SiteTrafficDashboard() {
   useEffect(() => {
     setLoading(true);
     void load(range);
-    const ms = range === "live" ? 120_000 : 180_000;
+    const ms = range === "live" ? 300_000 : 600_000;
 
     function tick() {
       if (document.visibilityState !== "visible") return;
@@ -324,7 +325,7 @@ export function SiteTrafficDashboard() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
               </span>
-              Live · updates every 20s
+              Live · updates every 5 min
             </span>
           ) : (
             <span className="text-xs text-muted-foreground">
@@ -414,7 +415,7 @@ export function SiteTrafficDashboard() {
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <BarChart3 className="h-4 w-4" />
-              All time
+              Last {SITE_VISIT_RETENTION_DAYS} days
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -422,7 +423,8 @@ export function SiteTrafficDashboard() {
               {data.allTime.visitors.toLocaleString("en-KE")}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              {data.allTime.pageViews.toLocaleString("en-KE")} total page views
+              {data.allTime.pageViews.toLocaleString("en-KE")} page views
+              (retained)
             </p>
           </CardContent>
         </Card>

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-
-const RETENTION_DAYS = 90;
+import { SITE_VISIT_RETENTION_DAYS } from "@/lib/site-visit-retention";
 
 /**
  * Delete old SiteVisit rows to keep Neon storage / scan costs down.
@@ -16,7 +15,9 @@ export async function GET(request: Request) {
     }
   }
 
-  const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
+  const cutoff = new Date(
+    Date.now() - SITE_VISIT_RETENTION_DAYS * 24 * 60 * 60 * 1000,
+  );
 
   try {
     const result = await prisma.siteVisit.deleteMany({
@@ -26,7 +27,7 @@ export async function GET(request: Request) {
     return NextResponse.json({
       success: true,
       deleted: result.count,
-      olderThanDays: RETENTION_DAYS,
+      olderThanDays: SITE_VISIT_RETENTION_DAYS,
       cutoff: cutoff.toISOString(),
     });
   } catch (error) {

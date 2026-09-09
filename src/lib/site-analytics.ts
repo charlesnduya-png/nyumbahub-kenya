@@ -6,6 +6,9 @@ import type {
   TrafficSeriesPoint,
 } from "@/lib/live-analytics";
 import { comparePeriodChange } from "@/lib/live-analytics";
+import {
+  siteVisitRetentionStart,
+} from "@/lib/site-visit-retention";
 import { ttlCached } from "@/lib/ttl-cache";
 
 export type { TrafficRange, TrafficReport } from "@/lib/live-analytics";
@@ -26,16 +29,6 @@ function kenyaMidnight(dateKey: string): Date {
 export function getKenyaYearStart(now = new Date()): Date {
   const year = kenyaDateKey(now).split("-")[0];
   return kenyaMidnight(`${year}-01-01`);
-}
-
-function kenyaHour(date: Date): number {
-  return Number(
-    new Intl.DateTimeFormat("en-US", {
-      timeZone: KENYA_TZ,
-      hour: "numeric",
-      hour12: false,
-    }).format(date),
-  );
 }
 
 function formatHour(h: number) {
@@ -210,7 +203,7 @@ async function topPagesInPeriod(
 async function recentActivity(prisma: PrismaClient, now: Date) {
   const visits = await prisma.siteVisit.findMany({
     orderBy: { createdAt: "desc" },
-    take: 15,
+    take: 12,
     select: { sessionId: true, path: true, createdAt: true },
   });
   return visits.map((v) => ({
@@ -223,55 +216,86 @@ async function recentActivity(prisma: PrismaClient, now: Date) {
   }));
 }
 
+async function hourlyVisitorBuckets(
+  prisma: PrismaClient,
+  since: Date,
+  until: Date,
+): Promise<Array<{ hour: number; visitors: number }>> {
+  const rows = await prisma.$queryRaw<Array<{ hour: number; visitors: number }>>`
+    SELECT
+      EXTRACT(HOUR FROM ("createdAt" AT TIME ZONE 'Africa/Nairobi'))::int AS hour,
+      COUNT(DISTINCT "sessionId")::int AS visitors
+    FROM "SiteVisit"
+    WHERE "createdAt" >= ${since} AND "createdAt" < ${until}
+    GROUP BY hour
+  `;
+  return rows;
+}
+
+async function liveVisitorCount(prisma: PrismaClient, since: Date) {
+  const rows = await prisma.$queryRaw<[{ count: number }]>`
+    SELECT COUNT(DISTINCT "sessionId")::int AS count
+    FROM "SiteVisit"
+    WHERE "createdAt" >= ${since}
+  `;
+  return rows[0]?.count ?? 0;
+}
+
+/** Bounded "all time" = retention window only (never scan from epoch). */
+async function retentionTotals(prisma: PrismaClient, now: Date) {
+  return countPeriod(prisma, siteVisitRetentionStart(now));
+}
+
 async function getLiveReport(
   prisma: PrismaClient,
   now: Date,
 ): Promise<TrafficReport> {
   const { todayStart } = getKenyaPeriodStarts(now);
   const yesterdayStart = new Date(todayStart.getTime() - 86_400_000);
-  const todayKey = kenyaDateKey(now);
-  const yesterdayKey = kenyaDateKey(yesterdayStart);
   const liveSince = new Date(now.getTime() - LIVE_WINDOW_MS);
   const yesterdaySameTimeEnd = new Date(now.getTime() - 86_400_000);
   const tomorrow = new Date(todayStart.getTime() + 86_400_000);
 
-  const [visits, allTime, todayStats, yesterdaySameStats, todayRows] =
-    await Promise.all([
-      prisma.siteVisit.findMany({
-        where: { createdAt: { gte: yesterdayStart } },
-        select: { sessionId: true, path: true, createdAt: true },
-        orderBy: { createdAt: "desc" },
-        take: 5000,
-      }),
-      countPeriod(prisma, new Date(0)),
-      countPeriod(prisma, todayStart),
-      countPeriod(prisma, yesterdayStart, yesterdaySameTimeEnd),
-      dailyBuckets(prisma, todayStart, tomorrow),
-    ]);
+  const [
+    liveNow,
+    retention,
+    todayStats,
+    yesterdaySameStats,
+    todayRows,
+    hourlyTodayRows,
+    hourlyYesterdayRows,
+    topPages,
+    activity,
+  ] = await Promise.all([
+    liveVisitorCount(prisma, liveSince),
+    retentionTotals(prisma, now),
+    countPeriod(prisma, todayStart),
+    countPeriod(prisma, yesterdayStart, yesterdaySameTimeEnd),
+    dailyBuckets(prisma, todayStart, tomorrow),
+    hourlyVisitorBuckets(prisma, todayStart, tomorrow),
+    hourlyVisitorBuckets(prisma, yesterdayStart, todayStart),
+    topPagesInPeriod(prisma, todayStart),
+    recentActivity(prisma, now),
+  ]);
 
-  const liveSessions = new Set<string>();
-  const hourlyTodayMap = new Map<number, Set<string>>();
-  const hourlyYesterdayMap = new Map<number, Set<string>>();
+  const hourlyTodayMap = new Map<number, number>();
+  const hourlyYesterdayMap = new Map<number, number>();
   for (let h = 0; h < 24; h++) {
-    hourlyTodayMap.set(h, new Set());
-    hourlyYesterdayMap.set(h, new Set());
+    hourlyTodayMap.set(h, 0);
+    hourlyYesterdayMap.set(h, 0);
   }
-
-  for (const v of visits) {
-    const key = kenyaDateKey(v.createdAt);
-    const hour = kenyaHour(v.createdAt);
-    if (v.createdAt >= liveSince) liveSessions.add(v.sessionId);
-    if (key === todayKey) hourlyTodayMap.get(hour)?.add(v.sessionId);
-    if (key === yesterdayKey) hourlyYesterdayMap.get(hour)?.add(v.sessionId);
+  for (const row of hourlyTodayRows) {
+    hourlyTodayMap.set(row.hour, row.visitors);
   }
-
-  const topPages = await topPagesInPeriod(prisma, todayStart);
+  for (const row of hourlyYesterdayRows) {
+    hourlyYesterdayMap.set(row.hour, row.visitors);
+  }
 
   return {
     range: "live",
     rangeLabel: "Today",
     compareLabel: "Yesterday (same time)",
-    liveNow: liveSessions.size,
+    liveNow,
     visitors: todayStats.visitors,
     pageViews: todayStats.pageViews,
     previousVisitors: yesterdaySameStats.visitors,
@@ -283,27 +307,20 @@ async function getLiveReport(
     series: fillDailySeriesFromStart(todayStart, tomorrow, todayRows),
     previousSeries: [],
     topPages,
-    recentActivity: visits.slice(0, 12).map((v) => ({
-      path: v.path,
-      sessionLabel: `Visitor …${v.sessionId.slice(-4)}`,
-      secondsAgo: Math.max(
-        0,
-        Math.floor((now.getTime() - v.createdAt.getTime()) / 1000),
-      ),
-    })),
-    hourlyToday: [...hourlyTodayMap.entries()].map(([hour, sessions]) => ({
+    recentActivity: activity,
+    hourlyToday: [...hourlyTodayMap.entries()].map(([hour, visitors]) => ({
       hour,
       label: formatHour(hour),
-      visitors: sessions.size,
+      visitors,
     })),
     hourlyYesterday: [...hourlyYesterdayMap.entries()].map(
-      ([hour, sessions]) => ({
+      ([hour, visitors]) => ({
         hour,
         label: formatHour(hour),
-        visitors: sessions.size,
+        visitors,
       }),
     ),
-    allTime,
+    allTime: retention,
     updatedAt: now.toISOString(),
   };
 }
@@ -316,11 +333,11 @@ async function getWeekReport(
   const nextWeekStart = new Date(weekStart.getTime() + 7 * 86_400_000);
   const prevWeekStart = new Date(weekStart.getTime() - 7 * 86_400_000);
 
-  const [current, previous, allTime, currentRows, previousRows, topPages, activity] =
+  const [current, previous, retention, currentRows, previousRows, topPages, activity] =
     await Promise.all([
       countPeriod(prisma, weekStart),
       countPeriod(prisma, prevWeekStart, weekStart),
-      countPeriod(prisma, new Date(0)),
+      retentionTotals(prisma, now),
       dailyBuckets(prisma, weekStart, nextWeekStart),
       dailyBuckets(prisma, prevWeekStart, weekStart),
       topPagesInPeriod(prisma, weekStart),
@@ -344,7 +361,7 @@ async function getWeekReport(
     ),
     topPages,
     recentActivity: activity,
-    allTime,
+    allTime: retention,
     updatedAt: now.toISOString(),
   };
 }
@@ -359,11 +376,11 @@ async function getMonthReport(
   const prevMonthStart = shiftMonthKey(y, m, -1);
   const tomorrow = new Date(todayStart.getTime() + 86_400_000);
 
-  const [current, previous, allTime, currentRows, previousRows, topPages, activity] =
+  const [current, previous, retention, currentRows, previousRows, topPages, activity] =
     await Promise.all([
       countPeriod(prisma, monthStart),
       countPeriod(prisma, prevMonthStart, monthStart),
-      countPeriod(prisma, new Date(0)),
+      retentionTotals(prisma, now),
       dailyBuckets(prisma, monthStart, tomorrow),
       dailyBuckets(prisma, prevMonthStart, monthStart),
       topPagesInPeriod(prisma, monthStart),
@@ -391,7 +408,7 @@ async function getMonthReport(
     ),
     topPages,
     recentActivity: activity,
-    allTime,
+    allTime: retention,
     updatedAt: now.toISOString(),
   };
 }
@@ -403,19 +420,35 @@ async function getYearReport(
   const yearStart = getKenyaYearStart(now);
   const year = Number(kenyaDateKey(now).split("-")[0]);
   const prevYearStart = kenyaMidnight(`${year - 1}-01-01`);
-  const tomorrow = new Date(getKenyaPeriodStarts(now).todayStart.getTime() + 86_400_000);
+  const tomorrow = new Date(
+    getKenyaPeriodStarts(now).todayStart.getTime() + 86_400_000,
+  );
   const currentMonth = Number(kenyaDateKey(now).split("-")[1]);
+  // Bound year scans to retention window so we never full-table scan.
+  const since = new Date(
+    Math.max(yearStart.getTime(), siteVisitRetentionStart(now).getTime()),
+  );
+  const prevSince = new Date(
+    Math.max(prevYearStart.getTime(), siteVisitRetentionStart(now).getTime()),
+  );
 
-  const [current, previous, allTime, currentRows, previousRows, topPages, activity] =
-    await Promise.all([
-      countPeriod(prisma, yearStart),
-      countPeriod(prisma, prevYearStart, yearStart),
-      countPeriod(prisma, new Date(0)),
-      monthlyBuckets(prisma, yearStart, tomorrow),
-      monthlyBuckets(prisma, prevYearStart, yearStart),
-      topPagesInPeriod(prisma, yearStart),
-      recentActivity(prisma, now),
-    ]);
+  const [
+    current,
+    previous,
+    retention,
+    currentRows,
+    previousRows,
+    topPages,
+    activity,
+  ] = await Promise.all([
+    countPeriod(prisma, since),
+    countPeriod(prisma, prevSince, yearStart),
+    retentionTotals(prisma, now),
+    monthlyBuckets(prisma, since, tomorrow),
+    monthlyBuckets(prisma, prevSince, yearStart),
+    topPagesInPeriod(prisma, since),
+    recentActivity(prisma, now),
+  ]);
 
   return {
     range: "year",
@@ -430,7 +463,7 @@ async function getYearReport(
     previousSeries: fillMonthlySeries(year - 1, 12, previousRows),
     topPages,
     recentActivity: activity,
-    allTime,
+    allTime: retention,
     updatedAt: now.toISOString(),
   };
 }
@@ -445,7 +478,7 @@ export async function getTrafficAnalytics(
   range: TrafficRange = "live",
 ): Promise<TrafficReport> {
   const ttlMs =
-    range === "live" ? 45_000 : range === "week" ? 90_000 : 120_000;
+    range === "live" ? 90_000 : range === "week" ? 180_000 : 300_000;
 
   return ttlCached(`traffic:${range}`, ttlMs, async () => {
     const now = new Date();

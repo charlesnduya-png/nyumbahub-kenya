@@ -146,7 +146,7 @@ export function InboxChat({
       if (selectedPeerId) {
         void loadThread(selectedPeerId, selectedPropertyId);
       }
-    }, 45_000);
+    }, 90_000);
     return () => clearInterval(interval);
   }, [loadConversations, loadThread, selectedPeerId, selectedPropertyId]);
 

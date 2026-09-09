@@ -5,8 +5,11 @@ import { usePathname } from "next/navigation";
 import { isCrawlerUserAgent } from "@/lib/crawler";
 
 const SESSION_VISIT_KEY = "yh_site_visits";
-const MIN_GAP_MS = 15 * 60 * 1000;
-const MAX_VISITS_PER_SESSION = 8;
+/** Longer gap + fewer paths = fewer Neon writes. */
+const MIN_GAP_MS = 30 * 60 * 1000;
+const MAX_VISITS_PER_SESSION = 4;
+/** Only ~1 in 4 eligible pageviews are sent to the API. */
+const SAMPLE_RATE = 0.25;
 
 function shouldRecordVisit(path: string) {
   if (typeof window === "undefined") return false;
@@ -29,6 +32,18 @@ function shouldRecordVisit(path: string) {
       return false;
     }
 
+    // Sample after local dedupe so we still mark the path and avoid retries.
+    if (Math.random() >= SAMPLE_RATE) {
+      visits[path] = now;
+      const trimmed = Object.fromEntries(
+        Object.entries(visits)
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, MAX_VISITS_PER_SESSION),
+      );
+      sessionStorage.setItem(SESSION_VISIT_KEY, JSON.stringify(trimmed));
+      return false;
+    }
+
     visits[path] = now;
     const trimmed = Object.fromEntries(
       Object.entries(visits)
@@ -38,7 +53,7 @@ function shouldRecordVisit(path: string) {
     sessionStorage.setItem(SESSION_VISIT_KEY, JSON.stringify(trimmed));
     return true;
   } catch {
-    return true;
+    return Math.random() < SAMPLE_RATE;
   }
 }
 
@@ -57,6 +72,11 @@ export function SiteVisitTracker() {
       pathname.startsWith("/forgot-password") ||
       pathname.startsWith("/reset-password") ||
       pathname.startsWith("/sitemap") ||
+      pathname.startsWith("/partners") ||
+      pathname.startsWith("/about") ||
+      pathname.startsWith("/privacy") ||
+      pathname.startsWith("/terms") ||
+      pathname.startsWith("/cookies") ||
       isCrawlerUserAgent(
         typeof navigator === "undefined" ? "" : navigator.userAgent,
       )
@@ -87,7 +107,7 @@ export function SiteVisitTracker() {
           referrer: document.referrer || null,
         }),
       }).catch(() => undefined);
-    }, 800);
+    }, 1200);
 
     return () => window.clearTimeout(timer);
   }, [pathname]);

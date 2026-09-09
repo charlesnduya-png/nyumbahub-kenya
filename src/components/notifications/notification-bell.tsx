@@ -62,7 +62,7 @@ export function NotificationBell({
   const { status, data: session } = useSession();
   const role = session?.user?.role;
   const isOwner = role === "SELLER" || role === "AGENT";
-  const effectivePollMs = pollMs ?? (isOwner ? 120_000 : 180_000);
+  const effectivePollMs = pollMs ?? (isOwner ? 180_000 : 300_000);
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
