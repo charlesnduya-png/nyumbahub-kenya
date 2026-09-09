@@ -418,9 +418,6 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                   <TabsTrigger value="amenities" className="shrink-0">
                     Amenities
                   </TabsTrigger>
-                  <TabsTrigger value="nearby" className="shrink-0">
-                    Nearby
-                  </TabsTrigger>
                   <TabsTrigger value="map" className="shrink-0">
                     Map
                   </TabsTrigger>
@@ -429,16 +426,16 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                   <div className="mt-4">
                     <SignInToUnlock
                       title="Sign in to see this listing"
-                      description="Description, amenities, nearby places, and the map are visible after you sign in."
+                      description="Description, amenities, and the map are visible after you sign in."
                       callbackPath={callbackPath}
                     >
                       <div className="space-y-3 p-6">
                         <p className="text-muted-foreground">
-                          Full write-up, amenities, nearby places, and the map
-                          unlock after you sign in.
+                          Full write-up, amenities, and the map unlock after you
+                          sign in.
                         </p>
                         <p className="text-muted-foreground">
-                          Parking · Security · Nearby schools and shops
+                          Parking · Security · Full listing details
                         </p>
                         <div className="h-40 rounded-lg bg-muted" />
                       </div>
@@ -467,45 +464,6 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                         parkingSpaces={property.parkingSpaces}
                         listingType={property.listingType}
                       />
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-                <TabsContent value="nearby" className="mt-4">
-                  <Card>
-                    <CardContent className="p-6">
-                      {"nearbyPlaces" in property && property.nearbyPlaces?.length ? (
-                        <ul className="space-y-3">
-                          {property.nearbyPlaces.map(
-                            (place: {
-                              id: string;
-                              name: string;
-                              type: string;
-                              distance?: number | null;
-                            }) => (
-                              <li key={place.id} className="flex justify-between">
-                                <span>
-                                  {place.name}{" "}
-                                  <span className="text-muted-foreground">
-                                    ({place.type})
-                                  </span>
-                                </span>
-                                {place.distance != null && (
-                                  <span className="text-sm text-muted-foreground">
-                                    {place.distance} km
-                                  </span>
-                                )}
-                              </li>
-                            ),
-                          )}
-                        </ul>
-                      ) : (
-                        <ul className="space-y-2 text-muted-foreground">
-                          <li>• Two Rivers Mall — 2.5 km</li>
-                          <li>• Nairobi Hospital — 1.8 km</li>
-                          <li>• International School of Kenya — 3.2 km</li>
-                          <li>• Expressway interchange — 4.0 km</li>
-                        </ul>
-                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>

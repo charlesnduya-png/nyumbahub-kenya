@@ -19,7 +19,6 @@ import {
   type LocationMarketIntent,
 } from "@/lib/location-seo";
 import {
-  getNearbyPlaces,
   getPropertyForSalePlace,
   placeLocationLabel,
   type PropertyForSalePlace,
@@ -76,7 +75,6 @@ export function LocationMarketPage({
   maxPrice: number | null;
 }) {
   const faqs = intentFaqs(intent, place);
-  const nearby = getNearbyPlaces(place);
   const locationLabel = placeLocationLabel(place);
   const copy = LISTINGS_COPY[intent];
   const searchHref = propertiesSearchHref(intent, place);
@@ -203,8 +201,8 @@ export function LocationMarketPage({
           <div className="mt-8 rounded-3xl border bg-card/80 p-8 text-center">
             <p className="font-medium">{copy.empty}</p>
             <p className="mt-2 text-sm text-muted-foreground">
-              Check nearby places or browse all African listings. New homes go
-              live after admin approval.
+              Browse all African listings instead. New homes go live after admin
+              approval.
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Button asChild>
@@ -292,23 +290,6 @@ export function LocationMarketPage({
                 </Button>
               );
             })}
-          </div>
-        </section>
-      ) : null}
-
-      {nearby.length > 0 ? (
-        <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
-          <h2 className="font-display text-xl font-semibold">
-            Nearby {intent === "bnb" ? "stays" : "places"}
-          </h2>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {nearby.map((item) => (
-              <Button key={item.slug} variant="secondary" size="sm" asChild>
-                <Link href={intentPlacePath(intent, item.slug)}>
-                  {item.name}
-                </Link>
-              </Button>
-            ))}
           </div>
         </section>
       ) : null}
