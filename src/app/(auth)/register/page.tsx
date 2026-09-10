@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CountrySelect } from "@/components/properties/country-select";
+import { DEFAULT_LISTING_COUNTRY } from "@/lib/african-countries";
 import { registerSchema, type RegisterInput } from "@/lib/validations/auth";
 
 const AUTH_FORM_FOOTER =
@@ -33,11 +35,15 @@ export default function RegisterPage() {
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema) as Resolver<RegisterInput>,
-    defaultValues: { role: "BUYER" },
+    defaultValues: { role: "BUYER", country: DEFAULT_LISTING_COUNTRY },
   });
+
+  const country = watch("country");
 
   async function onSubmit(data: RegisterInput) {
     setIsLoading(true);
@@ -138,6 +144,16 @@ export default function RegisterPage() {
               <p className="text-xs text-muted-foreground">
                 Open to customers across Africa — include your country code.
               </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="country">Country</Label>
+              <CountrySelect
+                id="country"
+                value={country ?? DEFAULT_LISTING_COUNTRY}
+                onValueChange={(value) =>
+                  setValue("country", value, { shouldValidate: true })
+                }
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>

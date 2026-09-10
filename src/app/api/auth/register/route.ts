@@ -86,6 +86,7 @@ export async function POST(request: Request) {
         passwordHash,
         role,
         nationalId: cleanedNationalId,
+        country: country?.trim() || null,
         nationalIdVerified: cleanedNationalId ? "PENDING" : "UNVERIFIED",
         verificationStatus:
           isProfessional || isJobPartner ? "PENDING" : "UNVERIFIED",
@@ -96,6 +97,7 @@ export async function POST(request: Request) {
         email: true,
         phone: true,
         role: true,
+        country: true,
         nationalId: true,
         createdAt: true,
       },

@@ -19,7 +19,9 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CountrySelect } from "@/components/properties/country-select";
 import { JobPartnerEarningsInfo } from "@/components/job-partner/job-partner-earnings-info";
+import { DEFAULT_LISTING_COUNTRY } from "@/lib/african-countries";
 import { jobPartnerCommissionPercent } from "@/lib/job-partner-copy";
 import { registerSchema, type RegisterInput } from "@/lib/validations/auth";
 
@@ -34,11 +36,19 @@ export default function JobPartnerRegisterPage() {
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema) as Resolver<RegisterInput>,
-    defaultValues: { role: "JOB_PARTNER", nationalId: "" },
+    defaultValues: {
+      role: "JOB_PARTNER",
+      nationalId: "",
+      country: DEFAULT_LISTING_COUNTRY,
+    },
   });
+
+  const country = watch("country");
 
   async function onSubmit(data: RegisterInput) {
     setIsLoading(true);
@@ -148,6 +158,17 @@ export default function JobPartnerRegisterPage() {
               <p className="text-xs text-muted-foreground">
                 Partners across Africa and beyond: include your country code.
               </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="country">Country</Label>
+              <CountrySelect
+                id="country"
+                value={country ?? DEFAULT_LISTING_COUNTRY}
+                includeGlobal
+                onValueChange={(value) =>
+                  setValue("country", value, { shouldValidate: true })
+                }
+              />
             </div>
 
             <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-2">

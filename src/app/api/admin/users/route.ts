@@ -63,6 +63,7 @@ export async function GET() {
         email: true,
         phone: true,
         role: true,
+        country: true,
         isActive: true,
         createdAt: true,
         image: true,
@@ -78,8 +79,14 @@ export async function GET() {
             agencyName: true,
             licenseNumber: true,
             county: true,
+            town: true,
             verificationStatus: true,
             _count: { select: { listings: true } },
+          },
+        },
+        wallet: {
+          select: {
+            payoutCountry: true,
           },
         },
       },
@@ -171,6 +178,14 @@ export async function GET() {
         email: u.email,
         phone: u.phone ?? "—",
         role: u.role,
+        country:
+          u.country ??
+          u.wallet?.payoutCountry ??
+          (u.agentProfile?.town?.includes(",")
+            ? u.agentProfile.town.split(",").pop()?.trim()
+            : null) ??
+          null,
+        region: u.agentProfile?.county ?? null,
         isActive: u.isActive,
         createdAt: u.createdAt.toISOString(),
         image: u.image,

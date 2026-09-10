@@ -61,6 +61,8 @@ export interface AdminUser {
   email: string;
   phone: string;
   role: Role;
+  country?: string | null;
+  region?: string | null;
   isActive: boolean;
   createdAt: string;
   image?: string | null;
@@ -200,6 +202,7 @@ function UsersTable({
           <th className="pb-3 pr-4 font-medium">Team</th>
           <th className="pb-3 pr-4 font-medium">Email</th>
           <th className="pb-3 pr-4 font-medium">Phone</th>
+          <th className="pb-3 pr-4 font-medium">Country</th>
           {showListings ? (
             <th className="pb-3 pr-4 font-medium">ID / License</th>
           ) : null}
@@ -232,6 +235,12 @@ function UsersTable({
             </td>
             <td className="py-3 pr-4">{u.email}</td>
             <td className="py-3 pr-4">{u.phone}</td>
+            <td className="py-3 pr-4">
+              <p>{u.country ?? "—"}</p>
+              {u.region && u.region !== u.country ? (
+                <p className="text-xs text-muted-foreground">{u.region}</p>
+              ) : null}
+            </td>
             {showListings ? (
               <td className="py-3 pr-4">
                 <p className="font-mono text-xs">
@@ -423,6 +432,9 @@ export default function AdminUsersPage() {
           u.name.toLowerCase().includes(q) ||
           u.email.toLowerCase().includes(q) ||
           u.phone.toLowerCase().includes(q) ||
+          (u.country ?? "").toLowerCase().includes(q) ||
+          (u.region ?? "").toLowerCase().includes(q) ||
+          (u.agentCounty ?? "").toLowerCase().includes(q) ||
           teamHit
         );
       });
@@ -557,7 +569,7 @@ export default function AdminUsersPage() {
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search name, email, phone, or team…"
+                placeholder="Search name, email, phone, country, or team…"
                 className="w-full pl-8 sm:w-72"
               />
             </div>

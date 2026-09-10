@@ -228,6 +228,8 @@ model User {
   titleDeedVerified     VerificationStatus @default(UNVERIFIED)
   verificationStatus    VerificationStatus @default(UNVERIFIED)
   isActive              Boolean            @default(true)
+  /// Signup / profile country (Africa + diaspora). Used in admin account views.
+  country               String?
   /// Admin-set cap on active listings. null = use plan tier; -1 = unlimited.
   listingLimitOverride  Int?
   referredByJobPartnerUserId String?
@@ -279,6 +281,8 @@ model User {
 
   @@index([role])
   @@index([email])
+  @@index([country])
+  @@index([role, createdAt])
 }
 
 model Account {
