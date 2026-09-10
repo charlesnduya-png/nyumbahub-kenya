@@ -27,9 +27,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RegisterAccountTypePicker } from "@/components/auth/register-account-type-picker";
+import { CountrySelect } from "@/components/properties/country-select";
 import { jobPartnerCommissionPercent } from "@/lib/job-partner-copy";
 import { addHotelPath, isProfessionalRole } from "@/lib/hotel-listing";
-import { KENYA_COUNTIES } from "@/lib/kenya";
+import { DEFAULT_LISTING_COUNTRY } from "@/lib/african-countries";
 
 import { registerSchema, type RegisterInput } from "@/lib/validations/auth";
 
@@ -60,7 +61,8 @@ export default function ProfessionalRegisterClient() {
     resolver: zodResolver(registerSchema) as Resolver<RegisterInput>,
     defaultValues: {
       role: "SELLER",
-      county: "Nairobi",
+      country: DEFAULT_LISTING_COUNTRY,
+      county: "",
       nationalId: "",
       agencyName: "",
       jobRef: jobRefFromUrl || undefined,
@@ -74,6 +76,7 @@ export default function ProfessionalRegisterClient() {
   }, [jobRefFromUrl, setValue]);
 
   const role = watch("role");
+  const country = watch("country");
   const county = watch("county");
 
   async function onSubmit(data: RegisterInput) {
@@ -151,8 +154,9 @@ export default function ProfessionalRegisterClient() {
         <CardHeader className="text-center">
           <CardTitle>Create a professional account</CardTitle>
           <CardDescription>
-            For landlords, owners, and agents — free for now (up to 5 listings).
-            Official ID details are required and reviewed by Your Home admin.
+            For landlords, owners, and agents across Africa — free for now (up
+            to 5 listings). Official ID details are required and reviewed by
+            Your Home admin.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -204,7 +208,7 @@ export default function ProfessionalRegisterClient() {
               <Label htmlFor="name">Full legal name</Label>
               <Input
                 id="name"
-                placeholder="As on your National ID"
+                placeholder="As on your ID or passport"
                 {...register("name")}
               />
               {errors.name && (
@@ -216,7 +220,7 @@ export default function ProfessionalRegisterClient() {
               <Input
                 id="email"
                 type="email"
-                placeholder="you@agency.co.ke"
+                placeholder="you@example.com"
                 {...register("email")}
               />
               {errors.email && (
@@ -224,15 +228,19 @@ export default function ProfessionalRegisterClient() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Business phone</Label>
+              <Label htmlFor="phone">Business phone (with country code)</Label>
               <Input
                 id="phone"
-                placeholder="0712345678"
+                placeholder="+254712345678 or +234… / +233…"
                 {...register("phone")}
               />
               {errors.phone && (
                 <p className="text-sm text-destructive">{errors.phone.message}</p>
               )}
+              <p className="text-xs text-muted-foreground">
+                Professionals across Africa can register — include your country
+                code.
+              </p>
             </div>
 
             <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-4">
@@ -244,7 +252,7 @@ export default function ProfessionalRegisterClient() {
                 <Label htmlFor="nationalId">National ID / Passport number</Label>
                 <Input
                   id="nationalId"
-                  placeholder="e.g. 12345678"
+                  placeholder="ID or passport number"
                   {...register("nationalId")}
                 />
                 {errors.nationalId && (
@@ -256,6 +264,17 @@ export default function ProfessionalRegisterClient() {
                   Used for verification only. Shown to admin on your agent /
                   landlord account.
                 </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="country">Country</Label>
+                <CountrySelect
+                  id="country"
+                  value={country ?? DEFAULT_LISTING_COUNTRY}
+                  onValueChange={(value) =>
+                    setValue("country", value, { shouldValidate: true })
+                  }
+                />
               </div>
 
               {role === "AGENT" ? (
@@ -274,24 +293,22 @@ export default function ProfessionalRegisterClient() {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label>Primary county</Label>
-                    <Select
-                      value={county ?? "Nairobi"}
-                      onValueChange={(value) =>
-                        setValue("county", value, { shouldValidate: true })
+                    <Label htmlFor="county">Primary city / region</Label>
+                    <Input
+                      id="county"
+                      placeholder="e.g. Lagos, Accra, Nairobi, Cape Town"
+                      value={county ?? ""}
+                      onChange={(e) =>
+                        setValue("county", e.target.value, {
+                          shouldValidate: true,
+                        })
                       }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select county" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {KENYA_COUNTIES.map((c) => (
-                          <SelectItem key={c} value={c}>
-                            {c}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    />
+                    {errors.county && (
+                      <p className="text-sm text-destructive">
+                        {errors.county.message}
+                      </p>
+                    )}
                   </div>
                 </>
               ) : null}

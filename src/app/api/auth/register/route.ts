@@ -10,13 +10,10 @@ import { digitsOnly } from "@/lib/phone";
 import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validations/auth";
 
-function normalizeRegisterPhone(phone: string, role: string) {
+function normalizeRegisterPhone(phone: string) {
   const trimmed = phone.trim();
-  if (role === "JOB_PARTNER") {
-    const digits = digitsOnly(trimmed);
-    return digits.length >= 8 ? digits : trimmed;
-  }
-  return trimmed;
+  const digits = digitsOnly(trimmed);
+  return digits.length >= 8 ? digits : trimmed;
 }
 
 export async function POST(request: Request) {
@@ -44,12 +41,17 @@ export async function POST(request: Request) {
       nationalId,
       agencyName,
       licenseNumber,
+      country,
       county,
       jobRef,
     } = parsed.data;
-    const phone = normalizeRegisterPhone(rawPhone, role);
+    const phone = normalizeRegisterPhone(rawPhone);
     const normalizedEmail = email.toLowerCase();
     const cleanedNationalId = nationalId?.trim().toUpperCase() || null;
+    const locationLabel =
+      [county?.trim(), country?.trim()].filter(Boolean).join(", ") ||
+      country?.trim() ||
+      "Africa";
 
     const existing = await prisma.user.findFirst({
       where: {
@@ -105,8 +107,8 @@ export async function POST(request: Request) {
           userId: user.id,
           agencyName: agencyName?.trim() || `${name}'s Agency`,
           licenseNumber: licenseNumber?.trim() || null,
-          county: county?.trim() || "Nairobi",
-          town: county?.trim() || "Nairobi",
+          county: county?.trim() || country?.trim() || "Africa",
+          town: locationLabel,
           verificationStatus: "PENDING",
           isVerified: false,
         },

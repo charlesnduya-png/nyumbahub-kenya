@@ -27,7 +27,6 @@ export default function AuthLayout({
 
       <div className="relative z-10 mx-auto w-full max-w-lg px-4 py-5 pb-10 sm:px-6 sm:py-8">
         <BrandLogo
-          showKenya
           size="md"
           onDark
           className="mx-auto mb-5 shrink-0 sm:mb-7 sm:scale-110"

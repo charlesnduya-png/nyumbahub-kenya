@@ -100,14 +100,15 @@ export default function RegisterPage() {
         <CardHeader className="text-center">
           <CardTitle>Create a customer account</CardTitle>
           <CardDescription>
-            Free account to search homes, save favourites, and message listings.
+            Free account to search homes across Africa, save favourites, and
+            message listings.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Full name</Label>
-              <Input id="name" placeholder="Jane Wanjiru" {...register("name")} />
+              <Input id="name" placeholder="Your full name" {...register("name")} />
               {errors.name && (
                 <p className="text-sm text-destructive">{errors.name.message}</p>
               )}
@@ -125,15 +126,18 @@ export default function RegisterPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone (Safaricom/Airtel)</Label>
+              <Label htmlFor="phone">Phone (with country code)</Label>
               <Input
                 id="phone"
-                placeholder="0712345678"
+                placeholder="+254712345678 or +234… / +233…"
                 {...register("phone")}
               />
               {errors.phone && (
                 <p className="text-sm text-destructive">{errors.phone.message}</p>
               )}
+              <p className="text-xs text-muted-foreground">
+                Open to customers across Africa — include your country code.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>

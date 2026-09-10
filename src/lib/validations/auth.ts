@@ -1,11 +1,9 @@
 import { z } from "zod";
 
-const kenyanPhoneRegex = /^(\+254|254|0)?[17]\d{8}$/;
-/** International phones: optional +, 8–15 digits. */
-const internationalPhoneRegex = /^\+?[0-9\s()-]{8,20}$/;
-const kenyanNationalIdRegex = /^[A-Za-z0-9]{6,12}$/;
-/** Passport / national ID for worldwide partners. */
-const partnerIdRegex = /^[A-Za-z0-9]{6,20}$/;
+/** African / international phones: optional +, 8–15 digits. */
+const africaPhoneRegex = /^\+?[0-9\s()-]{8,20}$/;
+/** National ID or passport across African countries. */
+const africaIdRegex = /^[A-Za-z0-9]{6,20}$/;
 
 export const userRoleSchema = z.enum(["BUYER", "SELLER", "AGENT", "JOB_PARTNER"]);
 
@@ -62,6 +60,13 @@ export const registerSchema = z
       .max(60)
       .optional()
       .or(z.literal("").transform(() => undefined)),
+    country: z
+      .string()
+      .trim()
+      .min(2)
+      .max(80)
+      .optional()
+      .or(z.literal("").transform(() => undefined)),
     county: z
       .string()
       .trim()
@@ -81,19 +86,11 @@ export const registerSchema = z
     path: ["confirmPassword"],
   })
   .superRefine((data, ctx) => {
-    if (data.role === "JOB_PARTNER") {
-      if (!internationalPhoneRegex.test(data.phone)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message:
-            "Enter a valid phone with country code (e.g. +254712345678 or +1…)",
-          path: ["phone"],
-        });
-      }
-    } else if (!kenyanPhoneRegex.test(data.phone)) {
+    if (!africaPhoneRegex.test(data.phone)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Enter a valid Kenyan phone number (e.g. 0712345678)",
+        message:
+          "Enter a valid phone with country code (e.g. +254712345678, +234…, +233…)",
         path: ["phone"],
       });
     }
@@ -102,13 +99,13 @@ export const registerSchema = z
       if (!data.nationalId) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "National ID is required for professional accounts",
+          message: "National ID or passport is required for professional accounts",
           path: ["nationalId"],
         });
-      } else if (!kenyanNationalIdRegex.test(data.nationalId)) {
+      } else if (!africaIdRegex.test(data.nationalId)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Enter a valid National ID / passport number (6–12 characters)",
+          message: "Enter a valid ID or passport number (6–20 characters)",
           path: ["nationalId"],
         });
       }
@@ -131,7 +128,7 @@ export const registerSchema = z
           message: "National ID or passport number is required",
           path: ["nationalId"],
         });
-      } else if (!partnerIdRegex.test(data.nationalId)) {
+      } else if (!africaIdRegex.test(data.nationalId)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "Enter a valid ID or passport number (6–20 characters)",

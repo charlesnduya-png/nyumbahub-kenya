@@ -174,7 +174,7 @@ export default function LoginPageClient() {
         <CardDescription>
           {ownerMode
             ? "Sign in with your owner account to manage the whole site."
-            : "Find homes across Kenya — from Nairobi to the coast."}
+            : "Find homes across Africa — from Nairobi and Lagos to Accra, Cape Town, and beyond."}
         </CardDescription>
       </CardHeader>
       <form

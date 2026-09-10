@@ -146,7 +146,7 @@ export default function JobPartnerRegisterPage() {
                 <p className="text-sm text-destructive">{errors.phone.message}</p>
               )}
               <p className="text-xs text-muted-foreground">
-                Partners outside Kenya: include your full international number.
+                Partners across Africa and beyond: include your country code.
               </p>
             </div>
 

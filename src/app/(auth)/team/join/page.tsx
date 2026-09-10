@@ -209,7 +209,7 @@ function JoinTeamForm() {
               id="join-phone"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="0712345678"
+              placeholder="+254712345678"
               disabled={busy}
             />
           </div>
