@@ -8,12 +8,13 @@ import { buildPageMetadata } from "@/lib/seo";
 export const metadata: Metadata = buildPageMetadata({
   title: "About Your Home — Africa Real Estate Marketplace",
   description:
-    "Your Home (yourhome.co.ke and yourhome.africa) is Africa's marketplace for verified homes, land, plots, rentals, and BnB stays. We connect buyers, tenants, sellers, and agents across Kenya and all 54 African countries.",
+    "Your Home (yourhome.co.ke and yourhome.africa) is Africa's marketplace for verified homes, land, plots, rentals, and BnB stays. Buyers, tenants, sellers, and agents create free accounts across all 54 African countries.",
   path: "/about",
   keywords: [
     "Your Home Kenya",
     "Africa real estate platform",
     "verified property listings Africa",
+    "create account Your Home Africa",
     "yourhome.co.ke",
     "yourhome.africa",
   ],
@@ -24,14 +25,15 @@ export default function AboutPage() {
     <div className="min-h-screen bg-background">
       <section className="border-b bg-card">
         <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
-          <BrandLogo showKenya size="lg" className="mb-8" />
+          <BrandLogo size="lg" className="mb-8" />
           <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">
             About Your Home
           </h1>
           <p className="mt-4 text-lg text-muted-foreground">
             We built Your Home so people across Africa can buy, rent, list, and
             book stays with clearer listings, verified professionals, and
-            payments that work locally — starting in Kenya.
+            payments that work locally — from Kenya to Nigeria, Ghana, South
+            Africa, and every African market we serve.
           </p>
         </div>
       </section>

@@ -74,10 +74,11 @@ export function Footer() {
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-6">
           <div className="lg:col-span-1">
-            <BrandLogo showKenya size="lg" />
+            <BrandLogo size="lg" />
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
               Your Home is Africa&apos;s marketplace for verified homes, land,
-              rentals, and BnB stays — starting in Kenya. Buy, rent, list, or{" "}
+              rentals, and BnB stays across all 54 countries. Create a free
+              account, buy, rent, list, or{" "}
               <Link
                 href="/partners"
                 className="text-foreground underline-offset-4 hover:underline"

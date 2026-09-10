@@ -24,7 +24,7 @@ import { buildPageMetadata, homeFaqJsonLd } from "@/lib/seo";
 export const metadata = buildPageMetadata({
   title: "Africa Real Estate — Houses for Sale, Rent, Land & BnB",
   description:
-    "Your Home (yourhome.co.ke) — search verified houses, apartments, land, plots, rentals, and BnB stays in Kenya, Nigeria, Ghana, South Africa, and all 54 African countries. List free, earn as a partner, or host stays. Also at yourhome.africa.",
+    "Your Home (yourhome.co.ke) — search verified houses, apartments, land, plots, rentals, and BnB stays across all 54 African countries. Create a free account from Kenya, Nigeria, Ghana, South Africa, and beyond. List free, earn as a partner, or host stays. Also at yourhome.africa.",
   path: "/",
   keywords: [
     "Africa real estate website",
@@ -34,6 +34,8 @@ export const metadata = buildPageMetadata({
     "houses for rent Accra",
     "BnB Cape Town",
     "list property free Africa",
+    "create account Your Home Africa",
+    "register real estate Africa",
     "earn money real estate Kenya",
     "Your Home job partner",
   ],

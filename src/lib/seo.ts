@@ -42,7 +42,7 @@ const GOOGLE_SITE_VERIFICATION =
   "";
 
 const APP_DESCRIPTION =
-  `Your Home (${SITE_DOMAIN_LABEL}) — Africa's marketplace for verified houses, apartments, land, plots, rentals, and BnB stays. Search Kenya, Nigeria, Ghana, South Africa, Tanzania, Uganda, Egypt, Morocco, Rwanda, and all 54 African countries. List free. M-Pesa ready.`;
+  `Your Home (${SITE_DOMAIN_LABEL}) — Africa's marketplace for verified houses, apartments, land, plots, rentals, and BnB stays. Search Kenya, Nigeria, Ghana, South Africa, Tanzania, Uganda, Egypt, Morocco, Rwanda, and all 54 African countries. Create a free account from anywhere in Africa. List free. M-Pesa and local payments ready.`;
 
 /** Core + long-tail Africa real estate keywords for metadata. */
 const SEO_KEYWORDS = [
@@ -81,6 +81,10 @@ const SEO_KEYWORDS = [
   "real estate agents Kenya",
   "verified property listings Africa",
   "list property free Kenya",
+  "list property free Africa",
+  "create account Your Home Africa",
+  "register real estate Africa",
+  "sign up property marketplace Africa",
   "M-Pesa property listing",
   "earn money Your Home",
   "real estate referral Kenya",
@@ -342,6 +346,7 @@ export function organizationJsonLd() {
       "agency and hotel plan commissions",
       "PayPal and Wise partner payouts",
       "international affiliate real estate",
+      "create free account across Africa",
     ],
   };
 }
@@ -407,7 +412,12 @@ export const HOME_FAQ_ITEMS = [
   {
     question: "Can I list my property for free?",
     answer:
-      "Yes. Landlords, agents, and sellers can register on Your Home and list properties in any African country. Listings are reviewed for quality before going live.",
+      "Yes. Landlords, agents, and sellers across Africa can create a free Your Home account and list properties in any African country. Use your local phone number with country code. Listings are reviewed for quality before going live.",
+  },
+  {
+    question: "Can I create an account from outside Kenya?",
+    answer:
+      "Yes. Customers, professionals, and job partners can register from Kenya, Nigeria, Ghana, South Africa, and every other African country — and partners can join worldwide. Sign in at /login or create an account at /register.",
   },
   {
     question: "How can I earn money on Your Home?",
