@@ -87,6 +87,10 @@ const SEO_KEYWORDS = [
   "job partner commission Kenya",
   "make money listing property Kenya",
   "agency referral program Africa",
+  "real estate affiliate PayPal",
+  "international job partner Your Home",
+  "earn commission Africa real estate",
+  "Wise payout real estate referral",
 ];
 
 export {
@@ -336,6 +340,8 @@ export function organizationJsonLd() {
       "commercial property",
       "real estate referral partner program",
       "agency and hotel plan commissions",
+      "PayPal and Wise partner payouts",
+      "international affiliate real estate",
     ],
   };
 }
@@ -406,12 +412,12 @@ export const HOME_FAQ_ITEMS = [
   {
     question: "How can I earn money on Your Home?",
     answer:
-      "Earn as a job partner with 30% commission when agencies and hotels you refer pay monthly plans, list property for sale or rent, host BnB stays, or grow an agency account. Learn more on the Your Home partners page.",
+      "Earn as a job partner with 30% commission when agencies and hotels you refer pay monthly plans — open to partners worldwide. Withdraw via PayPal, Wise, bank transfer, or mobile money. You can also list property or host BnB stays. Register free at /register/jobs or learn more on the partners page.",
   },
   {
     question: "What is the Your Home job partner program?",
     answer:
-      "Job partners share a referral link with agencies, agents, and hotel operators. When they subscribe to a paid plan, you earn 30% commission in your wallet — including recurring renewals.",
+      "Job partners anywhere in the world share a referral link with agencies, agents, and hotel operators. When they subscribe to a paid plan, you earn 30% commission in your wallet — including recurring renewals — and cash out with PayPal, Wise, or local payout methods.",
   },
 ] as const;
 

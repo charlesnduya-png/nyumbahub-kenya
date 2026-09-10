@@ -72,7 +72,16 @@ export default async function JobPartnerWalletPage() {
           <h1 className="text-2xl font-bold">Wallet</h1>
           <p className="mt-1 text-muted-foreground">
             You earn {commissionPct}% when referred agencies or hotels pay their
-            monthly plan. Commissions land here immediately — withdraw anytime.
+            monthly plan. Commissions land here immediately — withdraw anytime
+            via PayPal, Wise, bank transfer, or mobile money.
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Wallet currency:{" "}
+            <span className="font-medium text-foreground">
+              {summary.currency}
+            </span>
+            . Digital wallets usually convert to your local currency when we
+            send the payout.
           </p>
         </div>
         <Button variant="outline" asChild className="w-full shrink-0 sm:w-auto">
@@ -107,6 +116,10 @@ export default async function JobPartnerWalletPage() {
       <Card id="payout-method">
         <CardHeader>
           <CardTitle>Payout method</CardTitle>
+          <p className="text-sm font-normal text-muted-foreground">
+            PayPal, Wise, Payoneer, Revolut, bank transfer, or African mobile
+            money — pick what works in your country.
+          </p>
         </CardHeader>
         <CardContent>
           <PayoutMethodForm initial={payout} canEdit />

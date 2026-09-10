@@ -92,7 +92,7 @@ export default function JobPartnerRegisterPage() {
             active: true,
             icon: Briefcase,
             label: "Job partner",
-            description: `Earn ${pct}% when agencies or hotels you refer pay their plan.`,
+            description: `Earn ${pct}% worldwide — PayPal & Wise payouts.`,
           },
         ]}
       />
@@ -101,9 +101,9 @@ export default function JobPartnerRegisterPage() {
         <CardHeader className="text-center">
           <CardTitle>Create a job partner account</CardTitle>
           <CardDescription>
-            Refer estate agencies and hotel operators. Earn {pct}% on every
-            monthly agency or hotel plan payment — credited to your wallet right
-            away.
+            Open worldwide. Refer estate agencies and hotel operators in any
+            country. Earn {pct}% on every monthly plan payment — withdraw via
+            PayPal, Wise, bank, or mobile money.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -116,7 +116,7 @@ export default function JobPartnerRegisterPage() {
               <Label htmlFor="name">Full legal name</Label>
               <Input
                 id="name"
-                placeholder="As on your National ID"
+                placeholder="As on your ID or passport"
                 {...register("name")}
               />
               {errors.name && (
@@ -136,21 +136,28 @@ export default function JobPartnerRegisterPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input id="phone" placeholder="0712345678" {...register("phone")} />
+              <Label htmlFor="phone">Phone (with country code)</Label>
+              <Input
+                id="phone"
+                placeholder="+254712345678 or +1…"
+                {...register("phone")}
+              />
               {errors.phone && (
                 <p className="text-sm text-destructive">{errors.phone.message}</p>
               )}
+              <p className="text-xs text-muted-foreground">
+                Partners outside Kenya: include your full international number.
+              </p>
             </div>
 
             <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-2">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <IdCard className="h-4 w-4 text-primary" />
-                National ID (required)
+                National ID or passport (required)
               </div>
               <Input
                 id="nationalId"
-                placeholder="e.g. 12345678"
+                placeholder="ID or passport number"
                 {...register("nationalId")}
               />
               {errors.nationalId && (

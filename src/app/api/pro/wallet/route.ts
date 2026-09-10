@@ -4,8 +4,18 @@ import { auth } from "@/lib/auth";
 import { resolveProfessionalActingContext } from "@/lib/account-team";
 import { notifyAdmins } from "@/lib/admin-notify";
 import { prisma } from "@/lib/prisma";
-import { africanCountrySchema } from "@/lib/african-countries";
+import { PAYOUT_COUNTRY_NAMES } from "@/lib/africa-payouts";
 import { getWalletOverview, updateWalletPayoutMethod, requestWalletWithdrawal } from "@/lib/wallet";
+
+const payoutCountrySchema = z
+  .string()
+  .trim()
+  .min(2)
+  .max(80)
+  .refine(
+    (value) => PAYOUT_COUNTRY_NAMES.includes(value),
+    "Select a supported payout country",
+  );
 
 function canViewWallet(ctx: {
   isTeamMember: boolean;
@@ -58,7 +68,7 @@ export async function GET() {
 const payoutSchema = z
   .object({
     method: z.enum(["MOBILE_MONEY", "BANK", "DIGITAL_WALLET"]),
-    country: africanCountrySchema,
+    country: payoutCountrySchema,
     accountName: z.string().trim().min(2).max(120),
     phone: z.string().trim().max(30).optional().default(""),
     provider: z.string().trim().max(60).optional().default(""),

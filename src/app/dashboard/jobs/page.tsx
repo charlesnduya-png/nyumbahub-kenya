@@ -72,8 +72,9 @@ export default async function JobPartnerDashboardPage() {
         <div className="min-w-0">
           <h1 className="text-2xl font-bold">Job partner dashboard</h1>
           <p className="mt-1 text-muted-foreground">
-            Refer agencies and hotel operators. Earn {commissionPct}% every time
-            they pay a monthly plan — credited instantly to your wallet.
+            Refer agencies and hotel operators worldwide. Earn {commissionPct}%{" "}
+            every time they pay a monthly plan — credited instantly. Withdraw
+            with PayPal, Wise, bank, or mobile money.
           </p>
         </div>
         <Button asChild className="w-full shrink-0 sm:w-auto">

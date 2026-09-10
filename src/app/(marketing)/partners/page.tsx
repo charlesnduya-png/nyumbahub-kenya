@@ -1,6 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Building2, Hotel, Share2, Wallet } from "lucide-react";
+import {
+  ArrowRight,
+  Banknote,
+  Building2,
+  Globe2,
+  Hotel,
+  Share2,
+  Wallet,
+} from "lucide-react";
 
 import { BrandLogo } from "@/components/brand/logo";
 import { JobPartnerEarningsInfo } from "@/components/job-partner/job-partner-earnings-info";
@@ -19,14 +27,25 @@ const pct = jobPartnerCommissionPercent();
 
 const PARTNER_FAQ = [
   {
-    question: "How can I make money on Your Home?",
+    question: "Can people from other countries become job partners?",
     answer:
-      `You can earn as a job partner (${pct}% commission when agencies and hotels you refer pay monthly plans), list property for sale or rent, host BnB stays, or run an agency account with paid listing plans.`,
+      "Yes. Your Home job partners can join from Kenya, across Africa, and other countries worldwide. Share your referral link with agencies and hotels anywhere Your Home operates, then withdraw earnings via PayPal, Wise, bank transfer, or local mobile money.",
   },
   {
-    question: "What is the Your Home job partner program?",
-    answer:
-      `Job partners share a personal referral link with estate agencies, agents, landlords, and hotel operators. When they subscribe to a paid agency or hotel plan, you earn ${pct}% commission in your wallet — including on renewals.`,
+    question: "How can I make money on Your Home?",
+    answer: `Register free as a job partner and earn ${pct}% commission when agencies and hotels you refer pay monthly plans. You can also list property for sale or rent, or host BnB stays. Start at /register/jobs.`,
+  },
+  {
+    question: "What is the Your Home job partner / affiliate program?",
+    answer: `Job partners share a personal referral link with estate agencies, agents, landlords, and hotel operators. When they subscribe to a paid agency or hotel plan, you earn ${pct}% in your wallet — including on renewals.`,
+  },
+  {
+    question: "How do job partner payouts and currency work?",
+    answer: JOB_PARTNER_EARNINGS.currency,
+  },
+  {
+    question: "Which payout methods are supported?",
+    answer: JOB_PARTNER_EARNINGS.payouts,
   },
   {
     question: "When do job partners get paid?",
@@ -44,20 +63,25 @@ const PARTNER_FAQ = [
 ] as const;
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Earn Money on Your Home — Partner Program & Referrals Kenya",
-  description: `Make money with Your Home: earn ${pct}% commission referring agencies and hotels, list property for sale or rent, or host BnB stays across Kenya and Africa. Free to join as a job partner.`,
+  title: `Earn ${pct}% Online — Your Home Job Partner Program Worldwide`,
+  description: `Register free and earn ${pct}% referring real estate agencies and hotels on Your Home. Open to partners in Kenya, Africa, and other countries. Withdraw with PayPal, Wise, bank transfer, or mobile money.`,
   path: "/partners",
   keywords: [
-    "earn money real estate Kenya",
-    "real estate referral commission Kenya",
+    "earn money online real estate Africa",
+    "real estate affiliate program",
     "job partner Your Home",
-    "affiliate real estate Africa",
-    "make money referring agents Kenya",
+    "referral commission PayPal",
+    "make money referring agents",
     "hotel plan referral commission",
-    "agency referral program Kenya",
+    "agency referral program Africa",
     "earn from Your Home",
     "yourhome.co.ke partners",
-    "list property earn Kenya",
+    "yourhome.africa partners",
+    "international real estate affiliate",
+    "PayPal real estate referral payout",
+    "Wise payout affiliate Kenya",
+    "register job partner earn commission",
+    "diaspora earn real estate Africa",
   ],
 });
 
@@ -78,12 +102,12 @@ export default function PartnersPage() {
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "WebPage",
-            name: "Earn money with Your Home partner program",
-            description: `Job partners earn ${pct}% commission on paid agency and hotel plans. Landlords and hosts also earn by listing on Your Home.`,
+            name: "Earn money worldwide with the Your Home partner program",
+            description: `Job partners worldwide earn ${pct}% commission on paid agency and hotel plans. Withdraw via PayPal, Wise, bank, or mobile money.`,
             url: absoluteUrl("/partners"),
             about: {
               "@type": "Thing",
-              name: "Real estate referral partner program",
+              name: "International real estate referral partner program",
             },
           }),
         }}
@@ -91,19 +115,19 @@ export default function PartnersPage() {
 
       <section className="border-b bg-card">
         <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
-          <BrandLogo showKenya size="lg" className="mb-8" />
+          <BrandLogo size="lg" className="mb-8" />
           <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">
-            Earn with Your Home
+            Earn with Your Home — worldwide
           </h1>
           <p className="mt-4 text-lg text-muted-foreground">
-            Turn Africa&apos;s property market into income — refer agencies and
-            hotels for {pct}% commission, list homes and land, or host BnB stays
-            on Your Home.
+            Join free from any country. Refer agencies and hotels for {pct}%{" "}
+            commission, then cash out with PayPal, Wise, bank transfer, or
+            mobile money.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild size="lg">
               <Link href="/register/jobs">
-                Become a job partner
+                Register free to earn
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
             </Button>
@@ -120,11 +144,10 @@ export default function PartnersPage() {
             Job partner program — {pct}% commission
           </h2>
           <p className="mt-3 leading-relaxed text-muted-foreground">
-            Share your referral link with estate agencies, agents, landlords,
-            and hotel operators across Kenya and Africa. When they pay a monthly
-            agency or hotel plan on Your Home, you earn {pct}% — paid into your
-            wallet as soon as their payment clears, and again every month they
-            renew.
+            {JOB_PARTNER_EARNINGS.international} Share your referral link with
+            estate agencies, agents, landlords, and hotel operators. When they
+            pay a monthly plan on Your Home, you earn {pct}% — credited to your
+            wallet as soon as payment clears, and again every month they renew.
           </p>
           <div className="mt-6 rounded-xl border bg-card p-5">
             <JobPartnerEarningsInfo />
@@ -141,6 +164,48 @@ export default function PartnersPage() {
 
         <div>
           <h2 className="font-display text-2xl font-semibold">
+            Currency & payout methods
+          </h2>
+          <p className="mt-3 leading-relaxed text-muted-foreground">
+            {JOB_PARTNER_EARNINGS.currency}
+          </p>
+          <ul className="mt-6 space-y-4">
+            <li className="flex gap-4">
+              <Globe2 className="mt-1 h-5 w-5 shrink-0 text-primary" />
+              <div>
+                <h3 className="font-medium">Worldwide partners welcome</h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  Sign up from Kenya, Nigeria, Ghana, South Africa, the UK, US,
+                  UAE, India, Europe, and more. Refer professionals wherever
+                  Your Home listings grow.
+                </p>
+              </div>
+            </li>
+            <li className="flex gap-4">
+              <Banknote className="mt-1 h-5 w-5 shrink-0 text-primary" />
+              <div>
+                <h3 className="font-medium">PayPal, Wise & more</h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  {JOB_PARTNER_EARNINGS.payouts}
+                </p>
+              </div>
+            </li>
+            <li className="flex gap-4">
+              <Wallet className="mt-1 h-5 w-5 shrink-0 text-primary" />
+              <div>
+                <h3 className="font-medium">Wallet currency</h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  Your dashboard shows balances in your wallet currency. Digital
+                  wallets and banks typically convert to USD, EUR, GBP, or your
+                  local currency when the payout is sent.
+                </p>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <h2 className="font-display text-2xl font-semibold">
             Other ways to earn on Your Home
           </h2>
           <ul className="mt-6 space-y-6">
@@ -152,7 +217,10 @@ export default function PartnersPage() {
                   Sellers, landlords, and agents publish verified listings.
                   Start with free listings, then upgrade when you need more
                   inventory.{" "}
-                  <Link href="/pricing" className="text-primary underline-offset-4 hover:underline">
+                  <Link
+                    href="/pricing"
+                    className="text-primary underline-offset-4 hover:underline"
+                  >
                     See pricing
                   </Link>
                   .
@@ -167,17 +235,6 @@ export default function PartnersPage() {
                   Earn from short stays and hotel bookings. Guests pay your
                   nightly rate; Your Home takes a platform fee on confirmed
                   stays.
-                </p>
-              </div>
-            </li>
-            <li className="flex gap-4">
-              <Wallet className="mt-1 h-5 w-5 shrink-0 text-primary" />
-              <div>
-                <h3 className="font-medium">Grow an agency or hotel business</h3>
-                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                  Agency and hotel plans unlock more listings, team tools, and
-                  visibility — and job partners earn commission when those plans
-                  are paid via a referral link.
                 </p>
               </div>
             </li>
@@ -205,12 +262,11 @@ export default function PartnersPage() {
             Ready to start earning?
           </h2>
           <p className="mt-3 text-muted-foreground">
-            Join free as a job partner or open a professional listing account.
-            Payments use M-Pesa where available.
+            Free registration. Worldwide partners. PayPal and Wise supported.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Button asChild>
-              <Link href="/register/jobs">Join as job partner</Link>
+              <Link href="/register/jobs">Register as job partner</Link>
             </Button>
             <Button variant="outline" asChild>
               <Link href="/register/professional">List property</Link>

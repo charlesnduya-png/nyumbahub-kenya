@@ -117,6 +117,8 @@ const MOBILE_MONEY_BY_COUNTRY: Record<string, string[]> = {
 export const DIGITAL_WALLET_PROVIDERS = [
   "PayPal",
   "Wise",
+  "Payoneer",
+  "Revolut",
   "Wave",
   "Chipper Cash",
   "OPay",
@@ -125,7 +127,61 @@ export const DIGITAL_WALLET_PROVIDERS = [
   "Other",
 ] as const;
 
+/** Diaspora / international payout destinations beyond Africa. */
+export const GLOBAL_PAYOUT_COUNTRIES = [
+  "United States",
+  "United Kingdom",
+  "Canada",
+  "United Arab Emirates",
+  "Saudi Arabia",
+  "Qatar",
+  "India",
+  "Germany",
+  "France",
+  "Netherlands",
+  "Belgium",
+  "Italy",
+  "Spain",
+  "Portugal",
+  "Australia",
+  "New Zealand",
+  "China",
+  "Singapore",
+  "Malaysia",
+  "Turkey",
+  "Brazil",
+  "Mexico",
+  "Other",
+] as const;
+
+const GLOBAL_DIAL_CODES: Record<string, string> = {
+  "United States": "+1",
+  "United Kingdom": "+44",
+  Canada: "+1",
+  "United Arab Emirates": "+971",
+  "Saudi Arabia": "+966",
+  Qatar: "+974",
+  India: "+91",
+  Germany: "+49",
+  France: "+33",
+  Netherlands: "+31",
+  Belgium: "+32",
+  Italy: "+39",
+  Spain: "+34",
+  Portugal: "+351",
+  Australia: "+61",
+  "New Zealand": "+64",
+  China: "+86",
+  Singapore: "+65",
+  Malaysia: "+60",
+  Turkey: "+90",
+  Brazil: "+55",
+  Mexico: "+52",
+  Other: "+",
+};
+
 export function dialCodeForCountry(country?: string | null) {
+  if (country && GLOBAL_DIAL_CODES[country]) return GLOBAL_DIAL_CODES[country];
   return AFRICA_DIAL_CODES[country || DEFAULT_LISTING_COUNTRY] ?? "+254";
 }
 
@@ -136,5 +192,11 @@ export function mobileMoneyProvidersFor(country?: string | null) {
     ];
   return list.includes("Other") ? list : [...list, "Other"];
 }
+
+/** Africa + international destinations for partner / pro payouts. */
+export const PAYOUT_COUNTRY_NAMES: string[] = [
+  ...AFRICAN_COUNTRIES.map((c) => c.name),
+  ...GLOBAL_PAYOUT_COUNTRIES,
+].filter((name, index, all) => all.indexOf(name) === index);
 
 export const PAYOUT_COUNTRIES = AFRICAN_COUNTRIES;

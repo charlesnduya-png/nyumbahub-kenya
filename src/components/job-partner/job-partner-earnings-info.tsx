@@ -1,4 +1,4 @@
-import { Clock3, RefreshCw, Wallet } from "lucide-react";
+import { Globe2, Banknote, Clock3, RefreshCw, Wallet } from "lucide-react";
 import {
   JOB_PARTNER_EARNINGS,
   jobPartnerCommissionPercent,
@@ -13,6 +13,13 @@ export function JobPartnerEarningsInfo({ className }: { className?: string }) {
         {JOB_PARTNER_EARNINGS.headline.replace("30%", `${pct}%`)}
       </p>
       <ul className="mt-3 space-y-3 text-sm text-muted-foreground">
+        <li className="flex gap-3">
+          <Globe2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <span>
+            <strong className="font-medium text-foreground">Who can join:</strong>{" "}
+            {JOB_PARTNER_EARNINGS.international}
+          </span>
+        </li>
         <li className="flex gap-3">
           <Wallet className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
           <span>
@@ -32,6 +39,13 @@ export function JobPartnerEarningsInfo({ className }: { className?: string }) {
           <span>
             <strong className="font-medium text-foreground">Who to refer:</strong>{" "}
             {JOB_PARTNER_EARNINGS.who}
+          </span>
+        </li>
+        <li className="flex gap-3">
+          <Banknote className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <span>
+            <strong className="font-medium text-foreground">Payouts:</strong>{" "}
+            {JOB_PARTNER_EARNINGS.payouts}
           </span>
         </li>
       </ul>

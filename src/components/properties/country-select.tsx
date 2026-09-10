@@ -7,6 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PAYOUT_COUNTRY_NAMES } from "@/lib/africa-payouts";
 import {
   AFRICAN_COUNTRIES,
   DEFAULT_LISTING_COUNTRY,
@@ -20,6 +21,8 @@ interface CountrySelectProps {
   onValueChange: (value: string) => void;
   disabled?: boolean;
   allowAll?: boolean;
+  /** Include diaspora / worldwide payout destinations (PayPal, Wise, etc.). */
+  includeGlobal?: boolean;
   triggerClassName?: string;
 }
 
@@ -29,11 +32,16 @@ export function CountrySelect({
   onValueChange,
   disabled,
   allowAll = false,
+  includeGlobal = false,
   triggerClassName,
 }: CountrySelectProps) {
   const selected = allowAll
     ? value || ALL_COUNTRIES_VALUE
     : value || DEFAULT_LISTING_COUNTRY;
+
+  const options = includeGlobal
+    ? PAYOUT_COUNTRY_NAMES
+    : AFRICAN_COUNTRIES.map((country) => country.name);
 
   return (
     <Select value={selected} onValueChange={onValueChange} disabled={disabled}>
@@ -44,9 +52,9 @@ export function CountrySelect({
         {allowAll ? (
           <SelectItem value={ALL_COUNTRIES_VALUE}>All countries</SelectItem>
         ) : null}
-        {AFRICAN_COUNTRIES.map((country) => (
-          <SelectItem key={country.iso2} value={country.name}>
-            {country.name}
+        {options.map((name) => (
+          <SelectItem key={name} value={name}>
+            {name}
           </SelectItem>
         ))}
       </SelectContent>

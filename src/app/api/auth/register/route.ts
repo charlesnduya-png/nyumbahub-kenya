@@ -6,8 +6,18 @@ import {
   attachHotelReferral,
   createJobPartnerProfile,
 } from "@/lib/job-partner";
+import { digitsOnly } from "@/lib/phone";
 import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validations/auth";
+
+function normalizeRegisterPhone(phone: string, role: string) {
+  const trimmed = phone.trim();
+  if (role === "JOB_PARTNER") {
+    const digits = digitsOnly(trimmed);
+    return digits.length >= 8 ? digits : trimmed;
+  }
+  return trimmed;
+}
 
 export async function POST(request: Request) {
   try {
@@ -28,7 +38,7 @@ export async function POST(request: Request) {
     const {
       name,
       email,
-      phone,
+      phone: rawPhone,
       password,
       role,
       nationalId,
@@ -37,6 +47,7 @@ export async function POST(request: Request) {
       county,
       jobRef,
     } = parsed.data;
+    const phone = normalizeRegisterPhone(rawPhone, role);
     const normalizedEmail = email.toLowerCase();
     const cleanedNationalId = nationalId?.trim().toUpperCase() || null;
 

@@ -29,11 +29,14 @@ export function PayoutMethodForm({
     initial.country || DEFAULT_LISTING_COUNTRY,
   );
   const [method, setMethod] = useState<PayoutMethod>(
-    initial.method ?? "MOBILE_MONEY",
+    initial.method ?? "DIGITAL_WALLET",
   );
   const [accountName, setAccountName] = useState(initial.accountName);
   const [phone, setPhone] = useState(initial.phone);
-  const [provider, setProvider] = useState(initial.provider || "M-Pesa");
+  const [provider, setProvider] = useState(
+    initial.provider ||
+      (initial.method === "MOBILE_MONEY" ? "M-Pesa" : "PayPal"),
+  );
   const [bankName, setBankName] = useState(initial.bankName);
   const [bankAccount, setBankAccount] = useState(initial.bankAccount);
   const [bankBranch, setBankBranch] = useState(initial.bankBranch);
@@ -51,6 +54,22 @@ export function PayoutMethodForm({
     const nextProviders = mobileMoneyProvidersFor(next);
     if (method === "MOBILE_MONEY" && !nextProviders.includes(provider)) {
       setProvider(nextProviders[0] ?? "Other");
+    }
+  }
+
+  function changeMethod(next: PayoutMethod) {
+    setMethod(next);
+    if (next === "DIGITAL_WALLET") {
+      setProvider((current) =>
+        (DIGITAL_WALLET_PROVIDERS as readonly string[]).includes(current)
+          ? current
+          : "PayPal",
+      );
+    } else if (next === "MOBILE_MONEY") {
+      const nextProviders = mobileMoneyProvidersFor(country);
+      setProvider((current) =>
+        nextProviders.includes(current) ? current : (nextProviders[0] ?? "Other"),
+      );
     }
   }
 
@@ -97,6 +116,7 @@ export function PayoutMethodForm({
             value={country}
             onValueChange={changeCountry}
             disabled={!canEdit}
+            includeGlobal
           />
         </div>
         <div className="grid gap-2">
@@ -106,16 +126,20 @@ export function PayoutMethodForm({
             className="h-10 rounded-md border bg-background px-3 text-sm"
             value={method}
             disabled={!canEdit}
-            onChange={(e) => setMethod(e.target.value as PayoutMethod)}
+            onChange={(e) => changeMethod(e.target.value as PayoutMethod)}
           >
             <option value="MOBILE_MONEY">
               Mobile money (M-Pesa, MoMo, Wave, EcoCash…)
             </option>
-            <option value="BANK">Bank transfer</option>
+            <option value="BANK">Bank transfer (local or SWIFT/IBAN)</option>
             <option value="DIGITAL_WALLET">
-              Digital wallet (PayPal, Wise, Chipper Cash…)
+              Digital wallet (PayPal, Wise, Payoneer, Revolut…)
             </option>
           </select>
+          <p className="text-xs text-muted-foreground">
+            Partners worldwide can use PayPal or Wise. African partners can also
+            use local mobile money.
+          </p>
         </div>
       </div>
 
