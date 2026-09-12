@@ -1,7 +1,16 @@
 import { put } from "@vercel/blob";
 
+/**
+ * Blob uploads on Vercel prefer OIDC (BLOB_STORE_ID + short-lived token).
+ * Fall back to BLOB_READ_WRITE_TOKEN for local/CI outside Vercel.
+ * Never expose either value to the client (no NEXT_PUBLIC_*).
+ */
 export function isBlobConfigured(): boolean {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+  return Boolean(
+    process.env.BLOB_READ_WRITE_TOKEN?.trim() ||
+      process.env.BLOB_STORE_ID?.trim() ||
+      process.env.VERCEL_OIDC_TOKEN?.trim(),
+  );
 }
 
 export async function uploadFileToBlob(input: {
