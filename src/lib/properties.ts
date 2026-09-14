@@ -145,6 +145,9 @@ export function toPropertyCard(property: PropertyWithImages): PropertyCard {
       ? rooms.filter((r) => r.status === "AVAILABLE").length
       : undefined;
 
+  const promoActive =
+    !property.expiresAt || property.expiresAt.getTime() > Date.now();
+
   return {
     id: property.id,
     title: property.title,
@@ -165,8 +168,8 @@ export function toPropertyCard(property: PropertyWithImages): PropertyCard {
     furnished: property.furnished,
     swimmingPool: property.swimmingPool,
     security: property.security,
-    isFeatured: property.isFeatured,
-    isPremium: property.isPremium,
+    isFeatured: Boolean(property.isFeatured && promoActive),
+    isPremium: Boolean(property.isPremium && promoActive),
     isVerified: property.isVerified,
     views: property.views,
     publishedAt: property.publishedAt,
@@ -295,7 +298,15 @@ async function getActiveProperties(
           where: {
             status: "ACTIVE",
             ...(listingType ? { listingType } : {}),
-            ...(featured ? { isFeatured: true } : {}),
+            ...(featured
+              ? {
+                  isFeatured: true,
+                  OR: [
+                    { expiresAt: null },
+                    { expiresAt: { gt: new Date() } },
+                  ],
+                }
+              : {}),
           },
           take: limit,
           orderBy: [{ isFeatured: "desc" }, { publishedAt: "desc" }],

@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/prisma";
-import { listingFlagsForProduct } from "@/lib/listing-subscription";
+import {
+  getActiveListingSubscription,
+  listingFlagsForPlan,
+  listingFlagsForProduct,
+} from "@/lib/listing-subscription";
 import { getProduct } from "@/lib/pricing";
 import { revalidatePropertySlug } from "@/lib/properties";
 
@@ -13,6 +17,93 @@ const LISTING_BOOST_PRODUCT_IDS = new Set([
 
 export function isListingBoostProduct(productId: string) {
   return LISTING_BOOST_PRODUCT_IDS.has(productId);
+}
+
+/**
+ * Clear paid promo flags when expiresAt has passed (or was never set and
+ * the owner no longer has a featured-granting subscription).
+ * Owners with an active featured plan keep flags and get expiresAt refreshed.
+ */
+export async function expireListingPromotions(now = new Date()) {
+  const candidates = await prisma.property.findMany({
+    where: {
+      OR: [{ isFeatured: true }, { isSponsored: true }, { isPremium: true }],
+      AND: [
+        {
+          OR: [{ expiresAt: { lte: now } }, { expiresAt: null }],
+        },
+      ],
+    },
+    select: {
+      id: true,
+      slug: true,
+      ownerId: true,
+      expiresAt: true,
+      isFeatured: true,
+      isSponsored: true,
+      isPremium: true,
+    },
+  });
+
+  let demoted = 0;
+  let refreshed = 0;
+  const demotedIds: string[] = [];
+
+  for (const listing of candidates) {
+    // Still within a timed promo window — leave alone.
+    if (listing.expiresAt && listing.expiresAt > now) continue;
+
+    const subscription = await getActiveListingSubscription(listing.ownerId);
+    const planFlags = subscription
+      ? listingFlagsForPlan(subscription.plan)
+      : ({} as {
+          isFeatured?: boolean;
+          isSponsored?: boolean;
+          isPremium?: boolean;
+        });
+    const keepFeatured = Boolean(planFlags.isFeatured);
+    const keepSponsored = Boolean(planFlags.isSponsored);
+    const keepPremium = Boolean(planFlags.isPremium);
+
+    if (keepFeatured || keepSponsored || keepPremium) {
+      await prisma.property.update({
+        where: { id: listing.id },
+        data: {
+          isFeatured: keepFeatured,
+          isSponsored: keepSponsored,
+          isPremium: keepPremium,
+          expiresAt: subscription?.endDate ?? listing.expiresAt,
+        },
+      });
+      refreshed += 1;
+      revalidatePropertySlug(listing.slug);
+      continue;
+    }
+
+    if (!listing.isFeatured && !listing.isSponsored && !listing.isPremium) {
+      continue;
+    }
+
+    await prisma.property.update({
+      where: { id: listing.id },
+      data: {
+        isFeatured: false,
+        isSponsored: false,
+        isPremium: false,
+      },
+    });
+    demoted += 1;
+    demotedIds.push(listing.id);
+    revalidatePropertySlug(listing.slug);
+  }
+
+  return {
+    checked: candidates.length,
+    demoted,
+    refreshed,
+    demotedIds,
+    at: now.toISOString(),
+  };
 }
 
 export async function activateListingBoost(input: {
