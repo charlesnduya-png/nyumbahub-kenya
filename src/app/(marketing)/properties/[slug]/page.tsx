@@ -7,7 +7,6 @@ import {
   Bed,
   Calendar,
   MapPin,
-  Share2,
 } from "lucide-react";
 import { PropertyDetailGallery } from "@/components/properties/property-detail-gallery";
 import { PropertyBookingPanel } from "@/components/properties/property-booking-panel";
@@ -23,11 +22,13 @@ import { auth } from "@/lib/auth";
 import { getPropertyBySlug, getPropertyBySlugFresh, resolveListingHost } from "@/lib/properties";
 import { resolveProfessionalActingContext } from "@/lib/account-team";
 import {
+  absoluteUrl,
   breadcrumbJsonLd,
   generatePropertyMetadata,
   propertyJsonLd,
 } from "@/lib/seo";
 import { toWhatsAppNumber, telHref } from "@/lib/phone";
+import { ShareListingButton } from "@/components/properties/share-listing-button";
 import { getListingTypeLabel, getPropertyTypeLabel } from "@/lib/kenya";
 import { isStayListing } from "@/lib/listing-kinds";
 import {
@@ -196,8 +197,14 @@ export default async function PropertyDetailPage({ params }: PageProps) {
   const callPhone = rawContactPhone
     ? telHref(rawContactPhone).replace(/^tel:/, "")
     : null;
+  const listingUrl = absoluteUrl(`/properties/${property.slug}`);
+  const locationLabel = [property.estate, property.town, property.county]
+    .filter(Boolean)
+    .join(", ");
   const whatsappMessage = encodeURIComponent(
-    `Hi, I'm interested in ${property.title} on Your Home (${property.slug})`,
+    locationLabel
+      ? `Hi, I'm interested in "${property.title}" in ${locationLabel} on Your Home.`
+      : `Hi, I'm interested in "${property.title}" on Your Home.`,
   );
 
   const listingHost = resolveListingHost(property);
@@ -339,10 +346,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                     {roomsAvailable} of {rentalRooms.length} rooms available
                   </Badge>
                 ) : null}
-                <Button variant="outline" size="sm">
-                  <Share2 className="mr-1 h-4 w-4" />
-                  Share
-                </Button>
+                <ShareListingButton title={property.title} url={listingUrl} />
                 <Button variant="outline" size="sm" asChild>
                   <Link href="/compare">Compare</Link>
                 </Button>
