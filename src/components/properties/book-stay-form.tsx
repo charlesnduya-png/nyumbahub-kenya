@@ -241,7 +241,7 @@ export function BookStayForm({
         <Link href="/dashboard/tenant/messages" className="text-primary hover:underline">
           Messages
         </Link>
-        . A KES 150 viewing pass is required for 24 hours of contact.
+        .
       </p>
     </form>
     {paywall}

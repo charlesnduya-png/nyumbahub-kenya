@@ -23,8 +23,8 @@ export async function POST(request: Request, { params }: RouteParams) {
       return NextResponse.json(
         {
           success: false,
-          error: "Sign in and buy a 24-hour viewing pass (KES 150) to contact landlords.",
-          code: "TENANT_ACCESS_REQUIRED",
+          error: "Sign in to contact landlords.",
+          code: "UNAUTHORIZED",
         },
         { status: 401 },
       );

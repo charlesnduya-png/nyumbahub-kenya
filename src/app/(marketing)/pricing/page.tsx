@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { FREE_TIER_MAX_LISTINGS, PRICING_MUTED } from "@/lib/listing-flags";
+import { FREE_TIER_MAX_LISTINGS, PRICING_MUTED, TENANT_ACCESS_REQUIRED } from "@/lib/listing-flags";
 import {
   BNB_BOOKING_COMMISSION_RATE,
   LISTING_PRODUCTS,
@@ -199,6 +199,7 @@ export default function PricingPage() {
           </div>
         </div>
 
+        {TENANT_ACCESS_REQUIRED ? (
         <div className="mt-16">
           <h2 className="font-display text-2xl font-semibold">
             Tenant viewing pass
@@ -219,6 +220,7 @@ export default function PricingPage() {
             </CardContent>
           </Card>
         </div>
+        ) : null}
 
         <div className="mt-16">
           <h2 className="font-display text-2xl font-semibold">

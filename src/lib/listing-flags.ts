@@ -16,4 +16,4 @@ export const PRICING_MUTED = !PAYMENTS_REQUIRED;
 export const FREE_TIER_MAX_LISTINGS = getAgencyFreeMaxListings();
 
 /** When false, tenants chat / reserve / call without the 24h pass. */
-export const TENANT_ACCESS_REQUIRED = PAYMENTS_REQUIRED;
+export const TENANT_ACCESS_REQUIRED = false;

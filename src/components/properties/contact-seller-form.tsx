@@ -88,7 +88,7 @@ export function ContactSellerForm({
         return;
       }
 
-      toast.error("Sign in and unlock a 24-hour viewing pass to contact landlords.");
+      toast.error("Sign in to contact landlords.");
     } catch {
       toast.error("Something went wrong.");
     } finally {
@@ -141,7 +141,7 @@ export function ContactSellerForm({
               >
                 Sign in
               </Link>{" "}
-              and pay KES 150 for a 24-hour viewing pass to chat with the host.
+              to chat with the host.
             </p>
           ) : null}
           <form onSubmit={handleSubmit} className="space-y-4">

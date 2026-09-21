@@ -41,6 +41,15 @@ export function useTenantAccess() {
   const [state, setState] = useState<AccessState>(defaultState);
 
   const refresh = useCallback(async () => {
+    if (!TENANT_ACCESS_REQUIRED) {
+      setState({
+        loading: false,
+        required: false,
+        active: true,
+        endsAt: null,
+      });
+      return;
+    }
     if (status === "unauthenticated") {
       setState({
         loading: false,
