@@ -123,7 +123,7 @@ export function TenantAccessPaywall({
         {status !== "authenticated" ? (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Sign in as a tenant, then pay with M-Pesa to unlock contact.
+              Sign in as a tenant, then pay with M-Pesa or card to unlock contact.
             </p>
             <Button asChild className="w-full">
               <Link href={loginHref}>Sign in to continue</Link>
@@ -141,8 +141,8 @@ export function TenantAccessPaywall({
             <PaymentCheckout
               embedded
               productId={TENANT_ACCESS_PRODUCT_ID}
-              ctaLabel={`Pay KES ${TENANT_ACCESS_PRICE} with M-Pesa`}
-              showCard={false}
+              ctaLabel={`Pay KES ${TENANT_ACCESS_PRICE}`}
+              showCard
               onPaid={async (payment) => {
                 const res = await fetch("/api/tenant-access", {
                   method: "POST",

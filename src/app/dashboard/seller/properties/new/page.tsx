@@ -494,7 +494,7 @@ export default function NewPropertyPage() {
         {!monthlyActive ? (
           <Card>
             <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0">
-              <CardTitle>2. Pay monthly with M-Pesa (optional)</CardTitle>
+              <CardTitle>2. Pay monthly (optional)</CardTitle>
               {!paymentId ? (
                 <Button type="button" onClick={() => setMonthlyPayOpen(true)}>
                   <Smartphone className="mr-2 h-4 w-4" />
@@ -510,7 +510,7 @@ export default function NewPropertyPage() {
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Tap Upgrade plan to pay with M-Pesa in a popup and list more
+                  Tap Upgrade plan to pay with M-Pesa or card in a popup and list more
                   properties this month.
                 </p>
               )}
@@ -521,7 +521,7 @@ export default function NewPropertyPage() {
               onOpenChange={setMonthlyPayOpen}
               productId={productId}
               title="Monthly listing plan"
-              description="Pay with M-Pesa to list more properties this month."
+              description="Choose M-Pesa or card to list more properties this month."
               ctaLabel="Upgrade monthly listing plan"
               onPaid={(payment) => {
                 if (payment.status !== "COMPLETED") return;

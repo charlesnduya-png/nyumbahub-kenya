@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 import { isMonthlyListingProduct } from "@/lib/listing-subscription";
 import { formatProductPrice, getProduct, type ProductId } from "@/lib/pricing";
 
+type PayMethod = "MPESA" | "CARD";
+
 interface CheckoutProps {
   productId: ProductId | string;
   propertyId?: string;
@@ -43,7 +45,8 @@ export function PaymentCheckout({
       : baseProduct
     : undefined;
   const [phone, setPhone] = useState("");
-  const [loading, setLoading] = useState<"mpesa" | "card" | null>(null);
+  const [method, setMethod] = useState<PayMethod>("MPESA");
+  const [loading, setLoading] = useState(false);
 
   if (!product) {
     return (
@@ -112,18 +115,14 @@ export function PaymentCheckout({
     });
   }
 
-  async function activateMonthlyIfNeeded(payment: {
-    id: string;
-    reference?: string;
-    productId?: string;
-    amount?: number;
-    status?: string;
-  }) {
-    await syncAndFulfill(payment);
-  }
+  async function startCheckout() {
+    const payMethod = showCard ? method : "MPESA";
+    if (payMethod === "MPESA" && !phone.trim()) {
+      toast.error("Enter your M-Pesa number");
+      return;
+    }
 
-  async function startCheckout(method: "MPESA" | "CARD") {
-    setLoading(method === "MPESA" ? "mpesa" : "card");
+    setLoading(true);
     try {
       const res = await fetch("/api/payments/checkout", {
         method: "POST",
@@ -132,7 +131,7 @@ export function PaymentCheckout({
           productId,
           propertyId,
           phoneNumber: phone || undefined,
-          method,
+          method: payMethod,
         }),
       });
       const json = await res.json();
@@ -148,16 +147,15 @@ export function PaymentCheckout({
       }
 
       if (json.data?.status === "COMPLETED") {
-        await activateMonthlyIfNeeded(json.data);
+        await syncAndFulfill(json.data);
         return;
       }
 
-      // M-Pesa STK started (or pending) — activate monthly access for this payment
       if (json.data?.id) {
         if (json.data?.CustomerMessage) {
           toast.message(json.data.CustomerMessage);
         }
-        await activateMonthlyIfNeeded(json.data);
+        await syncAndFulfill(json.data);
         return;
       }
 
@@ -165,7 +163,7 @@ export function PaymentCheckout({
     } catch {
       toast.error("Unable to start payment");
     } finally {
-      setLoading(null);
+      setLoading(false);
     }
   }
 
@@ -173,6 +171,12 @@ export function PaymentCheckout({
     product.category === "subscription"
       ? `/ month`
       : `/ ${product.durationDays} days`;
+
+  const payLabel =
+    ctaLabel ??
+    (method === "CARD"
+      ? `Pay ${formatProductPrice(product)} with card`
+      : `Pay ${formatProductPrice(product)} with M-Pesa`);
 
   return (
     <div
@@ -196,46 +200,90 @@ export function PaymentCheckout({
         ) : null}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor={`mpesa-${productId}`}>M-Pesa number</Label>
-        <Input
-          id={`mpesa-${productId}`}
-          placeholder="0712345678"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-        />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Button
-          type="button"
-          disabled={!!loading}
-          onClick={() => void startCheckout("MPESA")}
-        >
-          {loading === "mpesa" ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Smartphone className="mr-2 h-4 w-4" />
-          )}
-          {ctaLabel ?? "Pay with M-Pesa"}
-        </Button>
-
-        {showCard && (
-          <Button
-            type="button"
-            variant="outline"
-            disabled={!!loading}
-            onClick={() => void startCheckout("CARD")}
+      {showCard ? (
+        <div className="space-y-2">
+          <Label>Payment method</Label>
+          <div
+            className="grid grid-cols-2 gap-2"
+            role="radiogroup"
+            aria-label="Payment method"
           >
-            {loading === "card" ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <CreditCard className="mr-2 h-4 w-4" />
-            )}
-            Pay with Visa / Mastercard (Pesapal)
-          </Button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={method === "MPESA"}
+              disabled={loading}
+              onClick={() => setMethod("MPESA")}
+              className={cn(
+                "flex flex-col items-center gap-1.5 rounded-xl border px-3 py-3 text-sm transition-colors",
+                method === "MPESA"
+                  ? "border-primary bg-primary/5 text-foreground ring-1 ring-primary"
+                  : "border-border bg-background text-muted-foreground hover:bg-muted/50",
+              )}
+            >
+              <Smartphone className="h-5 w-5" />
+              <span className="font-medium">M-Pesa</span>
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={method === "CARD"}
+              disabled={loading}
+              onClick={() => setMethod("CARD")}
+              className={cn(
+                "flex flex-col items-center gap-1.5 rounded-xl border px-3 py-3 text-sm transition-colors",
+                method === "CARD"
+                  ? "border-primary bg-primary/5 text-foreground ring-1 ring-primary"
+                  : "border-border bg-background text-muted-foreground hover:bg-muted/50",
+              )}
+            >
+              <CreditCard className="h-5 w-5" />
+              <span className="font-medium">Card</span>
+              <span className="text-[10px] leading-none text-muted-foreground">
+                Visa / Mastercard
+              </span>
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {(!showCard || method === "MPESA") && (
+        <div className="space-y-2">
+          <Label htmlFor={`mpesa-${productId}`}>M-Pesa number</Label>
+          <Input
+            id={`mpesa-${productId}`}
+            placeholder="0712345678"
+            inputMode="tel"
+            autoComplete="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            disabled={loading}
+          />
+        </div>
+      )}
+
+      {showCard && method === "CARD" ? (
+        <p className="text-xs text-muted-foreground">
+          You will be redirected to Pesapal to pay securely with Visa or
+          Mastercard.
+        </p>
+      ) : null}
+
+      <Button
+        type="button"
+        className="w-full"
+        disabled={loading}
+        onClick={() => void startCheckout()}
+      >
+        {loading ? (
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : method === "CARD" && showCard ? (
+          <CreditCard className="mr-2 h-4 w-4" />
+        ) : (
+          <Smartphone className="mr-2 h-4 w-4" />
         )}
-      </div>
+        {loading ? "Starting payment…" : payLabel}
+      </Button>
     </div>
   );
 }

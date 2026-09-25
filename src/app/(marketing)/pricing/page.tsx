@@ -151,7 +151,7 @@ export default function PricingPage() {
             Pricing that scales with you
           </h1>
           <p className="mt-4 text-muted-foreground">
-            {MONETIZATION_COPY.flow} Pay with M-Pesa.
+            {MONETIZATION_COPY.flow} Pay with M-Pesa or card (Visa / Mastercard).
           </p>
         </div>
 

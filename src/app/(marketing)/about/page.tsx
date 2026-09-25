@@ -54,7 +54,7 @@ export default function AboutPage() {
           <ul className="mt-3 list-disc space-y-2 pl-5 text-muted-foreground">
             <li>Search verified listings across African countries and cities</li>
             <li>Connect with sellers and agents through the platform inbox</li>
-            <li>Professionals pay with M-Pesa to publish or promote listings</li>
+            <li>Professionals pay with M-Pesa or card to publish or promote listings</li>
             <li>Our admin team reviews listings before they appear publicly</li>
           </ul>
         </div>

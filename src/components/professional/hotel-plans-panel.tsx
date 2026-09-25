@@ -6,7 +6,6 @@ import {
   Building2,
   Check,
   Crown,
-  Smartphone,
   Sparkles,
   Zap,
 } from "lucide-react";
@@ -220,10 +219,7 @@ export function HotelPlansPanel() {
                   ) : upgrading === plan.id ? (
                     "Updating…"
                   ) : isPaid ? (
-                    <>
-                      <Smartphone className="mr-2 h-4 w-4" />
-                      Pay with M-Pesa
-                    </>
+                    "Pay with M-Pesa or card"
                   ) : (
                     "Use Free"
                   )}
@@ -273,8 +269,8 @@ export function HotelPlansPanel() {
       </Card>
 
       <p className="text-xs text-muted-foreground">
-        Paid hotel plans activate automatically after successful M-Pesa payment.
-        Switch to Free anytime without payment.
+        Paid hotel plans activate automatically after successful M-Pesa or card
+        payment. Switch to Free anytime without payment.
       </p>
 
       {payProductId && payProduct && payPlan ? (
@@ -288,8 +284,7 @@ export function HotelPlansPanel() {
           productId={payProductId}
           priceOverride={payPlan.price}
           title={`Activate Hotel ${payPlan.name}`}
-          description={`${formatPrice(payPlan.price, { currency: payPlan.currency })} for ${payPlan.durationDays} days via M-Pesa.`}
-          ctaLabel={`Pay ${formatPrice(payPlan.price, { currency: payPlan.currency })} with M-Pesa`}
+          description={`${formatPrice(payPlan.price, { currency: payPlan.currency })} for ${payPlan.durationDays} days. Choose M-Pesa or card.`}
           onPaid={(payment) => {
             if (payment.status === "COMPLETED") {
               toast.success(`${payPlan.name} plan activated · ${payment.reference}`);

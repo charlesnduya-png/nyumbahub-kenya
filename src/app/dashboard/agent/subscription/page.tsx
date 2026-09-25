@@ -141,7 +141,7 @@ export default function AgentSubscriptionPage() {
                   onClick={() => setPayOpen(true)}
                 >
                   <Smartphone className="mr-2 h-4 w-4" />
-                  Subscribe with M-Pesa
+                  Subscribe — M-Pesa or card
                 </Button>
               ) : null}
             </div>
@@ -163,8 +163,8 @@ export default function AgentSubscriptionPage() {
         onOpenChange={setPayOpen}
         productId={selected}
         title={`Pay for ${product.name}`}
-        description={`${formatProductPrice(product)} billed every ${product.durationDays} days via M-Pesa.`}
-        ctaLabel="Subscribe with M-Pesa"
+        description={`${formatProductPrice(product)} billed every ${product.durationDays} days. Choose M-Pesa or card.`}
+        ctaLabel="Subscribe"
         onPaid={(payment) => {
           setActivePlan(product.name);
           toast.success(`Subscribed · ${payment.reference}`);

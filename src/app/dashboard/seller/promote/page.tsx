@@ -149,7 +149,7 @@ export default function SellerPromotePage() {
                   onClick={() => setPayOpen(true)}
                 >
                   <Smartphone className="mr-2 h-4 w-4" />
-                  Pay {formatProductPrice(plan)} with M-Pesa
+                  Pay {formatProductPrice(plan)}
                 </Button>
               ) : null}
             </div>
@@ -164,9 +164,8 @@ export default function SellerPromotePage() {
         productId={selected}
         propertyId={propertyId === "all" ? undefined : propertyId}
         title={`Pay for ${product.name}`}
-        description="Complete M-Pesa payment to activate this boost."
+        description="Choose M-Pesa or card to activate this boost."
         dialogExtra={listingPicker}
-        triggerLabel={`Pay ${formatProductPrice(product)} with M-Pesa`}
         onPaid={(payment) => {
           if (payment.status === "COMPLETED") {
             setLastPayment(payment.reference);
