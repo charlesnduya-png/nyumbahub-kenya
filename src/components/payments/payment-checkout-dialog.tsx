@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ComponentProps, type ReactNode } from "react";
-import { CreditCard, Smartphone } from "lucide-react";
+import { Smartphone } from "lucide-react";
 
 import { PaymentCheckout } from "@/components/payments/payment-checkout";
 import { Button } from "@/components/ui/button";
@@ -38,7 +38,7 @@ interface PaymentCheckoutDialogProps {
   title?: string;
   description?: string;
   ctaLabel?: string;
-  /** Show Visa/Mastercard (Pesapal) alongside M-Pesa. Default on. */
+  /** @deprecated Card checkout removed — ignored. */
   showCard?: boolean;
   /** Extra fields shown above checkout inside the popup (e.g. listing picker). */
   dialogExtra?: ReactNode;
@@ -59,7 +59,6 @@ export function PaymentCheckoutDialog({
   title,
   description,
   ctaLabel,
-  showCard = true,
   dialogExtra,
   onPaid,
 }: PaymentCheckoutDialogProps) {
@@ -79,9 +78,7 @@ export function PaymentCheckoutDialog({
     );
   }
 
-  const defaultTrigger = showCard
-    ? `Pay ${formatProductPrice(product)}`
-    : `Pay ${formatProductPrice(product)} with M-Pesa`;
+  const defaultTrigger = `Pay ${formatProductPrice(product)} with M-Pesa`;
 
   return (
     <>
@@ -93,14 +90,7 @@ export function PaymentCheckoutDialog({
           className={triggerClassName}
           onClick={() => setOpen(true)}
         >
-          {showCard ? (
-            <span className="mr-2 inline-flex items-center gap-0.5">
-              <Smartphone className="h-4 w-4" />
-              <CreditCard className="h-4 w-4" />
-            </span>
-          ) : (
-            <Smartphone className="mr-2 h-4 w-4" />
-          )}
+          <Smartphone className="mr-2 h-4 w-4" />
           {triggerLabel ?? defaultTrigger}
         </Button>
       ) : null}
@@ -111,9 +101,7 @@ export function PaymentCheckoutDialog({
             <DialogTitle>{title ?? product.name}</DialogTitle>
             <DialogDescription>
               {description ??
-                (showCard
-                  ? "Choose M-Pesa or card (Visa / Mastercard), then complete payment."
-                  : "Enter your M-Pesa number. You'll get a prompt on your phone to complete payment.")}
+                "Enter your M-Pesa number. You'll get a prompt on your phone to complete payment."}
             </DialogDescription>
           </DialogHeader>
           {open ? (
@@ -124,8 +112,7 @@ export function PaymentCheckoutDialog({
                 productId={productId}
                 propertyId={propertyId}
                 priceOverride={priceOverride}
-                showCard={showCard}
-                ctaLabel={ctaLabel}
+                ctaLabel={ctaLabel ?? defaultTrigger}
                 onPaid={(payment) => {
                   onPaid?.(payment);
                   if (payment.status === "COMPLETED") {

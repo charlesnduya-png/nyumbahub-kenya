@@ -119,10 +119,9 @@ export function VerifiedSellerBadgeCard() {
         open={payOpen}
         onOpenChange={setPayOpen}
         productId={VERIFIED_BADGE_PRODUCT_ID}
-        showCard
         title="Verified seller badge"
-        description={`Build trust on your profile for ${product.durationDays} days. Choose M-Pesa or card.`}
-        ctaLabel={`Pay ${formatProductPrice(product)}`}
+        description={`Build trust on your profile for ${product.durationDays} days after payment.`}
+        ctaLabel={`Pay ${formatProductPrice(product)} with M-Pesa`}
         onPaid={async (payment) => {
           if (payment.status === "COMPLETED") {
             setPaid(true);
