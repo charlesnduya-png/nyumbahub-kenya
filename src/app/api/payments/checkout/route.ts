@@ -16,6 +16,13 @@ import {
 import { isMpesaConfigured, MpesaConfigError, stkPush } from "@/lib/mpesa";
 import { getProductWithLivePricing } from "@/lib/hotel-plan-pricing";
 import { createCheckoutSession, isStripeConfigured } from "@/lib/stripe";
+import {
+  isPesapalConfigured,
+  PesapalApiError,
+  PesapalConfigError,
+  pesapalCallbackUrl,
+  pesapalSubmitOrder,
+} from "@/lib/pesapal";
 import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
@@ -100,9 +107,69 @@ export async function POST(request: Request) {
       // demo store already has the payment
     }
 
-    // Demo instant confirm removed — payments require configured M-Pesa or Stripe.
+    // Demo instant confirm removed — payments require configured M-Pesa, Pesapal, or Stripe.
 
     if (parsed.data.method === "CARD") {
+      if (isPesapalConfigured()) {
+        try {
+          const nameParts = (session.user.name ?? "Your Home").trim().split(/\s+/);
+          const order = await pesapalSubmitOrder({
+            merchantReference: payment.id,
+            amount: product.price,
+            description: product.name,
+            callbackUrl: pesapalCallbackUrl(payment.id),
+            email: session.user.email,
+            phone: parsed.data.phoneNumber,
+            firstName: nameParts[0],
+            lastName: nameParts.slice(1).join(" ") || "Customer",
+          });
+
+          try {
+            await prisma.payment.update({
+              where: { id: payment.id },
+              data: {
+                metadata: {
+                  productId: product.id,
+                  propertyId: parsed.data.propertyId ?? null,
+                  paidByUserId: session.user.id,
+                  provider: "pesapal",
+                  pesapalOrderTrackingId: order.orderTrackingId,
+                  pesapalMerchantReference: order.merchantReference,
+                },
+              },
+            });
+          } catch {
+            // best effort
+          }
+
+          return NextResponse.json({
+            success: true,
+            data: {
+              id: payment.id,
+              reference: payment.reference,
+              checkoutUrl: order.redirectUrl,
+              orderTrackingId: order.orderTrackingId,
+              status: "PENDING",
+              provider: "pesapal",
+            },
+          });
+        } catch (error) {
+          if (error instanceof PesapalConfigError) {
+            return NextResponse.json(
+              { success: false, error: error.message },
+              { status: 503 },
+            );
+          }
+          if (error instanceof PesapalApiError) {
+            return NextResponse.json(
+              { success: false, error: error.message },
+              { status: 502 },
+            );
+          }
+          throw error;
+        }
+      }
+
       if (!isStripeConfigured()) {
         return NextResponse.json(
           {
@@ -138,6 +205,7 @@ export async function POST(request: Request) {
           reference: payment.reference,
           checkoutUrl: sessionCheckout.url,
           status: "PENDING",
+          provider: "stripe",
         },
       });
     }

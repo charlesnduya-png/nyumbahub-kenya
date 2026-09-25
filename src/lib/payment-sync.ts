@@ -1,6 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@prisma/client";
 import { intaSendPaymentStatus } from "@/lib/intasend";
+import {
+  mapPesapalStatusCode,
+  pesapalGetTransactionStatus,
+} from "@/lib/pesapal";
 import { fulfillCompletedPayment } from "@/lib/payment-fulfillment";
 
 type PaymentMeta = {
@@ -12,6 +16,9 @@ type PaymentMeta = {
   amountPaid?: string;
   syncedAt?: string;
   failedReason?: string | null;
+  pesapalOrderTrackingId?: string;
+  pesapalStatusCode?: number;
+  provider?: string;
 };
 
 function jsonMeta(meta: PaymentMeta): Prisma.InputJsonObject {
@@ -43,6 +50,61 @@ export async function syncPaymentStatus(paymentId: string, userId?: string) {
   }
 
   let meta = (payment.metadata ?? {}) as PaymentMeta;
+
+  if (payment.status !== "COMPLETED" && meta.pesapalOrderTrackingId) {
+    try {
+      const remote = await pesapalGetTransactionStatus(
+        meta.pesapalOrderTrackingId,
+      );
+      const mapped = mapPesapalStatusCode(remote.status_code);
+
+      if (mapped === "COMPLETED") {
+        meta = {
+          ...meta,
+          pesapalStatusCode: remote.status_code,
+          amountPaid: remote.amount != null ? String(remote.amount) : String(payment.amount),
+          syncedAt: new Date().toISOString(),
+          provider: "pesapal",
+        };
+
+        payment = await prisma.payment.update({
+          where: { id: payment.id },
+          data: {
+            status: "COMPLETED",
+            mpesaReceipt:
+              remote.confirmation_code ?? payment.mpesaReceipt ?? undefined,
+            metadata: jsonMeta(meta),
+          },
+        });
+      } else if (mapped === "FAILED") {
+        payment = await prisma.payment.update({
+          where: { id: payment.id },
+          data: {
+            status: "FAILED",
+            metadata: jsonMeta({
+              ...meta,
+              pesapalStatusCode: remote.status_code,
+              failedReason: remote.description ?? remote.message ?? null,
+              syncedAt: new Date().toISOString(),
+              provider: "pesapal",
+            }),
+          },
+        });
+
+        return {
+          success: true as const,
+          data: {
+            paymentId: payment.id,
+            status: payment.status,
+            fulfilled: false,
+            productId: meta.productId ?? null,
+          },
+        };
+      }
+    } catch {
+      // keep current DB state
+    }
+  }
 
   if (payment.status !== "COMPLETED" && meta.intasendInvoiceId) {
     try {

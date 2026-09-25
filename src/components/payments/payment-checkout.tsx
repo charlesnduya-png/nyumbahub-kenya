@@ -232,7 +232,7 @@ export function PaymentCheckout({
             ) : (
               <CreditCard className="mr-2 h-4 w-4" />
             )}
-            Pay with Visa / Mastercard
+            Pay with Visa / Mastercard (Pesapal)
           </Button>
         )}
       </div>
