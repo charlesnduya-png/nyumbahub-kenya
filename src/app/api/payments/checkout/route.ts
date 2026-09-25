@@ -21,6 +21,7 @@ import {
   PesapalApiError,
   PesapalConfigError,
   pesapalCallbackUrl,
+  pesapalCancellationUrl,
   pesapalSubmitOrder,
 } from "@/lib/pesapal";
 import { prisma } from "@/lib/prisma";
@@ -118,6 +119,7 @@ export async function POST(request: Request) {
             amount: product.price,
             description: product.name,
             callbackUrl: pesapalCallbackUrl(payment.id),
+            cancellationUrl: pesapalCancellationUrl(payment.id),
             email: session.user.email,
             phone: parsed.data.phoneNumber,
             firstName: nameParts[0],
@@ -151,6 +153,7 @@ export async function POST(request: Request) {
               orderTrackingId: order.orderTrackingId,
               status: "PENDING",
               provider: "pesapal",
+              embed: true,
             },
           });
         } catch (error) {

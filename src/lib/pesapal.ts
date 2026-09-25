@@ -69,6 +69,10 @@ export function pesapalCallbackUrl(paymentId: string) {
   return `${appBaseUrl()}/api/payments/pesapal/callback?paymentId=${encodeURIComponent(paymentId)}`;
 }
 
+export function pesapalCancellationUrl(paymentId: string) {
+  return `${appBaseUrl()}/payments/card/cancel?paymentId=${encodeURIComponent(paymentId)}`;
+}
+
 async function pesapalFetch<T>(
   path: string,
   init: RequestInit & { token?: string } = {},
@@ -174,6 +178,7 @@ export async function pesapalSubmitOrder(input: {
   amount: number;
   description: string;
   callbackUrl: string;
+  cancellationUrl?: string;
   email?: string | null;
   phone?: string | null;
   firstName?: string | null;
@@ -198,7 +203,9 @@ export async function pesapalSubmitOrder(input: {
       description: input.description.slice(0, 100),
       callback_url: input.callbackUrl,
       notification_id: notificationId,
-      redirect_mode: "TOP_WINDOW",
+      // PARENT_WINDOW keeps callback on our site when checkout is iframed
+      redirect_mode: "PARENT_WINDOW",
+      cancellation_url: input.cancellationUrl || undefined,
       billing_address: {
         email_address: input.email || "billing@yourhome.co.ke",
         phone_number: input.phone || undefined,
