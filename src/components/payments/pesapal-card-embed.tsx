@@ -77,36 +77,43 @@ export function PesapalCardEmbed({
       className="fixed inset-0 z-[60] flex flex-col bg-background"
       role="dialog"
       aria-modal="true"
-      aria-label="Card payment"
+      aria-label="Pay Your Home"
     >
-      <header className="flex items-center justify-between gap-3 border-b bg-card px-4 py-3 sm:px-6">
-        <div className="flex min-w-0 items-center gap-3">
-          <BrandLogo href={null} showWordmark size="sm" />
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium">Secure card payment</p>
-            <p className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Lock className="h-3 w-3 shrink-0" />
-              Visa / Mastercard · Pesapal
-              {amountLabel ? ` · ${amountLabel}` : null}
-            </p>
-          </div>
-        </div>
+      <header className="relative border-b bg-card px-4 pb-4 pt-3 sm:px-6">
         <Button
           type="button"
           variant="ghost"
           size="icon"
+          className="absolute right-3 top-3 sm:right-5"
           onClick={onClose}
           aria-label="Close card payment"
         >
           <X className="h-5 w-5" />
         </Button>
+
+        <div className="mx-auto flex max-w-lg flex-col items-center gap-2 text-center">
+          <BrandLogo href={null} showWordmark showKenya={false} size="md" />
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+            Pay{" "}
+            <span className="text-primary">Your Home</span>
+          </h1>
+          <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+            <Lock className="h-3.5 w-3.5 shrink-0" />
+            Card · Visa / Mastercard
+            {amountLabel ? (
+              <span className="font-medium text-foreground">
+                · {amountLabel}
+              </span>
+            ) : null}
+          </p>
+        </div>
       </header>
 
       <div className="relative min-h-0 flex-1 bg-muted/30">
         {frameLoading ? (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-background/80 text-sm text-muted-foreground">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            Loading secure checkout…
+            Loading Pay Your Home checkout…
           </div>
         ) : null}
         {checking ? (
@@ -116,7 +123,7 @@ export function PesapalCardEmbed({
           </div>
         ) : null}
         <iframe
-          title="Pesapal card checkout"
+          title="Pay Your Home card checkout"
           src={checkoutUrl}
           className={cn(
             "h-full w-full border-0 bg-white",
@@ -128,7 +135,7 @@ export function PesapalCardEmbed({
       </div>
 
       <footer className="border-t bg-card px-4 py-2 text-center text-[11px] text-muted-foreground sm:px-6">
-        Payment is processed securely by Pesapal. Your Home never stores your
+        Pay Your Home · card payments secured by Pesapal. We never store your
         card details.
       </footer>
     </div>
